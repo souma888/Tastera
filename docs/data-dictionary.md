@@ -34,7 +34,7 @@ This document describes source fields in the MovieLens Latest Small archive used
 |---|---|---|---|
 | movieId | MovieLens movie identifier | Integer | Join key to movies.csv |
 | imdbId | IMDb identifier, stored in MovieLens' source format | Integer/string-like identifier | Preserve identifier formatting when constructing external URLs |
-| tmdbId | The Movie Database identifier | Numeric with possible missing values | Treat as an identifier, not a measurement; check missingness before joining |
+| tmdbId | The Movie Database identifier | Numeric with possible missing values | Initial audit: 8 of 9,742 values missing (0.0821%); treat as an identifier, not a measurement, and do not discard the movie solely because this external ID is absent |
 
 ## Derived fields planned for analysis
 
@@ -46,11 +46,13 @@ These are possible derived features, not columns in the original files.
 | rating_datetime_utc | ratings.timestamp | Convert Unix seconds to UTC datetime | Temporal analysis and time-aware evaluation |
 | ratings_per_user | ratings.userId | Count ratings by user | Activity distribution and split diagnostics |
 | ratings_per_movie | ratings.movieId | Count ratings by movie | Popularity baseline and coverage analysis |
-| tag_text_features | tags.tag | Documented text normalization and aggregation | Content-based experiments |
+| tag_text_features | tags.tag | Documented text normalization and aggregation | Content-based experiments; initial audit found tags for 1,572 of 9,742 catalog movies (3,683 tag rows, 1,589 case-sensitive tag strings, 58 tag contributors) |
 | movie_metadata_text | Titles, genres and tags | Explicitly documented combination | TF-IDF/content-based baseline |
 
 ## Data quality policy
 
+- Initial MovieLens audit: no missing values in movies.csv, ratings.csv or tags.csv; 8 missing links.tmdbId values; no duplicate full rows; movie-ID joins were consistent with the catalog.
+- Before modeling, separately validate duplicate (userId, movieId) rating pairs and observed rating values against the expected half-star scale; record the executed results.
 - Measure missing values, duplicate rows, key uniqueness and join coverage before cleaning.
 - Do not silently overwrite raw source fields.
 - Document every removal, imputation, normalization or join in the notebook and reusable code.
