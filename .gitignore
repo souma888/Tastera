@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Node.js / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local data, databases, and model artifacts
+data/raw/
+data/processed/
+data/external/
+*.db
+*.sqlite
+*.sqlite3
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.parquet
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
