@@ -35,7 +35,15 @@ The initial terminal inspection reported:
 | tags.csv | 3,683 | 4 |
 | links.csv | 9,742 | 3 |
 
-These are the dimensions observed in the user's local copy during initial inspection. Re-run notebooks/01_dataset_audit.ipynb to independently verify the current files and record any discrepancy.
+The user's successful local audit notebook run reproduced these dimensions. The same run found no duplicate full rows, no movie-ID references outside the catalog, and no missing values in movies.csv, ratings.csv, or tags.csv. The links.csv file has 8 missing tmdbId values (0.0821%) and complete imdbId coverage.
+
+### Observed coverage notes
+
+- Ratings cover 9,724 distinct movies; tags cover 1,572 distinct movies.
+- The tags file has 3,683 records, 1,589 case-sensitive unique tag strings, and 58 tag contributors.
+- The observed user–movie rating matrix is 98.3000% sparse (610 users, 9,724 rated movies, 100,836 observed ratings).
+- The audit's follow-up duplicate (userId, movieId) and rating-scale validation must be run and reviewed before modeling decisions are finalized.
+- Re-run notebooks/01_dataset_audit.ipynb whenever the local dataset changes and keep conclusions tied to the executed version.
 
 ## Future candidate sources
 
