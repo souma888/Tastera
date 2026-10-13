@@ -2,7 +2,7 @@
 
 ## Status
 
-**Initial audit completed; follow-up rating-key validation pending.** The summary below is based on the user's successful local execution of `notebooks/01_dataset_audit.ipynb`. Re-run the notebook when the local dataset changes.
+**Initial audit and follow-up rating-key validation completed in the recorded notebook run.** The summary below reflects the committed outputs of `notebooks/01_dataset_audit.ipynb`; rerun the notebook if the local dataset changes.
 
 ## Objective
 
@@ -39,7 +39,7 @@ Schemas:
 - No duplicate full rows were observed in any of the four CSV files.
 - The catalog's `movieId` and the links table's `movieId` are unique.
 - No rating or tag movie IDs were found outside the movie catalog.
-- **Still to verify:** duplicate `(userId, movieId)` rating pairs and rating values against the expected half-star scale. The follow-up cell has been added to the notebook, but its result must be reviewed after running it.
+- **Follow-up validation result:** 0 duplicate `(userId, movieId)` pairs, 0 missing rating values, and no observed rating values outside the expected half-star scale (`0.5` through `5.0` in `0.5` increments), according to the notebook's recorded output.
 
 ### Ratings and activity
 
@@ -88,6 +88,6 @@ The matrix across 610 users and 9,724 rated movies has 5,931,640 possible user�
 
 ## Next actions
 
-1. Run the new duplicate-pair and rating-scale validation cell and record its output.
-2. Follow [Experiment 02 — Baseline Recommenders](02-baseline-recommenders.md) for the first model comparison.
+1. Keep the duplicate-pair and rating-scale checks in the audit workflow and rerun them if the source data changes.
+2. Continue improving [Experiment 02 — Baseline Recommenders](02-baseline-recommenders.md), especially quantitative top-K ranking evaluation.
 3. Revisit the findings if the local dataset version changes.
