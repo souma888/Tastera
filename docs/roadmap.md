@@ -33,7 +33,7 @@ This roadmap reflects the repository as reviewed on 2026-10-13. It is an impleme
 ## Milestone 3 — Data pipeline and ML baseline
 
 - [x] Add and record MovieLens duplicate-pair and rating-scale validation checks in the audit notebook; rerun locally to verify the current environment.
-- [ ] Rerun the baseline notebook from top to bottom after the path portability fix; its committed output is stale.
+- [ ] Rerun the baseline notebook from top to bottom after the path portability fix; stale code-cell outputs have been cleared.
 - [ ] Record reproducible metrics and split details.
 - [ ] Add ranking evaluation with a defined relevance threshold and candidate set.
 - [ ] Document limitations and next experiment.
