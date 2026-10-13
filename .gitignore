@@ -30,6 +30,7 @@ pnpm-debug.log*
 
 # Local data, databases, and model artifacts
 data/raw/
+data/interim/
 data/processed/
 data/external/
 *.db
