@@ -18,13 +18,15 @@ This directory contains reproducible analysis and experiments for TASTERA. Noteb
 
 | Notebook | Purpose | Status |
 |---|---|---|
-| 01_dataset_audit.ipynb | Inspect MovieLens schemas, quality, ID consistency, ratings, genres, tags and identifier coverage | Added; run locally and update the accompanying experiment report |
+| `01_dataset_audit.ipynb` | Inspect MovieLens schemas, quality, ID consistency, ratings, genres, tags and identifier coverage | Recorded audit and follow-up validation outputs exist. Rerun locally if the dataset changes or to verify the current environment. |
+| `02_baseline_recommenders.ipynb` | Compare rating-prediction baselines and inspect popularity/content-based recommendations | Path portability fix is committed. **Rerun from top to bottom:** its saved output still shows the previous machine-specific Windows path. Rating metrics do not evaluate top-K ranking quality. |
 
 ## Related documentation
 
 - docs/dataset-register.md: source provenance and usage restrictions
 - docs/data-dictionary.md: source fields and planned derived features
 - docs/experiments/01-movielens-audit.md: audit objective, method, findings and decisions
+- docs/experiments/02-baseline-recommenders.md: baseline methods, split design, metrics and limitations
 
 ## Running
 
