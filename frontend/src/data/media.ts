@@ -1,0 +1,58 @@
+import type { Media } from "../types/media";
+
+export const mediaItems: Media[] = [
+  {
+    id: "interstellar",
+    title: "Interstellar",
+    creator: "Christopher Nolan",
+    category: "Movies",
+    genre: "Sci-Fi",
+    image: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+    reason: "For your curiosity about space and the unknown.",
+  },
+  {
+    id: "dune-book",
+    title: "Dune",
+    creator: "Frank Herbert",
+    category: "Books",
+    genre: "Science Fiction",
+    image: "https://covers.openlibrary.org/b/isbn/9780441013593-L.jpg",
+    reason: "A world of complex systems, power and destiny.",
+  },
+  {
+    id: "random-access-memories",
+    title: "Random Access Memories",
+    creator: "Daft Punk",
+    category: "Music",
+    genre: "Electronic",
+    image: "https://coverartarchive.org/release/a8308466-dd18-4912-9192-ccd0eb1878e0/front-500",
+    reason: "For your interest in immersive, atmospheric sound.",
+  },
+  {
+    id: "arrival",
+    title: "Arrival",
+    creator: "Denis Villeneuve",
+    category: "Movies",
+    genre: "Sci-Fi",
+    image: "https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
+    reason: "A different perspective on language and humanity.",
+  },
+  {
+    id: "midnight-library",
+    title: "The Midnight Library",
+    creator: "Matt Haig",
+    category: "Books",
+    genre: "Fiction",
+    image: "https://covers.openlibrary.org/b/isbn/9780525559474-L.jpg",
+    reason: "Explore alternate lives and the choices between them.",
+  },
+  {
+    id: "after-hours",
+    title: "After Hours",
+    creator: "The Weeknd",
+    category: "Music",
+    genre: "R&B",
+    image: "https://coverartarchive.org/release/12fc7ee3-a1dc-4940-b65d-e011980ec790/front-500",
+    reason: "Dark, cinematic production with a strong atmosphere.",
+  },
+];
