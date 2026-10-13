@@ -37,7 +37,7 @@ This document separates what is present in the repository from proposed work. A 
   - genre-overlap content-based ranking.
 - Dataset register, data dictionary, and experiment notes in `docs/`.
 
-The recorded MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, and 610 users. Its recorded follow-up output reports zero duplicate `(userId, movieId)` pairs, zero missing rating values, and no values outside the expected half-star scale. The baseline notebook's path has since been made portable, but its saved output still shows the old Windows path; rerun both notebooks locally before treating the experiments as freshly reproduced.
+The recorded MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, and 610 users. Its recorded follow-up output reports zero duplicate `(userId, movieId)` pairs, zero missing rating values, and no values outside the expected half-star scale. The baseline notebook's path has since been made portable, and its stale code-cell outputs have been cleared. Rerun both notebooks locally before treating the experiments as freshly reproduced.
 
 ## Known limitations
 
