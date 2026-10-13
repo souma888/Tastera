@@ -37,7 +37,7 @@ This document separates what is present in the repository from proposed work. A 
   - genre-overlap content-based ranking.
 - Dataset register, data dictionary, and experiment notes in `docs/`.
 
-The documented initial MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, and 610 users. The follow-up validation of duplicate user/movie rating pairs and rating values must be run and reviewed before those checks are considered complete.
+The recorded MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, and 610 users. Its recorded follow-up output reports zero duplicate `(userId, movieId)` pairs, zero missing rating values, and no values outside the expected half-star scale. The baseline notebook's path has since been made portable, but its saved output still shows the old Windows path; rerun both notebooks locally before treating the experiments as freshly reproduced.
 
 ## Known limitations
 
@@ -57,7 +57,7 @@ The documented initial MovieLens audit covers 9,742 movies, 100,836 ratings, 3,6
 1. Keep the current frontend checkpoint reproducible and document its local setup.
 2. Define the canonical media schema and API contract.
 3. Build and test the FastAPI application structure and a small media catalog endpoint.
-4. Finish pending MovieLens data validation and run the baseline experiment reproducibly.
+4. Rerun the MovieLens audit and baseline experiment locally to verify the recorded outputs and updated notebook path.
 5. Connect Discover to the catalog API, including loading, empty, and error states.
 6. Add a database and migrations, then user authentication and per-user interactions when ready.
 7. Evaluate ranking approaches before integrating model inference.
