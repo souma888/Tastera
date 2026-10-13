@@ -1,75 +1,68 @@
-# React + TypeScript + Vite
+# TASTERA Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite interface for TASTERA, a cross-media discovery prototype.
 
-Currently, two official plugins are available:
+## Current features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Discover page with a hero section, search, and category filters.
+- Reusable media cards for movies, books, and music.
+- In-memory saved items and a Library view.
+- Taste Map demonstration view.
+- Profile placeholder.
 
-## React Compiler
+The current catalog consists of six sample items in `src/data/media.ts`. The frontend is not yet connected to the FastAPI backend. Saves are held in React state and reset when the page reloads. The Taste Map is a prototype and is not generated from a trained model or live user data.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Requirements
 
-## Expanding the ESLint configuration
+- Node.js (use a current LTS release where possible)
+- npm
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Local development
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+From the repository root:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Open the local URL printed by Vite, usually `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Build and lint
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm run build
+npm run lint
 ```
+
+Run these commands after changes. Build/lint results should be checked locally before claiming a change is validated.
+
+## Project structure
+
+```text
+src/
+├── components/
+│   ├── MediaCard.tsx
+│   ├── TasteMap.tsx
+│   └── TasteMap.css
+├── data/
+│   └── media.ts
+├── types/
+│   └── media.ts
+├── App.tsx
+├── App.css
+└── index.css
+```
+
+- `App.tsx`: current page selection, search/filter state, and saved-item state.
+- `components/MediaCard.tsx`: reusable media card.
+- `components/TasteMap.tsx`: Taste Map prototype.
+- `data/media.ts`: temporary local sample catalog.
+- `types/media.ts`: TypeScript media interfaces.
+
+## Next integration step
+
+When the backend catalog endpoint is available, introduce a typed API client and replace the static catalog import with API data. Include loading, empty, and error states. Durable saved items and profiles should later use authenticated backend APIs and a database, rather than relying on page-local state.
+
+See [frontend guide](../docs/frontend.md), [architecture](../docs/architecture.md), and [project status](../docs/PROJECT_STATUS.md).
