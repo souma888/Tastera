@@ -306,28 +306,48 @@ tastera/
 
 This is an illustrative structure, not the current repository layout. It may be simplified for the initial MVP.
 
+## Current Implementation Status
+
+**Status:** Early frontend prototype and research foundation.
+
+- **Frontend:** React + TypeScript + Vite prototype with Discover, Library, Taste Map, and Profile views.
+- **Catalog:** Six hardcoded demonstration items across movies, books, and music.
+- **Backend:** FastAPI application with a health-check endpoint and a basic test.
+- **ML research:** MovieLens audit notebook, baseline recommendation classes, and baseline experiment notebook are present; run/review experiments before claiming reproducible results.
+- **Persistence and accounts:** Not implemented. Saved items currently reset on refresh.
+- **Catalog API and database:** Not implemented.
+- **Personalized/cross-media model serving:** Not implemented.
+- **Deployment:** Frontend deployment may be configured separately; the FastAPI backend and persistent database are not implied by a frontend deployment.
+
+See [Project Status](docs/PROJECT_STATUS.md) for a more detailed implemented-versus-planned inventory.
+
 ## Getting Started
 
-TASTERA is currently in the planning and initial development stage. A complete local installation guide will be added once the first runnable version is available.
+### Frontend
 
-For now:
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-1. Clone the repository.
-2. Review the project vision and roadmap.
-3. Follow the setup instructions added as the implementation becomes available.
+Run `npm run build` and `npm run lint` from `frontend/` to validate the frontend. See [Frontend Guide](docs/frontend.md).
 
-## Current Status
+### Backend
 
-**Status:** Planning and initial development.
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-- Product concept: In progress.
-- Requirements and architecture: To be finalized.
-- Frontend: Not yet implemented.
-- Backend: Not yet implemented.
-- Recommendation engine: Not yet implemented.
-- Deployment: Not yet available.
+Open `http://127.0.0.1:8000/health` for the health check and `http://127.0.0.1:8000/docs` for interactive API documentation. See [Backend Guide](docs/backend.md).
 
-This section will be updated as working components are completed.
+### Research
+
+Review [notebooks/README.md](notebooks/README.md), [the dataset register](docs/dataset-register.md), and the [ML roadmap](docs/ml-roadmap.md). Raw datasets should remain outside Git and must be used in accordance with their applicable terms.
 
 ## Project Goals
 
