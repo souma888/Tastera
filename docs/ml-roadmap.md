@@ -13,7 +13,7 @@ These components should be treated as research baselines, not a trained, deploye
 
 ## Stage 1 — Validate the dataset
 
-Before model comparisons, verify:
+Before model comparisons, verify the following in a fresh local run. The committed audit output already records checks for duplicate `(userId, movieId)` pairs and the half-star rating scale, but those results have not been freshly reproduced after the latest notebook edits:
 
 - Required columns and data types.
 - Duplicate `(userId, movieId)` rating pairs and how any are handled.
