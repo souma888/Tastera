@@ -4,10 +4,10 @@ This roadmap reflects the repository as reviewed on 2026-10-13. It is an impleme
 
 ## Milestone 0 — Stabilize the current checkpoint
 
-- [ ] Ensure the latest local frontend commit is pushed to GitHub.
-- [ ] Confirm the frontend builds and lint checks pass from a clean install.
-- [ ] Replace the generated Vite frontend README with project-specific instructions.
-- [ ] Keep demo data clearly separated from future API data.
+- [x] Ensure the frontend checkpoint is present on GitHub `main` (PR #1 merged).
+- [ ] Confirm the frontend builds and lint checks pass from a clean install; this review did not execute them.
+- [x] Replace the generated Vite frontend README with project-specific instructions.
+- [x] Keep demo data clearly separated from future API data.
 
 **Acceptance:** a new checkout can install dependencies and run/build the frontend using documented commands.
 
@@ -32,8 +32,8 @@ This roadmap reflects the repository as reviewed on 2026-10-13. It is an impleme
 
 ## Milestone 3 — Data pipeline and ML baseline
 
-- [ ] Complete pending MovieLens validation checks.
-- [ ] Run the baseline notebook from top to bottom.
+- [x] Add and record MovieLens duplicate-pair and rating-scale validation checks in the audit notebook; rerun locally to verify the current environment.
+- [ ] Rerun the baseline notebook from top to bottom after the path portability fix; its committed output is stale.
 - [ ] Record reproducible metrics and split details.
 - [ ] Add ranking evaluation with a defined relevance threshold and candidate set.
 - [ ] Document limitations and next experiment.
