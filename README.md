@@ -8,13 +8,13 @@
 
 ## Overview
 
-TASTERA is a planned AI-powered discovery platform designed to help users explore content across multiple categories based on their interests, preferences, and evolving tastes.
+TASTERA is an early prototype and research project for a planned AI-powered discovery platform. The current repository contains a React + TypeScript frontend prototype, a minimal FastAPI health-check service, and MovieLens-based recommendation experiments. The complete personalized, cross-media product described below remains under development.
 
 Traditional recommendation systems often focus on recommending similar items within a single category. TASTERA aims to go further by exploring relationships between different forms of content, helping users discover movies that connect with their favorite books, music that matches the atmosphere of a film, or creators and genres that align with their interests.
 
 The long-term vision is to create a personalized discovery experience that goes beyond popularity-based recommendations and encourages users to explore unfamiliar content through meaningful connections.
 
-TASTERA is currently in the planning and initial development stage. The features, architecture, and technology stack described in this document represent the project vision and may evolve during implementation.
+The project is in early implementation. The features, architecture, and technology stack described in this document represent the longer-term vision and may evolve as implementation progresses.
 
 ## The Problem
 
