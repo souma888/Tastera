@@ -8,7 +8,7 @@ export interface Media {
   category: MediaCategory;
   genre: string;
   image: string;
-  reason: string;
+  connection: string;
 }
 
 export interface MediaCardProps {

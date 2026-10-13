@@ -1,5 +1,7 @@
 import type { Media } from "../types/media";
 
+// Small, hand-curated demo catalog. These cross-media connections are
+// explanatory examples, not personalized or model-generated recommendations.
 export const mediaItems: Media[] = [
   {
     id: "interstellar",
@@ -8,7 +10,7 @@ export const mediaItems: Media[] = [
     category: "Movies",
     genre: "Sci-Fi",
     image: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-    reason: "For your curiosity about space and the unknown.",
+    connection: "Pairs cosmic scale with the intimate story of family and time.",
   },
   {
     id: "dune-book",
@@ -17,7 +19,7 @@ export const mediaItems: Media[] = [
     category: "Books",
     genre: "Science Fiction",
     image: "https://covers.openlibrary.org/b/isbn/9780441013593-L.jpg",
-    reason: "A world of complex systems, power and destiny.",
+    connection: "Like Arrival, it uses an unfamiliar world to explore language, power, and change.",
   },
   {
     id: "random-access-memories",
@@ -26,7 +28,7 @@ export const mediaItems: Media[] = [
     category: "Music",
     genre: "Electronic",
     image: "https://coverartarchive.org/release/a8308466-dd18-4912-9192-ccd0eb1878e0/front-500",
-    reason: "For your interest in immersive, atmospheric sound.",
+    connection: "A warm, cinematic sound that sits naturally beside the atmosphere of Blade Runner 2049.",
   },
   {
     id: "arrival",
@@ -35,7 +37,7 @@ export const mediaItems: Media[] = [
     category: "Movies",
     genre: "Sci-Fi",
     image: "https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
-    reason: "A different perspective on language and humanity.",
+    connection: "Connects science fiction with ideas about language, memory, and human connection.",
   },
   {
     id: "midnight-library",
@@ -44,7 +46,7 @@ export const mediaItems: Media[] = [
     category: "Books",
     genre: "Fiction",
     image: "https://covers.openlibrary.org/b/isbn/9780525559474-L.jpg",
-    reason: "Explore alternate lives and the choices between them.",
+    connection: "A reflective, accessible take on alternate lives and the choices between them.",
   },
   {
     id: "after-hours",
@@ -53,6 +55,87 @@ export const mediaItems: Media[] = [
     category: "Music",
     genre: "R&B",
     image: "https://coverartarchive.org/release/12fc7ee3-a1dc-4940-b65d-e011980ec790/front-500",
-    reason: "Dark, cinematic production with a strong atmosphere.",
+    connection: "Its nocturnal, neon-lit mood echoes the world of Blade Runner 2049.",
+  },
+  {
+    id: "blade-runner-2049",
+    title: "Blade Runner 2049",
+    creator: "Denis Villeneuve",
+    category: "Movies",
+    genre: "Sci-Fi",
+    image: "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
+    connection: "A slow, atmospheric vision of identity and memory, linked here to After Hours.",
+  },
+  {
+    id: "left-hand-darkness",
+    title: "The Left Hand of Darkness",
+    creator: "Ursula K. Le Guin",
+    category: "Books",
+    genre: "Science Fiction",
+    image: "https://covers.openlibrary.org/b/isbn/9780441478125-L.jpg",
+    connection: "Thoughtful world-building that asks how culture shapes identity and belonging.",
+  },
+  {
+    id: "moon-safari",
+    title: "Moon Safari",
+    creator: "Air",
+    category: "Music",
+    genre: "Electronic",
+    image: "https://coverartarchive.org/release/4c55906c-349b-362d-922e-956762912b42/front-500",
+    connection: "Dreamy, spacious electronics for listeners drawn to science-fiction soundscapes.",
+  },
+  {
+    id: "everything-everywhere",
+    title: "Everything Everywhere All at Once",
+    creator: "Daniel Kwan & Daniel Scheinert",
+    category: "Movies",
+    genre: "Adventure",
+    image: "https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg",
+    connection: "Turns parallel universes into a funny, heartfelt story about family and possibility.",
+  },
+  {
+    id: "project-hail-mary",
+    title: "Project Hail Mary",
+    creator: "Andy Weir",
+    category: "Books",
+    genre: "Science Fiction",
+    image: "https://covers.openlibrary.org/b/isbn/9780593135204-L.jpg",
+    connection: "A problem-solving space adventure for fans of science-led storytelling.",
+  },
+  {
+    id: "in-rainbows",
+    title: "In Rainbows",
+    creator: "Radiohead",
+    category: "Music",
+    genre: "Art Rock",
+    image: "https://coverartarchive.org/release/e9b0f69e-ee3d-36ed-8c12-f8ee65f87e45/front-500",
+    connection: "An immersive, emotionally textured album that rewards a close listen.",
+  },
+  {
+    id: "the-dispossessed",
+    title: "The Dispossessed",
+    creator: "Ursula K. Le Guin",
+    category: "Books",
+    genre: "Science Fiction",
+    image: "https://covers.openlibrary.org/b/isbn/9780061054884-L.jpg",
+    connection: "Pairs speculative world-building with questions about society and freedom.",
+  },
+  {
+    id: "her",
+    title: "Her",
+    creator: "Spike Jonze",
+    category: "Movies",
+    genre: "Romance",
+    image: "https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg",
+    connection: "A tender near-future story about technology, loneliness, and intimacy.",
+  },
+  {
+    id: "blue-train",
+    title: "Blue Train",
+    creator: "John Coltrane",
+    category: "Music",
+    genre: "Jazz",
+    image: "https://coverartarchive.org/release/85a238df-7d38-459d-b912-3e14d953a5f2/front-500",
+    connection: "A focused, expressive jazz record for exploring a different kind of immersive mood.",
   },
 ];

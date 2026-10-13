@@ -117,10 +117,8 @@ const links: [string, string][] = [
   ["you", "after-hours"],
   ["interstellar", "cosmos"],
   ["arrival", "interstellar"],
-  ["cosmos", "ram"],
   ["dune", "possibility"],
   ["possibility", "midnight"],
-  ["ram", "after-hours"],
   ["arrival", "after-hours"],
 ];
 
@@ -222,16 +220,6 @@ export default function TasteMap() {
                   className={isSelected ? "taste-link active" : "taste-link"}
                 />
               );
-              // return (
-              //   <line
-              //     key={`${fromId}-${toId}`}
-              //     x1={from.x}
-              //     y1={from.y}
-              //     x2={to.x}
-              //     y2={to.y}
-              //     className={isSelected ? "taste-link active" : "taste-link"}
-              //   />
-              // );
             })}
           </svg>
 

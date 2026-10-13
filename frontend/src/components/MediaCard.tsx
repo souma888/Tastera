@@ -1,4 +1,9 @@
+import type { CSSProperties } from "react";
 import type { MediaCardProps } from "../types/media";
+
+function getPosterHue(id: string) {
+  return [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 360;
+}
 
 export default function MediaCard({
   item,
@@ -7,11 +12,14 @@ export default function MediaCard({
 }: MediaCardProps) {
   return (
     <article className="media-card">
-      <div className="poster-wrap">
-        <div className="poster-fallback" aria-hidden="true">
-          <span>{item.category}</span>
-          <strong>{item.title}</strong>
-          <small>{item.creator}</small>
+      <div className="poster-wrap" style={{ "--poster-hue": getPosterHue(item.id) } as CSSProperties}>
+        <div className={`poster-fallback poster-${item.category.toLowerCase()}`} aria-hidden="true">
+          <div className="poster-art-mark">{item.title.slice(0, 1)}</div>
+          <div className="poster-copy">
+            <span>{item.category} · TASTERA SELECTION</span>
+            <strong>{item.title}</strong>
+            <small>{item.creator}</small>
+          </div>
         </div>
 
         <img
@@ -43,7 +51,10 @@ export default function MediaCard({
       <div className="card-meta">{item.genre.toUpperCase()}</div>
       <h3>{item.title}</h3>
       <p className="creator">{item.creator}</p>
-      <p className="recommendation-reason">{item.reason}</p>
+      <p className="recommendation-reason">
+        <span>WHY IT CONNECTS</span>
+        {item.connection}
+      </p>
     </article>
   );
 }

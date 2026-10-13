@@ -120,7 +120,7 @@ function App() {
               placeholder="Find your next obsession..."
               aria-label="Search media"
             />
-            <kbd>SEARCH</kbd>
+            <span className="search-hint">TITLE · CREATOR · GENRE</span>
           </label>
         </header>
 
@@ -210,6 +210,15 @@ function App() {
             )}
 
             <section className="discovery-section" id="discovery">
+              <div className="demo-notice" role="note">
+                <span className="demo-notice-mark" aria-hidden="true">✦</span>
+                <span>
+                  <strong>Demo collection</strong>
+                  {activePage === "Library"
+                    ? " Saved items stay in this browser session and reset on refresh."
+                    : " These sample picks illustrate Tastera; they are not personalized yet."}
+                </span>
+              </div>
               <div className="section-heading">
                 <div>
                   <span className="eyebrow">
