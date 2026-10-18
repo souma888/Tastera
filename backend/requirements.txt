@@ -4,6 +4,9 @@ pydantic
 sqlalchemy
 alembic
 psycopg[binary]
+argon2-cffi
+PyJWT
+email-validator
 
 # Development and testing
 pytest

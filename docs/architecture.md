@@ -1,6 +1,6 @@
 # TASTERA Architecture
 
-**Status:** The repository contains a frontend prototype, a FastAPI catalog API backed by a local SQLite database, and offline recommendation experiments. PostgreSQL deployment and production ingestion are future work.
+**Status:** The React frontend uses a FastAPI catalog/account API. Render hosts the API, Neon PostgreSQL stores catalog/accounts/saved media, and Vercel hosts the frontend. Recommendation research remains offline.
 
 ## Current implementation
 
@@ -9,12 +9,14 @@ Browser
   └── React + TypeScript + Vite
         ├── paginated catalog API requests
         ├── local fallback catalog (six media items)
-        ├── in-memory saved-item state
-        └── predefined Taste Map prototype
+        ├── account registration and sign-in
+        └── account-backed saved-item Library
 
 FastAPI application
   ├── GET /health
-  └── /api/v1/media ──> SQLAlchemy catalog service ──> SQLite (24 seed records)
+  ├── /api/v1/media ──> SQLAlchemy catalog service ──> Neon PostgreSQL
+  ├── /api/v1/auth/* ──> account registration and bearer sessions
+  └── /api/v1/me/saved ──> account-scoped saved media
 
 Offline research
   ├── MovieLens audit notebook
@@ -22,7 +24,7 @@ Offline research
   └── Python baseline classes
 ```
 
-Discover is integrated with the catalog API. There is no authenticated user state or automated catalog ingestion yet.
+Discover and the Library use the API. The account-backed Library requires `TASTERA_AUTH_SECRET` in the backend environment. Catalog ingestion is manual, and the Taste Map is still predefined demo data.
 
 ## Target architecture (incremental)
 

@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import { mediaItems } from "./data/media";
+import {
+  getCurrentAccount,
+  getSavedMedia,
+  registerAccount,
+  removeSavedMedia,
+  saveMedia,
+  signIn,
+} from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
+import type { Account } from "./services/accountApi";
 import type { Media, MediaFilter } from "./types/media";
 import "./App.css";
 
@@ -23,14 +32,60 @@ function App() {
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(mediaItems.length);
-  const [saved, setSaved] = useState<string[]>([]);
+  const [savedItems, setSavedItems] = useState<Media[]>([]);
+  const saved = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
   const [activePage, setActivePage] = useState<Page>("Discover");
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() =>
+    sessionStorage.getItem("tastera_access_token"),
+  );
+  const [isCheckingAccount, setIsCheckingAccount] = useState(() =>
+    Boolean(sessionStorage.getItem("tastera_access_token")),
+  );
+  const [savedActionError, setSavedActionError] = useState<string | null>(null);
+  const [savingIds, setSavingIds] = useState<string[]>([]);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthBusy, setIsAuthBusy] = useState(false);
 
   useEffect(() => {
-    if (activePage === "Taste Map" || activePage === "Your Profile") return;
+    if (!authToken) {
+      setAccount(null);
+      setSavedItems([]);
+      setIsCheckingAccount(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsCheckingAccount(true);
+    Promise.all([getCurrentAccount(authToken), getSavedMedia(authToken)])
+      .then(([currentAccount, items]) => {
+        if (cancelled) return;
+        setAccount(currentAccount);
+        setSavedItems(items);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        sessionStorage.removeItem("tastera_access_token");
+        setAuthToken(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingAccount(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
+
+  useEffect(() => {
+    if (activePage !== "Discover") return;
 
     const controller = new AbortController();
     const searchQuery = search.trim();
@@ -74,8 +129,9 @@ function App() {
 
   const visibleMedia = useMemo(() => {
     const query = search.trim().toLowerCase();
+    const source = activePage === "Library" ? savedItems : catalog;
 
-    return catalog.filter((item) => {
+    return source.filter((item) => {
       const matchesCategory =
         category === "All" || item.category === category;
 
@@ -86,19 +142,72 @@ function App() {
         item.genre.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query);
 
-      const matchesLibrary =
-        activePage !== "Library" || saved.includes(item.id);
-
-      return matchesCategory && matchesSearch && matchesLibrary;
+      return matchesCategory && matchesSearch;
     });
-  }, [catalog, category, search, activePage, saved]);
+  }, [activePage, catalog, category, savedItems, search]);
 
-  function toggleSaved(id: string) {
-    setSaved((current) =>
-      current.includes(id)
-        ? current.filter((savedId) => savedId !== id)
-        : [...current, id],
-    );
+  async function toggleSaved(id: string) {
+    if (!authToken) {
+      setAuthMode("sign-in");
+      setAuthError("Sign in or create an account to save items to your Library.");
+      setIsAuthOpen(true);
+      return;
+    }
+    if (savingIds.includes(id)) return;
+
+    setSavedActionError(null);
+    setSavingIds((current) => [...current, id]);
+    try {
+      if (saved.includes(id)) {
+        await removeSavedMedia(authToken, id);
+        setSavedItems((current) => current.filter((item) => item.id !== id));
+      } else {
+        const item = await saveMedia(authToken, id);
+        setSavedItems((current) =>
+          current.some((savedItem) => savedItem.id === id)
+            ? current
+            : [item, ...current],
+        );
+      }
+    } catch (error) {
+      setSavedActionError(
+        error instanceof Error ? error.message : "Could not update your Library.",
+      );
+    } finally {
+      setSavingIds((current) => current.filter((savingId) => savingId !== id));
+    }
+  }
+
+  async function submitAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsAuthBusy(true);
+    setAuthError(null);
+    try {
+      const result =
+        authMode === "sign-up"
+          ? await registerAccount(authEmail, authPassword)
+          : await signIn(authEmail, authPassword);
+      sessionStorage.setItem("tastera_access_token", result.access_token);
+      setAccount(result.account);
+      setSavedItems([]);
+      setAuthToken(result.access_token);
+      setAuthPassword("");
+      setIsAuthOpen(false);
+      setSavedActionError(null);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Could not sign in.");
+    } finally {
+      setIsAuthBusy(false);
+    }
+  }
+
+  function signOut() {
+    sessionStorage.removeItem("tastera_access_token");
+    setAuthToken(null);
+    setAccount(null);
+    setSavedItems([]);
+    setSavedActionError(null);
+    if (activePage === "Library") setActivePage("Discover");
   }
 
   function navigate(page: Page) {
@@ -162,19 +271,39 @@ function App() {
             YOUR WORLD <span>/</span> {activePage.toUpperCase()}
           </div>
 
-          <label className="search-box">
-            <span aria-hidden="true">⌕</span>
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPageNumber(1);
-              }}
-              placeholder="Find your next obsession..."
-              aria-label="Search media"
-            />
-            <span className="search-hint">TITLE · CREATOR · GENRE</span>
-          </label>
+          <div className="topbar-actions">
+            <label className="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPageNumber(1);
+                }}
+                placeholder="Find your next obsession..."
+                aria-label="Search media"
+              />
+              <span className="search-hint">TITLE · CREATOR · GENRE</span>
+            </label>
+            {account ? (
+              <button type="button" className="account-button" onClick={signOut}>
+                <span className="account-email">{account.email}</span>
+                <span>Sign out</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="account-button account-button-primary"
+                onClick={() => {
+                  setAuthMode("sign-in");
+                  setAuthError(null);
+                  setIsAuthOpen(true);
+                }}
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </header>
 
         {activePage === "Taste Map" ? (
@@ -192,15 +321,14 @@ function App() {
 
             <div className="profile-summary">
               <p>
-                <strong>{saved.length}</strong> saved{" "}
+                <strong>{savedItems.length}</strong> saved{" "}
                 {saved.length === 1 ? "item" : "items"}
               </p>
               <p>
                 <strong>
                   {
                     new Set(
-                      catalog
-                        .filter((item) => saved.includes(item.id))
+                      savedItems
                         .map((item) => item.category),
                     ).size
                   }
@@ -273,10 +401,17 @@ function App() {
                   {catalogError
                     ? ` ${catalogError}`
                     : activePage === "Library"
-                    ? " Saved items stay in this browser session and reset on refresh."
+                    ? account
+                      ? " Your Library is saved to your account and syncs when you sign in elsewhere."
+                      : " Sign in to save items and sync your Library across devices."
                     : " These catalog picks are not personalized yet."}
                 </span>
               </div>
+              {savedActionError && (
+                <div className="account-feedback account-feedback-error" role="alert">
+                  {savedActionError}
+                </div>
+              )}
               <div className="section-heading">
                 <div>
                   <span className="eyebrow">
@@ -292,7 +427,11 @@ function App() {
                 </div>
 
                 <span className="result-count">
-                  {(catalogError ? visibleMedia.length : totalItems)
+                  {(activePage === "Library"
+                    ? visibleMedia.length
+                    : catalogError
+                      ? visibleMedia.length
+                      : totalItems)
                     .toString()
                     .padStart(2, "0")} ITEMS
                 </span>
@@ -315,7 +454,11 @@ function App() {
                 ))}
               </div>
 
-              {isCatalogLoading ? (
+              {activePage === "Library" && isCheckingAccount ? (
+                <div className="catalog-loading" role="status">
+                  Loading your Library…
+                </div>
+              ) : isCatalogLoading && activePage === "Discover" ? (
                 <div className="catalog-loading" role="status">
                   Loading your discoveries…
                 </div>
@@ -339,13 +482,28 @@ function App() {
                   </h3>
                   <p>
                     {activePage === "Library"
-                      ? "Save a discovery with the heart button and it will appear here."
+                      ? account
+                        ? "Save a discovery with the heart button and it will appear here."
+                        : "Sign in to save discoveries to your personal Library."
                       : "Try another search or select a different category."}
                   </p>
+                  {activePage === "Library" && !account && (
+                    <button
+                      type="button"
+                      className="primary-button library-signin-button"
+                      onClick={() => {
+                        setAuthMode("sign-in");
+                        setAuthError(null);
+                        setIsAuthOpen(true);
+                      }}
+                    >
+                      Sign in or create an account <span>↗</span>
+                    </button>
+                  )}
                 </div>
               )}
 
-              {!isCatalogLoading && totalPages > 1 && (
+              {!isCatalogLoading && activePage === "Discover" && totalPages > 1 && (
                 <nav className="catalog-pagination" aria-label="Catalog pages">
                   <button
                     type="button"
@@ -379,6 +537,89 @@ function App() {
           </small>
         </footer>
       </main>
+
+      {isAuthOpen && (
+        <div
+          className="auth-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isAuthBusy) {
+              setIsAuthOpen(false);
+            }
+          }}
+        >
+          <section
+            className="auth-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-heading"
+          >
+            <button
+              type="button"
+              className="auth-close"
+              aria-label="Close sign-in dialog"
+              onClick={() => setIsAuthOpen(false)}
+              disabled={isAuthBusy}
+            >
+              ×
+            </button>
+            <span className="eyebrow">YOUR TASTERA ACCOUNT</span>
+            <h2 id="auth-heading">
+              {authMode === "sign-up" ? "Create your space." : "Welcome back."}
+            </h2>
+            <p className="auth-intro">
+              Save discoveries to a Library that follows you across devices.
+            </p>
+            <form className="auth-form" onSubmit={submitAuth}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  maxLength={320}
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  autoComplete={authMode === "sign-up" ? "new-password" : "current-password"}
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                />
+                {authMode === "sign-up" && (
+                  <small>Use at least 8 characters.</small>
+                )}
+              </label>
+              {authError && <p className="auth-error" role="alert">{authError}</p>}
+              <button type="submit" className="primary-button auth-submit" disabled={isAuthBusy}>
+                {isAuthBusy
+                  ? "Please wait…"
+                  : authMode === "sign-up"
+                    ? "Create account"
+                    : "Sign in"}
+              </button>
+            </form>
+            <p className="auth-switch">
+              {authMode === "sign-up" ? "Already have an account?" : "New to Tastera?"}{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(authMode === "sign-up" ? "sign-in" : "sign-up");
+                  setAuthError(null);
+                }}
+              >
+                {authMode === "sign-up" ? "Sign in" : "Create an account"}
+              </button>
+            </p>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

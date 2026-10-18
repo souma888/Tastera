@@ -9,11 +9,14 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /api/v1/media`: lists the labeled development catalog with category, text,
   and pagination query parameters.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
+- `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
+- `GET /api/v1/auth/me`: returns the signed-in account.
+- `GET`, `PUT`, and `DELETE /api/v1/me/saved`: read and update that account's saved media.
 - `tests/test_health.py`: tests the health endpoint.
 
 The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
 through `TASTERA_DATABASE_URL`. It includes an editorial development seed and a
-repeatable TMDb popular-movie importer. Authentication, user interactions, and
+repeatable TMDb popular-movie importer. Ratings, password recovery, and
 recommendation serving are not implemented yet. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
@@ -57,9 +60,19 @@ The local Vite origins on ports 5173 and 5174 may request the catalog by
 default. For a deployed frontend, set `TASTERA_CORS_ORIGINS` to a comma-separated
 list of its allowed origins, for example `https://tastera.example.com`.
 
-The migration creates `media_items`, `media_identifiers`, `genres`, and
-`media_genres`. Seed records use stable TASTERA IDs;
+The migrations create catalog tables plus `accounts` and `saved_media`. Seed records use stable TASTERA IDs;
 `python -m app.seed_catalog` is idempotent and only inserts missing records.
+
+## Accounts and saved items
+
+Set `TASTERA_AUTH_SECRET` to a private random value of at least 32 characters
+before enabling account registration or sign-in. Generate one locally with
+`python -c "import secrets; print(secrets.token_urlsafe(48))"`, then add it as a
+protected environment variable in the hosting service. Never commit or paste
+the secret into chat. Passwords are hashed with Argon2; bearer sessions expire
+after 12 hours. The frontend keeps the token in session storage, and saved media
+is stored per account in PostgreSQL. Email verification, password recovery,
+session revocation, and auth rate limiting are not implemented yet.
 
 ## Import movies from TMDb
 

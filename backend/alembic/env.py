@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.database import Base
 import app.models.catalog  # noqa: F401 - registers metadata
+import app.models.account  # noqa: F401 - registers metadata
 
 
 config = context.config

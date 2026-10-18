@@ -1,67 +1,46 @@
 # TASTERA Project Status
 
 **Last reviewed:** 2026-10-18
-**Status:** Early prototype and research foundation  
+**Status:** Deployed catalog foundation; account-backed Library is implemented locally and awaits deployment configuration.
 **Scope:** Cross-media discovery across movies, books, music, and potential future categories.
 
-This document separates what is present in the repository from proposed work. A feature described in the vision is not considered implemented until there is working code and appropriate tests.
+## Implemented
 
-## Implemented in the repository
-
-### Frontend prototype
+### Frontend
 
 - React, TypeScript, and Vite application under `frontend/`.
-- Dark-themed Discover interface with a hero section, search field, category filters, and reusable media cards.
-- Six demonstration entries in `frontend/src/data/media.ts`: Interstellar, Dune, Random Access Memories, Arrival, The Midnight Library, and After Hours.
-- Poster URLs are referenced from external image sources; the repository does not contain a full poster catalog.
-- In-memory saved-item interactions and a Library view.
-- Taste Map prototype using a predefined set of nodes and edges.
-- Profile placeholder that summarizes the current in-memory saved items.
-- A Vercel preview has been configured by the maintainer. Deployment configuration and current domain should be checked in Vercel.
+- Discover loads catalog results from the FastAPI API with search, categories, and pagination; six local items remain as an offline fallback.
+- Reusable media cards, poster fallback art, and a fixed Taste Map prototype.
+- Account registration/sign-in screens and account-backed Library UI. The bearer token is held in browser session storage.
 
-### Backend foundation
+### Backend and data
 
-- FastAPI application entry point in `backend/app/main.py`.
-- `GET /health` health-check endpoint.
-- Basic health-check test in `backend/tests/test_health.py`.
-- Requirements for FastAPI, Uvicorn, Pydantic, pytest, and HTTPX.
+- FastAPI catalog API, SQLAlchemy models, and Alembic migrations.
+- Local SQLite by default; deployed API uses Neon PostgreSQL through `TASTERA_DATABASE_URL`.
+- TMDb popular-movie importer with provider-ID upserts.
+- Argon2 password hashing, signed bearer sessions, and account-scoped saved-item list/save/remove endpoints.
 
-### Recommendation research
+### Research
 
-- MovieLens Latest Small dataset audit notebook: `notebooks/01_dataset_audit.ipynb`.
-- Baseline recommender notebook: `notebooks/02_baseline_recommenders.ipynb`.
-- Reusable baseline classes in `src/tastera/recommenders/baselines.py`:
-  - global-mean rating prediction;
-  - user-mean rating prediction;
-  - popularity ranking;
-  - genre-overlap content-based ranking.
-- Dataset register, data dictionary, and experiment notes in `docs/`.
+- MovieLens audit and baseline recommendation notebooks and documented experiment notes.
+- Reusable popularity and genre-overlap baseline classes under `src/tastera/recommenders/`.
 
-The recorded MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, and 610 users. Its recorded follow-up output reports zero duplicate `(userId, movieId)` pairs, zero missing rating values, and no values outside the expected half-star scale. The baseline notebook's path has since been made portable, and its stale code-cell outputs have been cleared. Rerun both notebooks locally before treating the experiments as freshly reproduced.
+## Current limitations and deployment steps
 
-## Known limitations
-
-- Discover fetches the paginated catalog from the FastAPI API. The backend stores editorial seed records in SQLite by default, with PostgreSQL supported through configuration. A repeatable TMDb popular-movie importer can add and refresh movie metadata by provider ID.
-- Search and category filters are sent to the catalog API; result cards are rendered from its paginated response.
-- Saved items exist only in React state and are lost on refresh. There is no account system or persistent user-interaction database yet.
-- The Profile view is a placeholder, not an authenticated user profile.
-- The Taste Map uses fixed demonstration nodes and edges; it is not generated from a user's saved items or a recommendation graph. A visual issue with duplicate-looking straight edges remains to be diagnosed.
-- The FastAPI backend has a paginated/searchable media catalog endpoint, SQLAlchemy models, an Alembic migration, and an idempotent seed command. Authentication, user-interaction APIs, and recommendation endpoints are not implemented.
-- The recommendation classes are research baselines, not a production recommendation service. No production model-serving pipeline is implemented.
-- Automated multi-source and scheduled ingestion are not implemented. TMDb movie imports are currently an explicit command; books and music remain editorial seed records.
-- Cross-media recommendations between movies, books, and music are a goal, not a demonstrated capability.
-- The Vercel frontend deployment does not itself run the FastAPI backend or provide persistent storage.
+- Configure a private `TASTERA_AUTH_SECRET` in Render before account endpoints can issue or validate sessions. Deploying the new migration also requires the current Render start command to run `python -m alembic upgrade head`.
+- The account flow has no email verification, password recovery, session revocation, or rate limiting yet.
+- Ratings and likes are not stored; only saved items currently contribute user state.
+- The Profile and Taste Map are still prototypes. The Taste Map remains fixed demo data and has a known duplicate-looking edge issue.
+- TMDb ingestion is manual and movie-only. Books and music remain editorial starter records; there is no scheduled/monitored ingestion yet.
+- Recommendation baselines are research code, not deployed personalized or cross-media recommendations.
+- The MovieLens notebooks should be rerun locally before treating their results as freshly reproduced.
 
 ## Recommended next milestones
 
-1. Keep the current frontend checkpoint reproducible and document its local setup.
-2. Add source-specific external identifiers and ingest an initial catalog from approved metadata providers.
-3. Configure a hosted PostgreSQL database and deploy the FastAPI service.
-4. Connect the Vercel frontend to the hosted API and verify the deployed end-to-end catalog flow.
-5. Rerun the MovieLens audit and baseline experiment locally to verify the recorded outputs and updated notebook path.
-6. Add user authentication and durable per-user interactions when ready.
-7. Evaluate ranking approaches before integrating model inference.
-8. Replace hardcoded Taste Map data with validated catalog/user relationship data.
-9. Add additional catalog sources and cross-media modeling after data rights, coverage, and quality are reviewed.
+1. Set `TASTERA_AUTH_SECRET` in Render, deploy the account migration, and verify sign-up/sign-in plus save/remove on the production domain.
+2. Add likes or ratings after the account-backed Library is confirmed in production.
+3. Serve a simple recommendation baseline through the API, then evaluate relevance and catalog coverage.
+4. Expand Books and Music from approved metadata sources and make ingestion observable and repeatable.
+5. Replace the demo Taste Map with evidence-backed catalog/user relationships.
 
-See [architecture](architecture.md), [frontend guide](frontend.md), [backend guide](backend.md), [ML roadmap](ml-roadmap.md), and [development roadmap](roadmap.md).
+See [architecture](architecture.md), [backend guide](backend.md), [ML roadmap](ml-roadmap.md), and [implementation roadmap](roadmap.md).
