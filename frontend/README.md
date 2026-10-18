@@ -1,30 +1,20 @@
 # TASTERA Frontend
 
-React + TypeScript + Vite interface for TASTERA, a cross-media discovery prototype.
+React, TypeScript, and Vite client for the TASTERA discovery app.
 
-## Current features
+## Implemented views and behavior
 
-- Discover page with a hero section, search, and category filters.
-- Reusable media cards for movies, books, and music.
-- In-memory saved items and a Library view.
-- Taste Map demonstration view.
-- Profile placeholder.
+- Discover reads the catalog through the typed API client, with search, category filters, and pagination. A six-item local catalog is available as an offline fallback.
+- Sign-up and sign-in connect to the backend account API.
+- Library loads saved media for the signed-in account and persists changes through the API.
+- For You loads backend genre-based recommendations for signed-in users. “More like this” and “Not for me” send persistent recommendation feedback.
+- Taste Map is fixed prototype data; Profile is not yet a complete, data-backed profile.
 
-Discover requests `GET /api/v1/media` through the typed client in
-`src/services/catalogApi.ts`. Set `VITE_API_BASE_URL` to a deployed backend URL
-(for example, `https://api.example.com/api/v1`). When the API is unavailable,
-the app clearly falls back to the small local demo catalog in `src/data/media.ts`.
-Saves are held in React state and reset when the page reloads. The Taste Map is
-a prototype and is not generated from a trained model or live user data.
+The recommendation baseline is genre-weighted content matching, not a trained ML model. Books and Music catalog coverage is currently limited.
 
-## Requirements
+## Requirements and local development
 
-- Node.js (use a current LTS release where possible)
-- npm
-
-## Local development
-
-From the repository root:
+Use a current Node.js LTS release and npm.
 
 ```powershell
 cd frontend
@@ -32,14 +22,13 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite, usually `http://localhost:5173`.
-
-To use the local FastAPI catalog, run the backend on port 8000 and create
-`frontend/.env.local` with:
+Vite prints the local address, usually `http://localhost:5173`. The API client defaults to `/api/v1`; for local FastAPI on port 8000, create `frontend/.env.local`:
 
 ```text
 VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
+
+Run the backend separately; its setup is documented in [docs/backend.md](../docs/backend.md).
 
 ## Build and lint
 
@@ -48,38 +37,16 @@ npm run build
 npm run lint
 ```
 
-Run these commands after changes. Build/lint results should be checked locally before claiming a change is validated.
+These commands check the frontend build and lint rules; they do not replace browser/API integration checks.
 
-## Project structure
+## Key files
 
-```text
-src/
-├── components/
-│   ├── MediaCard.tsx
-│   ├── TasteMap.tsx
-│   └── TasteMap.css
-├── data/
-│   └── media.ts
-├── services/
-│   └── catalogApi.ts
-├── types/
-│   └── media.ts
-├── App.tsx
-├── App.css
-└── index.css
-```
+| Path | Responsibility |
+|---|---|
+| `src/App.tsx` | Main views and application state |
+| `src/services/` | Catalog, account, saved media, and recommendation API clients |
+| `src/components/` | Shared media and visualization components |
+| `src/data/media.ts` | Small offline fallback catalog |
+| `src/types/` | Shared TypeScript models |
 
-- `App.tsx`: current page selection, search/filter state, and saved-item state.
-- `components/MediaCard.tsx`: reusable media card.
-- `components/TasteMap.tsx`: Taste Map prototype.
-- `services/catalogApi.ts`: typed catalog API client.
-- `data/media.ts`: fallback catalog when the API is unavailable.
-- `types/media.ts`: TypeScript media interfaces.
-
-## Next integration step
-
-The catalog API integration is complete for the current development fixture.
-Durable saved items and profiles should next use authenticated backend APIs and a
-database, rather than relying on page-local state.
-
-See [frontend guide](../docs/frontend.md), [architecture](../docs/architecture.md), and [project status](../docs/PROJECT_STATUS.md).
+For current gaps and product priorities, see [project status](../docs/PROJECT_STATUS.md) and [roadmap](../docs/roadmap.md).

@@ -1,27 +1,21 @@
 # Frontend Guide
 
-## Stack
+## Stack and deployment
 
-- React
-- TypeScript
-- Vite
-- CSS in `src/index.css` and component/application stylesheets
+The client uses React, TypeScript, and Vite. Production frontend: [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app). The API is hosted separately at [tastera.onrender.com](https://tastera.onrender.com); Vercel does not host the FastAPI service.
 
-## Current interface
+## Current behavior
 
-The prototype contains:
+- **Discover:** paginated catalog API, category filters, and search. A six-item local catalog is used when the API cannot be reached.
+- **Account:** registration/sign-in through the backend. The signed bearer token is held in `sessionStorage` and expires after 12 hours.
+- **Library:** account-scoped saved media persisted by the backend.
+- **For You:** recommendations from the backend genre-weighting baseline; signed-in users can submit persisted “More like this” or “Not for me” feedback.
+- **Taste Map:** predefined prototype graph, not derived from catalog relationships or the user's data. A duplicate-looking edge issue is known.
+- **Profile:** placeholder; data-backed profile work remains open.
 
-- Discover page with a hero section, search, category filters, and media cards.
-- Library view showing items saved during the current page session.
-- Taste Map prototype.
-- Profile placeholder with summary counts.
-- Shared `MediaCard` component and a shared `Media` TypeScript type.
-
-The current catalog is the static array in `src/data/media.ts`. Artwork is loaded from external image URLs. The app currently supports Movies, Books, and Music, but the broader product may add other categories later.
+Movies, Books, and Music are supported categories, but Books and Music have limited coverage. Recommendations are not a trained ML system and do not yet provide cross-media ranking.
 
 ## Local development
-
-From the repository root, open a terminal:
 
 ```powershell
 cd frontend
@@ -29,7 +23,13 @@ npm install
 npm run dev
 ```
 
-Vite prints the local URL to open in a browser, usually `http://localhost:5173`.
+To connect to a local API at `http://127.0.0.1:8000`, create `frontend/.env.local`:
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+Start the backend separately using [the backend guide](backend.md). The backend CORS setting must allow the local Vite origin. Do not put backend secrets in frontend environment variables; Vite variables are public in the built client.
 
 ## Validation
 
@@ -38,31 +38,16 @@ npm run build
 npm run lint
 ```
 
-Use the scripts actually present in `frontend/package.json`; if a script name changes, update this guide. A production build checks TypeScript/Vite compilation but is not a substitute for browser and integration testing.
+A successful build/lint does not verify production API connectivity, account isolation, or the complete browser flow.
 
-## Current behavior and limitations
-
-- Search and filters run locally against the six sample records.
-- Saved items are held in React state. Refreshing the page resets them.
-- There is no sign-in, backend API integration, or cross-device persistence.
-- Taste Map nodes and edges are demonstration data, not derived from a user's interactions.
-- External artwork availability and usage terms depend on the source.
-
-These are known prototype boundaries, not unexpected bugs.
-
-## Planned API integration
-
-When the catalog API is ready, replace direct imports from `src/data/media.ts` with a typed API client. Keep the `Media` UI model stable where possible and map API responses at the boundary. Add explicit loading, empty, and error states, and keep pagination/search parameters out of presentation-only components.
-
-Do not introduce frontend-only fake persistence as a substitute for the eventual user database. A small local demo cache can be temporary if clearly labelled, but the intended durable behavior belongs in the backend/database.
-
-## Main files
+## Main source areas
 
 | Path | Responsibility |
 |---|---|
-| `src/App.tsx` | Page selection, current search/filter/saved state |
-| `src/components/MediaCard.tsx` | Reusable media card |
-| `src/components/TasteMap.tsx` | Current Taste Map prototype |
-| `src/data/media.ts` | Temporary sample catalog |
-| `src/types/media.ts` | Frontend media and component types |
-| `src/index.css`, `src/App.css`, component CSS | Visual design and layout |
+| `frontend/src/App.tsx` | Main view selection and UI state |
+| `frontend/src/services/` | HTTP clients for catalog and user features |
+| `frontend/src/components/` | Shared media cards and visual components |
+| `frontend/src/data/media.ts` | Offline fallback content |
+| `frontend/src/types/` | Frontend data types |
+
+See [project status](PROJECT_STATUS.md) for the current feature backlog.

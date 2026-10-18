@@ -1,94 +1,48 @@
 # TASTERA Implementation Roadmap
 
-This roadmap reflects the repository as reviewed on 2026-10-13. It is an implementation plan, not a claim that unchecked items are complete.
+**Reviewed:** 2026-10-18. Shipped capabilities are listed as complete; open work is not presented as already implemented.
 
-## Milestone 0 — Stabilize the current checkpoint
+## Current baseline
 
-- [x] Ensure the frontend checkpoint is present on GitHub `main` (PR #1 merged).
-- [ ] Confirm the frontend builds and lint checks pass from a clean install; this review did not execute them.
-- [x] Replace the generated Vite frontend README with project-specific instructions.
-- [x] Keep demo data clearly separated from future API data.
+The deployed application has a Vercel React frontend, Render FastAPI backend, and Neon PostgreSQL database. It supports catalog browsing, accounts, a saved Library, and genre-based recommendations with persistent feedback. See [project status](PROJECT_STATUS.md) for the detailed feature inventory and limitations.
 
-**Acceptance:** a new checkout can install dependencies and run/build the frontend using documented commands.
+## Next product priorities
 
-## Milestone 1 — Backend foundation
+These are the user's requested next changes, in order:
 
-- [ ] Document Python version and setup.
-- [ ] Organize route handlers, schemas, services, and configuration.
-- [ ] Keep the health endpoint and its test passing.
-- [ ] Add configuration conventions and API error handling.
+1. **Complete Profile:** replace the placeholder with useful account-backed taste and activity information, using existing saved items and feedback where possible.
+2. **Expand Books and Music:** increase useful catalog coverage from reviewed, permitted sources; document source and attribution requirements and make imports repeatable.
+3. **Refresh For You:** add a control near recommendations to request a different batch, especially movies. Define whether refresh rotates candidates or changes ranking and avoid repeating the same batch unnecessarily.
 
-**Acceptance:** backend starts locally, health check responds, and tests pass.
+## Remaining work after those priorities
 
-## Milestone 2 — Canonical catalog and API
+### Product and recommendation quality
 
-- [ ] Define media schema and stable internal IDs.
-- [ ] Add external identifiers, categories, artwork URLs, source provenance, and timestamps.
-- [ ] Choose a first database and migration approach.
-- [ ] Implement catalog listing, detail, search, filters, pagination, and tests.
-- [ ] Seed a small, clearly labelled development catalog.
+- Verify feedback and undo against the deployed account flow; add backend/API tests for recommendations, feedback persistence, and account isolation.
+- Evaluate recommendation relevance, catalog coverage, and diversity with a defined protocol. Current genre weighting is a baseline, not a validated model.
+- Make the Taste Map use traceable catalog/user relationships and fix the duplicate-looking connection issue.
 
-**Acceptance:** API contract is documented, results are paginated and validated, and tests cover normal and invalid requests.
+### Data and operations
 
-## Milestone 3 — Data pipeline and ML baseline
+- Establish repeatable Books and Music import paths and catalog deduplication/provenance.
+- Add monitoring for API health, database/migration operations, and ingestion outcomes; document backup/restore and release/rollback procedures.
+- Review account security gaps: email verification, recovery, session revocation, and rate limiting.
 
-- [x] Add and record MovieLens duplicate-pair and rating-scale validation checks in the audit notebook; rerun locally to verify the current environment.
-- [ ] Rerun the baseline notebook from top to bottom after the path portability fix; stale code-cell outputs have been cleared.
-- [ ] Record reproducible metrics and split details.
-- [ ] Add ranking evaluation with a defined relevance threshold and candidate set.
-- [ ] Document limitations and next experiment.
+### Research
 
-**Acceptance:** experiment results can be reproduced from documented inputs and commands.
+- Rerun the MovieLens audit and baseline notebooks in the current environment before treating recorded results as freshly reproduced.
+- Define a leakage-aware top-K evaluation and compare methods on the same split/candidate set. MovieLens supports movie-only research, not cross-media quality claims.
 
-## Milestone 4 — Frontend/API integration
+## Completed foundation
 
-- [ ] Introduce a typed API client and configurable API base URL.
-- [ ] Replace the local catalog import with API responses.
-- [ ] Add loading, empty, and error states.
-- [ ] Keep search/filter behavior consistent with backend pagination.
+- React/Vite frontend and FastAPI backend are deployed separately.
+- Database-backed catalog with migrations and an idempotent editorial seed.
+- Catalog API with detail lookup, search, categories, and pagination.
+- Manual TMDb popular-movie import with provider-ID deduplication/upsert behavior.
+- Account registration/sign-in, Argon2 password hashing, signed bearer sessions, and account-scoped saved items.
+- For You genre baseline with persisted per-account “more”/“less” feedback.
+- MovieLens research notebooks and documented baseline implementations (fresh reproducibility remains to be confirmed).
 
-**Acceptance:** Discover renders catalog data from FastAPI rather than the static six-item array.
+## How to use this roadmap
 
-## Milestone 5 — User accounts and durable interactions
-
-- [ ] Choose an authentication strategy and threat model.
-- [ ] Add users and authenticated session/token handling.
-- [ ] Persist likes, saves, ratings, and relevant history.
-- [ ] Scope reads/writes to the authenticated user.
-- [ ] Add tests for authorization and cross-user data isolation.
-
-**Acceptance:** user interactions persist after refresh and sign-in on another device, and one user cannot access another user's private data.
-
-## Milestone 6 — Personalized recommendations
-
-- [ ] Define recommendation request/response schema.
-- [ ] Serve the strongest validated baseline through the backend.
-- [ ] Add user-specific ranking only when sufficient interaction data exists.
-- [ ] Include transparent explanation signals where supported.
-- [ ] Measure relevance, coverage, and diversity.
-
-**Acceptance:** recommendations are generated by backend logic, tested, and evaluated—not hardcoded into the UI.
-
-## Milestone 7 — Data-driven Taste Map
-
-- [ ] Define node and edge types and edge provenance.
-- [ ] Generate the graph from catalog metadata, relationships, and user signals.
-- [ ] Deduplicate edges by canonical endpoint pair and relationship type where appropriate.
-- [ ] Distinguish multiple legitimate relationships from accidental duplicate visuals.
-- [ ] Add interaction and accessibility tests.
-
-**Acceptance:** displayed connections can be traced to underlying data and the graph updates when relevant data changes.
-
-## Milestone 8 — Catalog expansion and production readiness
-
-- [ ] Assess source terms, attribution, rate limits, coverage, and permitted caching.
-- [ ] Implement monitored ingestion/update jobs and deduplication.
-- [ ] Add database backups, migrations, logging, security review, and deployment configuration.
-- [ ] Configure frontend/backend origins and secrets safely.
-- [ ] Add smoke tests and deployment/runbook documentation.
-
-**Acceptance:** deployed services can be operated and updated without manual edits to frontend code for each catalog item.
-
-## Recommended priority
-
-Work on the catalog/API foundation first, while completing the ML baseline experiment in parallel. Do not begin with a complex neural model, vector database, graph database, or microservice architecture before there is a reliable catalog, evaluation protocol, and working end-to-end data flow.
+Keep one user-visible outcome at a time. Update [project status](PROJECT_STATUS.md) when behavior changes, the relevant setup/API guide when commands or contracts change, and research notes only with results actually observed. Do not commit credentials or raw datasets. Ask the user before committing changes, per their standing instruction; an explicit request to commit authorizes that commit.

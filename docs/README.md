@@ -1,18 +1,18 @@
 # TASTERA Documentation
 
-Use these documents to understand the current implementation, design decisions, research, and next steps. The repository is still an early prototype; proposed architecture and unchecked roadmap items are not implemented features.
+Use these documents to understand the deployed product, design decisions, research, and remaining work. The app is live, while parts of the broader cross-media vision remain planned.
 
 ## Start here
 
-- [End-to-end project workflow](PROJECT_WORKFLOW.md) — the ordered execution plan, gates, and immediate next actions.
+- [End-to-end project workflow](PROJECT_WORKFLOW.md) — the current work order and development loop.
 - [Project status](PROJECT_STATUS.md) — implemented features, limitations, and immediate priorities.
-- [Architecture](architecture.md) — current data flow and proposed target architecture.
-- [Implementation roadmap](roadmap.md) — milestones with acceptance criteria.
+- [Architecture](architecture.md) — deployed data flow and future direction.
+- [Implementation roadmap](roadmap.md) — shipped foundation and remaining product/operational work.
 
 ## Development guides
 
-- [Frontend guide](frontend.md) — React/Vite setup, current behavior, and API integration plan.
-- [Backend guide](backend.md) — FastAPI setup, tests, and API conventions.
+- [Frontend guide](frontend.md) — React/Vite setup and current behavior.
+- [Backend guide](backend.md) — FastAPI setup, routes, and configuration.
 - [Notebooks guide](../notebooks/README.md) — research notebook workflow and reproducibility.
 
 ## Data and ML research

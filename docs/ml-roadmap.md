@@ -2,6 +2,8 @@
 
 ## What exists today
 
+The deployed app also serves a simple genre-weighted recommendation baseline through the backend. It uses saved genres and per-account `more`/`less` feedback. This is useful product functionality, but it is not the same as a trained/evaluated model and does not establish cross-media recommendation quality. The research items below remain open unless actual run results are recorded.
+
 The repository includes an offline recommendation research foundation:
 
 - `src/tastera/recommenders/baselines.py`: global mean, user mean, popularity, and genre-overlap content-based baselines.

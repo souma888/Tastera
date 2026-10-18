@@ -1,87 +1,62 @@
 # TASTERA Architecture
 
-**Status:** The React frontend uses a FastAPI catalog/account API. Render hosts the API, Neon PostgreSQL stores catalog/accounts/saved media, and Vercel hosts the frontend. Recommendation research remains offline.
+**Reviewed:** 2026-10-18. This describes the current deployed product and separates implemented behavior from future direction.
 
-## Current implementation
+## Current system
 
 ```text
 Browser
-  └── React + TypeScript + Vite
-        ├── paginated catalog API requests
-        ├── local fallback catalog (six media items)
-        ├── account registration and sign-in
-        └── account-backed saved-item Library
-
-FastAPI application
-  ├── GET /health
-  ├── /api/v1/media ──> SQLAlchemy catalog service ──> Neon PostgreSQL
-  ├── /api/v1/auth/* ──> account registration and bearer sessions
-  └── /api/v1/me/saved ──> account-scoped saved media
-
-Offline research
-  ├── MovieLens audit notebook
-  ├── baseline recommender notebook
-  └── Python baseline classes
+  └── React + TypeScript + Vite (Vercel)
+        ├── catalog, account, saved-media, recommendation API clients
+        ├── sessionStorage bearer token
+        └── six-item fallback catalog when API is unavailable
+              │ HTTPS
+              ▼
+        FastAPI (Render)
+          ├── /api/v1/media             catalog/search/detail
+          ├── /api/v1/auth              register/login/current account
+          ├── /api/v1/me/saved          account-scoped library
+          └── /api/v1/me/recommendations genre baseline and feedback
+              │ SQLAlchemy + Alembic
+              ▼
+        Neon PostgreSQL (production)
+        SQLite (local default)
 ```
 
-Discover and the Library use the API. The account-backed Library requires `TASTERA_AUTH_SECRET` in the backend environment. Catalog ingestion is manual, and the Taste Map is still predefined demo data.
-
-## Target architecture (incremental)
+Offline research is separate from request-time recommendations:
 
 ```text
-React frontend
-  └── versioned HTTP API (/api/v1)
-        └── FastAPI
-              ├── catalog/search service
-              ├── interaction and profile service
-              ├── recommendation service
-              └── relationship/Taste Map service
-                    └── PostgreSQL
-                         ├── catalog and identifiers
-                         ├── users and interactions
-                         └── media relationships
-
-Catalog ingestion jobs ──> validated catalog records
-Offline ML experiments ──> versioned model/artifact ──> recommendation service
+MovieLens data (local only) → audit/baseline notebooks → research notes
+TMDb popular movies → manual importer → catalog database
 ```
 
-Interaction, profile, recommendation, and Taste Map services, plus ingestion
-jobs and a hosted PostgreSQL instance, remain proposed future components.
+The frontend is deployed at [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app), and the API at [tastera.onrender.com](https://tastera.onrender.com). Deployment environment variables and hosting configuration are managed by the service dashboards; do not infer secrets or values from this document.
 
-## Main design principles
+## Implemented data and behavior
 
-1. **One normalized catalog:** represent movies, books, music, and future categories through a shared core schema, with optional category-specific metadata.
-2. **Stable internal IDs:** do not use provider IDs or titles as the application's only identifier. Store external IDs separately with their source.
-3. **API boundary:** the frontend should request catalog data and submit interactions through the backend rather than importing the catalog directly.
-4. **User-scoped data:** once accounts exist, a user must only be able to read or modify their own private interactions and collections.
-5. **Data provenance:** retain the source and retrieval/update details for imported metadata and relationships.
-6. **Reproducible ML:** separate offline training/evaluation code from request-time inference; record dataset, split, configuration, metrics, and artifact version.
-7. **Incremental complexity:** begin with a simple database and baseline model. Add vector search, graph infrastructure, queues, or separate services only when measured needs justify them.
-
-## Proposed core entities
-
-| Entity | Purpose |
-|---|---|
-| `media_items` | Canonical item ID, title, category, description, release/publication date, artwork URL and timestamps |
-| `media_identifiers` | Provider, external ID, and linked canonical media item |
-| `genres` / `media_genres` | Normalized genre labels and many-to-many membership |
-| `users` | Account identity and authentication metadata |
-| `user_interactions` | User, media item, interaction type, optional rating, and event time |
-| `collections` / `collection_items` | User-created lists, if needed |
-| `media_relationships` | Source item, target item, relationship type, evidence/provenance, and optional confidence |
-| `ingestion_runs` | Source, run time, status, counts, and errors for catalog jobs |
-
-Treat this as a starting point; finalize fields and constraints when implementing database migrations. Do not store passwords in plain text.
+- SQLAlchemy catalog records support Movies, Books, and Music; the TMDb importer currently handles popular movies and is run manually.
+- Alembic migrations manage the catalog, `accounts`, `saved_media`, and `recommendation_feedback` tables.
+- Passwords are hashed with Argon2. Signed bearer tokens expire after 12 hours; the browser stores them in session storage.
+- Saved items and recommendation feedback are scoped to the authenticated account.
+- Recommendations score catalog candidates using saved genres and persisted “more”/“less” signals. This is a simple, transparent baseline; it has not been established as a trained or evaluated ML model.
+- Profile and Taste Map do not yet reflect a complete live user model; the graph is prototype data.
 
 ## Request flow
 
-1. The frontend requests a paginated catalog endpoint.
-2. FastAPI validates query parameters and calls the catalog service.
-3. The service reads normalized records from the database.
-4. The API returns a stable response schema; the frontend renders loading, empty, success, and error states.
-5. Once authentication and interactions are implemented, likes/saves/ratings are sent to the backend and associated with the authenticated user.
-6. Recommendation requests retrieve candidates, score/rank them, and return explanations or available relationship evidence.
+1. The browser calls the versioned FastAPI API. Discover requests catalog data; account views send a bearer token.
+2. FastAPI validates requests and derives the account from the validated token for private endpoints.
+3. SQLAlchemy reads or writes the configured database. Alembic controls schema changes.
+4. The API returns data for the frontend to render. The frontend can use its small fallback catalog for catalog browsing if API loading fails; private features require a working API and account session.
 
-## Deployment direction
+## Security and operations
 
-A practical first deployment can use Vercel for the frontend, a Python-compatible host for FastAPI, and managed PostgreSQL. Configure the frontend API base URL via environment variables, restrict CORS to known frontend origins, and keep secrets in host environment settings. The current Vercel frontend deployment does not deploy the backend automatically.
+- Configure `TASTERA_DATABASE_URL`, `TASTERA_AUTH_SECRET`, and `TASTERA_CORS_ORIGINS` in the backend host. Never place backend secrets in `VITE_*` variables or Git.
+- Use HTTPS and limit CORS to trusted frontend origins in deployment.
+- Current account limitations include no email verification, password recovery, session revocation, or authentication rate limiting.
+- A manual TMDb import is not a scheduled or monitored ingestion pipeline. Books and Music need broader reviewed sources and coverage.
+
+## Direction
+
+The next product work is data-backed Profile, better Books/Music coverage, and a For You refresh action. Later work can make the Taste Map evidence-based, improve recommendation evaluation and diversity, and automate catalog ingestion. Add vector search, graph infrastructure, or a trained model only when the data and measured need support them.
+
+See [backend guide](backend.md), [frontend guide](frontend.md), and [project status](PROJECT_STATUS.md).
