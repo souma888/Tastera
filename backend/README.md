@@ -12,12 +12,16 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
 - `GET`, `PUT`, and `DELETE /api/v1/me/saved`: read and update that account's saved media.
+- `GET /api/v1/me/recommendations`: ranks unsaved items by saved genres and explicit feedback.
+- `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
+  `more` / `less` recommendation signal for the signed-in account.
 - `tests/test_health.py`: tests the health endpoint.
 
 The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
 through `TASTERA_DATABASE_URL`. It includes an editorial development seed and a
-repeatable TMDb popular-movie importer. Ratings, password recovery, and
-recommendation serving are not implemented yet. See
+repeatable TMDb popular-movie importer. Recommendation feedback is a simple
+genre-weight signal, not a trained model. Ratings and password recovery are not
+implemented yet. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
 ## Requirements
@@ -60,7 +64,8 @@ The local Vite origins on ports 5173 and 5174 may request the catalog by
 default. For a deployed frontend, set `TASTERA_CORS_ORIGINS` to a comma-separated
 list of its allowed origins, for example `https://tastera.example.com`.
 
-The migrations create catalog tables plus `accounts` and `saved_media`. Seed records use stable TASTERA IDs;
+The migrations create catalog tables plus `accounts`, `saved_media`, and
+`recommendation_feedback`. Seed records use stable TASTERA IDs;
 `python -m app.seed_catalog` is idempotent and only inserts missing records.
 
 ## Accounts and saved items

@@ -6,9 +6,11 @@ import {
   getCurrentAccount,
   getRecommendations,
   getSavedMedia,
+  clearRecommendationFeedback,
   registerAccount,
   removeSavedMedia,
   saveMedia,
+  setRecommendationFeedback,
   signIn,
 } from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
@@ -48,8 +50,13 @@ function App() {
   );
   const [savedActionError, setSavedActionError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendationFeedbackItems, setRecommendationFeedbackItems] = useState<
+    { item: Media; feedback: "more" | "less" }[]
+  >([]);
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
+  const [feedbackBusyIds, setFeedbackBusyIds] = useState<string[]>([]);
+  const [feedbackActionError, setFeedbackActionError] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -73,6 +80,8 @@ function App() {
         sessionStorage.removeItem("tastera_access_token");
         setAccount(null);
         setSavedItems([]);
+        setRecommendations([]);
+        setRecommendationFeedbackItems([]);
         setIsCheckingAccount(false);
         setAuthToken(null);
       })
@@ -86,7 +95,7 @@ function App() {
   }, [authToken]);
 
   useEffect(() => {
-    if (!authToken || isCheckingAccount || savedItems.length === 0) return;
+    if (!authToken || isCheckingAccount) return;
 
     const controller = new AbortController();
     Promise.resolve()
@@ -98,11 +107,13 @@ function App() {
       .then((page) => {
         if (!page) return;
         setRecommendations(page.items);
+        setRecommendationFeedbackItems(page.feedback_items);
         setRecommendationMessage(page.message);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setRecommendations([]);
+        setRecommendationFeedbackItems([]);
         setRecommendationMessage("Recommendations could not be loaded right now.");
       })
       .finally(() => {
@@ -206,6 +217,32 @@ function App() {
     }
   }
 
+  async function updateRecommendationFeedback(
+    id: string,
+    feedback: "more" | "less" | null,
+  ) {
+    if (!authToken || feedbackBusyIds.includes(id)) return;
+    setFeedbackActionError(null);
+    setFeedbackBusyIds((current) => [...current, id]);
+    try {
+      if (feedback) {
+        await setRecommendationFeedback(authToken, id, feedback);
+      } else {
+        await clearRecommendationFeedback(authToken, id);
+      }
+      const page = await getRecommendations(authToken);
+      setRecommendations(page.items);
+      setRecommendationFeedbackItems(page.feedback_items);
+      setRecommendationMessage(page.message);
+    } catch (error) {
+      setFeedbackActionError(
+        error instanceof Error ? error.message : "Could not save your recommendation feedback.",
+      );
+    } finally {
+      setFeedbackBusyIds((current) => current.filter((feedbackId) => feedbackId !== id));
+    }
+  }
+
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsAuthBusy(true);
@@ -237,6 +274,7 @@ function App() {
     setSavedItems([]);
     setSavedActionError(null);
     setRecommendations([]);
+    setRecommendationFeedbackItems([]);
     setRecommendationMessage("");
     setIsRecommendationsLoading(false);
     if (activePage === "Library") setActivePage("Discover");
@@ -453,24 +491,55 @@ function App() {
                 ) : recommendations.length > 0 ? (
                   <>
                     <p className="for-you-message">{recommendationMessage}</p>
+                    {feedbackActionError && (
+                      <p className="feedback-error" role="alert">{feedbackActionError}</p>
+                    )}
                     <div className="media-grid">
-                      {recommendations.map(({ item, reason }) => (
+                      {recommendations.map(({ item, reason, feedback }) => (
                         <MediaCard
                           key={item.id}
                           item={item}
                           isSaved={saved.includes(item.id)}
                           onToggleSaved={toggleSaved}
                           recommendationReason={reason}
+                          recommendationFeedback={feedback}
+                          feedbackBusy={feedbackBusyIds.includes(item.id)}
+                          onRecommendationFeedback={updateRecommendationFeedback}
                         />
                       ))}
                     </div>
                   </>
                 ) : (
                   <div className="for-you-empty">
+                    {feedbackActionError && (
+                      <p className="feedback-error" role="alert">{feedbackActionError}</p>
+                    )}
                     <p>{recommendationMessage || "Save a few items to your Library to get personalized picks."}</p>
                     <button type="button" className="text-button" onClick={() => navigate("Library")}>
                       Go to your Library →
                     </button>
+                  </div>
+                )}
+                {recommendationFeedbackItems.length > 0 && (
+                  <div className="feedback-history">
+                    <span className="eyebrow">YOUR FEEDBACK</span>
+                    <ul>
+                      {recommendationFeedbackItems.map(({ item, feedback }) => (
+                        <li key={item.id}>
+                          <span>
+                            <strong>{item.title}</strong>
+                            <small>{feedback === "more" ? "More like this" : "Not for me"}</small>
+                          </span>
+                          <button
+                            type="button"
+                            disabled={feedbackBusyIds.includes(item.id)}
+                            onClick={() => updateRecommendationFeedback(item.id, null)}
+                          >
+                            Undo
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </section>

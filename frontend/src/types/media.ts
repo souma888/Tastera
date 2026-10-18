@@ -23,10 +23,12 @@ export interface Recommendation {
   item: Media;
   reason: string;
   matched_genres: string[];
+  feedback?: "more" | "less" | null;
 }
 
 export interface RecommendationPage {
   items: Recommendation[];
+  feedback_items: { item: Media; feedback: "more" | "less" }[];
   saved_count: number;
   message: string;
 }
@@ -36,4 +38,7 @@ export interface MediaCardProps {
   isSaved: boolean;
   onToggleSaved: (id: string) => void;
   recommendationReason?: string;
+  recommendationFeedback?: "more" | "less" | null;
+  feedbackBusy?: boolean;
+  onRecommendationFeedback?: (id: string, feedback: "more" | "less" | null) => void;
 }

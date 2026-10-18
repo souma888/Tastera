@@ -584,6 +584,87 @@
   letter-spacing: 1px;
 }
 
+.recommendation-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.recommendation-feedback button {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.recommendation-feedback button:hover,
+.recommendation-feedback button.selected {
+  border-color: #8b75bd;
+  background: #b49aff16;
+  color: var(--lavender-hover);
+}
+
+.recommendation-feedback button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.feedback-error {
+  color: #ffc4d4;
+  font-size: 11px;
+}
+
+.feedback-history {
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff03;
+}
+
+.feedback-history ul {
+  display: grid;
+  gap: 9px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feedback-history li,
+.feedback-history li > span {
+  display: flex;
+  align-items: center;
+}
+
+.feedback-history li {
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.feedback-history li > span {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feedback-history small {
+  color: var(--text-muted);
+}
+
+.feedback-history button {
+  border: 0;
+  background: transparent;
+  color: var(--lavender);
+  font-size: 10px;
+  cursor: pointer;
+}
+
 .empty-state {
   padding: 40px 16px;
   border: 1px dashed var(--border-hover);

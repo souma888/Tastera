@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -21,6 +21,9 @@ class AccountRecord(Base):
     )
 
     saved_media: Mapped[list["SavedMediaRecord"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    recommendation_feedback: Mapped[list["RecommendationFeedbackRecord"]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
 
@@ -45,4 +48,27 @@ class SavedMediaRecord(Base):
     )
 
     account: Mapped[AccountRecord] = relationship(back_populates="saved_media")
+    media_item: Mapped["MediaItemRecord"] = relationship()
+
+
+class RecommendationFeedbackRecord(Base):
+    """A per-account signal that an item is a good or poor recommendation."""
+
+    __tablename__ = "recommendation_feedback"
+    __table_args__ = (
+        CheckConstraint("feedback in ('more', 'less')", name="ck_feedback_value"),
+    )
+
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True
+    )
+    media_item_id: Mapped[str] = mapped_column(
+        ForeignKey("media_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    feedback: Mapped[str] = mapped_column(String(10), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    account: Mapped[AccountRecord] = relationship(back_populates="recommendation_feedback")
     media_item: Mapped["MediaItemRecord"] = relationship()

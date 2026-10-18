@@ -3,12 +3,16 @@
 from collections.abc import Iterable
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, selectinload
 
-from app.models.account import SavedMediaRecord
+from app.models.account import RecommendationFeedbackRecord, SavedMediaRecord
 from app.models.catalog import MediaGenre, MediaItemRecord
 from app.schemas.media import MediaCategory
-from app.schemas.recommendations import Recommendation, RecommendationPage
+from app.schemas.recommendations import (
+    Recommendation,
+    RecommendationFeedbackItem,
+    RecommendationPage,
+)
 from app.services.catalog import to_schema
 
 
@@ -66,55 +70,124 @@ def recommend_for_account(
         )
 
     saved_records = _load_records(session, saved_ids)
-    profile_genres: set[str] = set()
+    genre_weights: dict[str, int] = {}
     saved_genres: dict[str, list[MediaItemRecord]] = {}
     for record in saved_records:
         for key in _genres(record):
-            profile_genres.add(key)
+            genre_weights[key] = genre_weights.get(key, 0) + 1
             saved_genres.setdefault(key, []).append(record)
 
-    if not profile_genres:
+    feedback_rows = session.scalars(
+        select(RecommendationFeedbackRecord).where(
+            RecommendationFeedbackRecord.account_id == account_id
+        ).order_by(
+            RecommendationFeedbackRecord.updated_at.desc(),
+            RecommendationFeedbackRecord.media_item_id,
+        )
+    ).all()
+    feedback_by_id = {row.media_item_id: row.feedback for row in feedback_rows}
+    feedback_records = _load_records(session, feedback_by_id)
+    feedback_order = {row.media_item_id: index for index, row in enumerate(feedback_rows)}
+    feedback_records.sort(key=lambda record: feedback_order.get(record.id, len(feedback_order)))
+    feedback_by_genre: dict[str, list[MediaItemRecord]] = {}
+    for record in feedback_records:
+        feedback_value = feedback_by_id.get(record.id)
+        weight = 2 if feedback_value == "more" else -1
+        for key in _genres(record):
+            genre_weights[key] = genre_weights.get(key, 0) + weight
+            if weight > 0:
+                feedback_by_genre.setdefault(key, []).append(record)
+
+    positive_genres = {key for key, weight in genre_weights.items() if weight > 0}
+    if not positive_genres:
         return RecommendationPage(
             items=[],
+            feedback_items=[
+                RecommendationFeedbackItem(
+                    item=to_schema(record), feedback=feedback_by_id[record.id]
+                )
+                for record in feedback_records
+            ],
             saved_count=len(saved_ids),
-            message="Your saved items do not have genre details yet, so there are no reliable matches.",
+            message="Your feedback has narrowed your current genre matches. Save or mark more items you enjoy to broaden the picks.",
         )
 
-    statement = select(MediaItemRecord).where(~MediaItemRecord.id.in_(saved_ids))
+    excluded_ids = saved_ids | {
+        media_id for media_id, value in feedback_by_id.items() if value == "less"
+    }
+    statement = select(MediaItemRecord).where(~MediaItemRecord.id.in_(excluded_ids))
     if category:
         statement = statement.where(MediaItemRecord.category == category.value)
     candidates = session.scalars(
         statement.options(selectinload(MediaItemRecord.genre_links).joinedload(MediaGenre.genre))
     ).all()
 
-    ranked: list[tuple[float, str, str, MediaItemRecord, list[str], MediaItemRecord]] = []
+    ranked: list[
+        tuple[float, str, str, MediaItemRecord, list[str], MediaItemRecord, str]
+    ] = []
     for candidate in candidates:
         candidate_genres = _genres(candidate)
-        overlap = profile_genres.intersection(candidate_genres)
-        if not overlap:
+        overlap = positive_genres.intersection(candidate_genres)
+        if not overlap and candidate.id not in feedback_by_id:
             continue
-        score = len(overlap) / max(len(candidate_genres), 1)
-        best_key = sorted(overlap)[0]
-        source_item = sorted(
-            saved_genres[best_key], key=lambda record: (record.title.casefold(), record.id)
-        )[0]
-        labels = sorted({candidate_genres[key] for key in overlap}, key=str.casefold)
-        ranked.append((score, candidate.title.casefold(), candidate.id, candidate, labels, source_item))
+        score = sum(genre_weights.get(key, 0) for key in candidate_genres) / max(
+            len(candidate_genres), 1
+        )
+        if score <= 0 and candidate.id not in feedback_by_id:
+            continue
+        matched_keys = sorted(key for key in overlap if genre_weights.get(key, 0) > 0)
+        if matched_keys:
+            best_key = matched_keys[0]
+            saved_sources = saved_genres.get(best_key, [])
+            source_records = saved_sources or feedback_by_genre.get(best_key, [])
+            source_item = sorted(
+                source_records, key=lambda record: (record.title.casefold(), record.id)
+            )[0]
+            source_kind = "saved" if saved_sources else "feedback"
+        else:
+            source_item = candidate
+            source_kind = "feedback"
+        labels = sorted({candidate_genres[key] for key in matched_keys}, key=str.casefold)
+        ranked.append(
+            (
+                score,
+                candidate.title.casefold(),
+                candidate.id,
+                candidate,
+                labels,
+                source_item,
+                source_kind,
+            )
+        )
 
     ranked.sort(key=lambda row: (-row[0], row[1], row[2]))
-    recommendations = [
-        Recommendation(
-            item=to_schema(record),
-            matched_genres=labels,
-            reason=f"Because you saved {source_item.title}: both share {', '.join(labels)}.",
+    recommendations = []
+    for _, _, _, record, labels, source_item, source_kind in ranked[:limit]:
+        if source_kind == "saved":
+            reason = f"Because you saved {source_item.title}: both share {', '.join(labels)}."
+        else:
+            reason = f"Shaped by your request for more like {source_item.title}."
+        recommendations.append(
+            Recommendation(
+                item=to_schema(record),
+                matched_genres=labels,
+                reason=reason,
+                feedback=feedback_by_id.get(record.id),
+            )
         )
-        for _, _, _, record, labels, source_item in ranked[:limit]
-    ]
     message = (
-        "Matched to genres from your saved items."
+        "Ranked from genres in your Library and your recommendation feedback."
         if recommendations
         else "No unsaved catalog items match the genres in your Library yet."
     )
     return RecommendationPage(
-        items=recommendations, saved_count=len(saved_ids), message=message
+        items=recommendations,
+        feedback_items=[
+            RecommendationFeedbackItem(
+                item=to_schema(record), feedback=feedback_by_id[record.id]
+            )
+            for record in feedback_records
+        ],
+        saved_count=len(saved_ids),
+        message=message,
     )

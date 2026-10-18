@@ -10,6 +10,9 @@ export default function MediaCard({
   isSaved,
   onToggleSaved,
   recommendationReason,
+  recommendationFeedback,
+  feedbackBusy = false,
+  onRecommendationFeedback,
 }: MediaCardProps) {
   return (
     <article className="media-card">
@@ -56,6 +59,42 @@ export default function MediaCard({
         <span>WHY IT CONNECTS</span>
         {recommendationReason ?? item.connection}
       </p>
+      {onRecommendationFeedback && (
+        <div
+          className="recommendation-feedback"
+          role="group"
+          aria-label={`Feedback for ${item.title}`}
+        >
+          <button
+            type="button"
+            className={recommendationFeedback === "more" ? "selected" : ""}
+            aria-pressed={recommendationFeedback === "more"}
+            disabled={feedbackBusy}
+            onClick={() =>
+              onRecommendationFeedback(
+                item.id,
+                recommendationFeedback === "more" ? null : "more",
+              )
+            }
+          >
+            {recommendationFeedback === "more" ? "✓ More like this" : "More like this"}
+          </button>
+          <button
+            type="button"
+            className={recommendationFeedback === "less" ? "selected" : ""}
+            aria-pressed={recommendationFeedback === "less"}
+            disabled={feedbackBusy}
+            onClick={() =>
+              onRecommendationFeedback(
+                item.id,
+                recommendationFeedback === "less" ? null : "less",
+              )
+            }
+          >
+            {recommendationFeedback === "less" ? "✓ Not for me" : "Not for me"}
+          </button>
+        </div>
+      )}
     </article>
   );
 }

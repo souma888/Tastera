@@ -2,7 +2,7 @@
 
 ## Current status
 
-The FastAPI backend exposes `GET /health` and a database-backed catalog API at `/api/v1/media`. SQLAlchemy models and an Alembic migration define media items, source identifiers, normalized genres, and media-genre links. A repeatable TMDb popular-movie importer is available; authentication, user interactions, scheduled ingestion, and recommendation inference are not implemented.
+The FastAPI backend exposes `GET /health`, a database-backed catalog API, account registration and sign-in, account-scoped saved items, and a transparent genre-based recommendation baseline. Signed-in users can give `more` or `less` feedback; those signals adjust genre weights and are stored per account. This is a simple content-matching baseline, not a trained or evaluated model. Scheduled ingestion and ratings are not implemented.
 
 ## Local setup
 

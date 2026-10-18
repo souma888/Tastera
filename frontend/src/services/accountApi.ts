@@ -78,6 +78,27 @@ export function getRecommendations(token: string, signal?: AbortSignal) {
   });
 }
 
+export function setRecommendationFeedback(
+  token: string,
+  mediaId: string,
+  feedback: "more" | "less",
+) {
+  return request<{ media_id: string; feedback: "more" | "less" }>(
+    `/me/recommendations/feedback/${encodeURIComponent(mediaId)}`,
+    {
+      ...authorized(token, "PUT"),
+      body: JSON.stringify({ feedback }),
+    },
+  );
+}
+
+export function clearRecommendationFeedback(token: string, mediaId: string) {
+  return request<void>(
+    `/me/recommendations/feedback/${encodeURIComponent(mediaId)}`,
+    authorized(token, "DELETE"),
+  );
+}
+
 export function saveMedia(token: string, mediaId: string) {
   return request<Media>(`/me/saved/${encodeURIComponent(mediaId)}`, {
     ...authorized(token, "PUT"),
