@@ -2,7 +2,7 @@
 
 ## Current status
 
-The backend is an early FastAPI foundation. It currently exposes `GET /health`, and `backend/tests/test_health.py` tests that endpoint. Catalog routes, database models, authentication, user interactions, and recommendation inference are not implemented.
+The FastAPI backend exposes `GET /health` and a database-backed catalog API at `/api/v1/media`. SQLAlchemy models and an Alembic migration define media items, source identifiers, normalized genres, and media-genre links. A repeatable TMDb popular-movie importer is available; authentication, user interactions, scheduled ingestion, and recommendation inference are not implemented.
 
 ## Local setup
 
@@ -14,8 +14,31 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+python -m alembic upgrade head
+python -m app.seed_catalog
 uvicorn app.main:app --reload
 ```
+
+SQLite is used by default at `backend/tastera.db`. Set `TASTERA_DATABASE_URL`
+before migration, seeding, and startup to use PostgreSQL. The seed command is
+safe to rerun; it adds missing records and synchronizes known ISBN identifiers.
+
+## Import popular movies from TMDb
+
+Set a TMDb API Read Access Token in `TMDB_READ_ACCESS_TOKEN`, then run from
+`backend/`:
+
+```powershell
+$env:TMDB_READ_ACCESS_TOKEN = "your-read-access-token"
+python -m app.import_tmdb --pages 5
+```
+
+This imports up to 100 movies per invocation (20 per page), fetches director
+credits, and upserts by unique TMDb movie ID. Repeat the command to refresh
+metadata. Use `--pages`, `--language`, and `--request-delay` to adjust the run.
+The token stays in the environment and must not be committed. Consult TMDb's
+[API terms and FAQ](https://developer.themoviedb.org/docs/faq); non-commercial
+use requires attribution, which the frontend displays.
 
 If PowerShell blocks virtual-environment activation, use Command Prompt activation or the appropriate session-only execution-policy workaround. Run commands from `backend/` so that `app.main:app` resolves.
 
@@ -46,7 +69,8 @@ backend/app/
 └── recommender/     # inference adapters, not training notebooks
 ```
 
-This is a proposed structure. Existing `.gitkeep` placeholders do not indicate implemented modules.
+`api/v1/`, `core/`, `models/`, `schemas/`, and `services/` contain the initial
+catalog implementation. Security and recommendation modules remain future work.
 
 ## API conventions
 
@@ -59,16 +83,22 @@ This is a proposed structure. Existing `.gitkeep` placeholders do not indicate i
 - Once accounts exist, derive the acting user from validated authentication, not from a user ID supplied by the client.
 - Configure allowed CORS origins explicitly for deployment.
 
-## First useful product endpoint
+## Catalog endpoint
 
-Implement a paginated catalog endpoint after defining the canonical media schema. A possible contract is:
+The current paginated catalog endpoint supports:
 
 ```http
 GET /api/v1/media?category=Movies&q=space&page=1&limit=20
 ```
 
-This is an example contract, not an existing route. Document allowed categories, query behavior, ordering, pagination fields, and error responses when implementing it.
+`category` accepts `Movies`, `Books`, or `Music`; `q` searches title, creator,
+and primary genre. Results have deterministic title/ID ordering and return
+`items`, `page`, `limit`, `total`, and `total_pages`. Limits range from 1 to 50.
+The Discover page exposes Previous/Next controls when multiple pages are
+available.
 
 ## Configuration and secrets
 
-Use environment variables for deployment-specific configuration. Do not commit API keys, database passwords, tokens, private datasets, or production environment files. Add a safe `.env.example` only when configuration variables are introduced.
+Use `TASTERA_DATABASE_URL` for the database and `TASTERA_CORS_ORIGINS` for
+comma-separated allowed browser origins. Do not commit database passwords,
+tokens, private datasets, or production environment files.

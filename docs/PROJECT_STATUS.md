@@ -1,6 +1,6 @@
 # TASTERA Project Status
 
-**Last reviewed:** 2026-10-13  
+**Last reviewed:** 2026-10-18
 **Status:** Early prototype and research foundation  
 **Scope:** Cross-media discovery across movies, books, music, and potential future categories.
 
@@ -41,25 +41,25 @@ The recorded MovieLens audit covers 9,742 movies, 100,836 ratings, 3,683 tags, a
 
 ## Known limitations
 
-- Discover still uses a local six-item sample array; it does not fetch a catalog from FastAPI.
-- Search and category filtering run in the browser against those six items.
+- Discover fetches the paginated catalog from the FastAPI API. The backend stores editorial seed records in SQLite by default, with PostgreSQL supported through configuration. A repeatable TMDb popular-movie importer can add and refresh movie metadata by provider ID.
+- Search and category filters are sent to the catalog API; result cards are rendered from its paginated response.
 - Saved items exist only in React state and are lost on refresh. There is no account system or persistent user-interaction database yet.
 - The Profile view is a placeholder, not an authenticated user profile.
 - The Taste Map uses fixed demonstration nodes and edges; it is not generated from a user's saved items or a recommendation graph. A visual issue with duplicate-looking straight edges remains to be diagnosed.
-- The FastAPI backend has no media catalog endpoint, database integration, authentication, user-interaction API, or recommendation endpoint.
+- The FastAPI backend has a paginated/searchable media catalog endpoint, SQLAlchemy models, an Alembic migration, and an idempotent seed command. Authentication, user-interaction APIs, and recommendation endpoints are not implemented.
 - The recommendation classes are research baselines, not a production recommendation service. No production model-serving pipeline is implemented.
-- Automated multi-source catalog ingestion and synchronization are not implemented.
+- Automated multi-source and scheduled ingestion are not implemented. TMDb movie imports are currently an explicit command; books and music remain editorial seed records.
 - Cross-media recommendations between movies, books, and music are a goal, not a demonstrated capability.
 - The Vercel frontend deployment does not itself run the FastAPI backend or provide persistent storage.
 
 ## Recommended next milestones
 
 1. Keep the current frontend checkpoint reproducible and document its local setup.
-2. Define the canonical media schema and API contract.
-3. Build and test the FastAPI application structure and a small media catalog endpoint.
-4. Rerun the MovieLens audit and baseline experiment locally to verify the recorded outputs and updated notebook path.
-5. Connect Discover to the catalog API, including loading, empty, and error states.
-6. Add a database and migrations, then user authentication and per-user interactions when ready.
+2. Add source-specific external identifiers and ingest an initial catalog from approved metadata providers.
+3. Configure a hosted PostgreSQL database and deploy the FastAPI service.
+4. Connect the Vercel frontend to the hosted API and verify the deployed end-to-end catalog flow.
+5. Rerun the MovieLens audit and baseline experiment locally to verify the recorded outputs and updated notebook path.
+6. Add user authentication and durable per-user interactions when ready.
 7. Evaluate ranking approaches before integrating model inference.
 8. Replace hardcoded Taste Map data with validated catalog/user relationship data.
 9. Add additional catalog sources and cross-media modeling after data rights, coverage, and quality are reviewed.

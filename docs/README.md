@@ -4,6 +4,7 @@ Use these documents to understand the current implementation, design decisions, 
 
 ## Start here
 
+- [End-to-end project workflow](PROJECT_WORKFLOW.md) — the ordered execution plan, gates, and immediate next actions.
 - [Project status](PROJECT_STATUS.md) — implemented features, limitations, and immediate priorities.
 - [Architecture](architecture.md) — current data flow and proposed target architecture.
 - [Implementation roadmap](roadmap.md) — milestones with acceptance criteria.

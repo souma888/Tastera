@@ -11,6 +11,14 @@ export interface Media {
   connection: string;
 }
 
+export interface MediaPage {
+  items: Media[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
 export interface MediaCardProps {
   item: Media;
   isSaved: boolean;

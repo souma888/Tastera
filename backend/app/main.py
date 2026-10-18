@@ -1,12 +1,36 @@
 """TASTERA FastAPI application entry point."""
 
+from os import getenv
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.media import router as media_router
 
 app = FastAPI(
     title="TASTERA API",
     description="Personalized discovery across movies, books, and music.",
     version="0.1.0",
 )
+
+cors_origins = tuple(
+    origin.strip()
+    for origin in getenv(
+        "TASTERA_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+    ).split(",")
+    if origin.strip()
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=[],
+)
+
+app.include_router(media_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])

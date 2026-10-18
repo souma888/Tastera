@@ -1,19 +1,20 @@
 # TASTERA Architecture
 
-**Status:** The target architecture below is a design direction. Only the frontend prototype, FastAPI health endpoint, and offline recommendation experiments currently exist.
+**Status:** The repository contains a frontend prototype, a FastAPI catalog API backed by a local SQLite database, and offline recommendation experiments. PostgreSQL deployment and production ingestion are future work.
 
 ## Current implementation
 
 ```text
 Browser
   └── React + TypeScript + Vite
-        ├── local sample catalog (six media items)
-        ├── browser-side search and category filters
+        ├── paginated catalog API requests
+        ├── local fallback catalog (six media items)
         ├── in-memory saved-item state
         └── predefined Taste Map prototype
 
 FastAPI application
-  └── GET /health
+  ├── GET /health
+  └── /api/v1/media ──> SQLAlchemy catalog service ──> SQLite (24 seed records)
 
 Offline research
   ├── MovieLens audit notebook
@@ -21,7 +22,7 @@ Offline research
   └── Python baseline classes
 ```
 
-The frontend and backend are not yet integrated. There is no application database or authenticated user state.
+Discover is integrated with the catalog API. There is no authenticated user state or automated catalog ingestion yet.
 
 ## Target architecture (incremental)
 
@@ -42,7 +43,8 @@ Catalog ingestion jobs ──> validated catalog records
 Offline ML experiments ──> versioned model/artifact ──> recommendation service
 ```
 
-This is a proposed destination, not a claim that these components are already implemented.
+Interaction, profile, recommendation, and Taste Map services, plus ingestion
+jobs and a hosted PostgreSQL instance, remain proposed future components.
 
 ## Main design principles
 

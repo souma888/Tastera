@@ -321,6 +321,8 @@ This is an illustrative structure, not the current repository layout. It may be 
 
 See [Project Status](docs/PROJECT_STATUS.md) for a more detailed implemented-versus-planned inventory.
 
+For the complete ordered plan—including dependencies, acceptance criteria, parallel research work, and the recommended next steps—see the [End-to-End Project Workflow](docs/PROJECT_WORKFLOW.md).
+
 ## Getting Started
 
 ### Frontend

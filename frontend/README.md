@@ -10,7 +10,12 @@ React + TypeScript + Vite interface for TASTERA, a cross-media discovery prototy
 - Taste Map demonstration view.
 - Profile placeholder.
 
-The current catalog consists of six sample items in `src/data/media.ts`. The frontend is not yet connected to the FastAPI backend. Saves are held in React state and reset when the page reloads. The Taste Map is a prototype and is not generated from a trained model or live user data.
+Discover requests `GET /api/v1/media` through the typed client in
+`src/services/catalogApi.ts`. Set `VITE_API_BASE_URL` to a deployed backend URL
+(for example, `https://api.example.com/api/v1`). When the API is unavailable,
+the app clearly falls back to the small local demo catalog in `src/data/media.ts`.
+Saves are held in React state and reset when the page reloads. The Taste Map is
+a prototype and is not generated from a trained model or live user data.
 
 ## Requirements
 
@@ -28,6 +33,13 @@ npm run dev
 ```
 
 Open the local URL printed by Vite, usually `http://localhost:5173`.
+
+To use the local FastAPI catalog, run the backend on port 8000 and create
+`frontend/.env.local` with:
+
+```text
+VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
 
 ## Build and lint
 
@@ -48,6 +60,8 @@ src/
 │   └── TasteMap.css
 ├── data/
 │   └── media.ts
+├── services/
+│   └── catalogApi.ts
 ├── types/
 │   └── media.ts
 ├── App.tsx
@@ -58,11 +72,14 @@ src/
 - `App.tsx`: current page selection, search/filter state, and saved-item state.
 - `components/MediaCard.tsx`: reusable media card.
 - `components/TasteMap.tsx`: Taste Map prototype.
-- `data/media.ts`: temporary local sample catalog.
+- `services/catalogApi.ts`: typed catalog API client.
+- `data/media.ts`: fallback catalog when the API is unavailable.
 - `types/media.ts`: TypeScript media interfaces.
 
 ## Next integration step
 
-When the backend catalog endpoint is available, introduce a typed API client and replace the static catalog import with API data. Include loading, empty, and error states. Durable saved items and profiles should later use authenticated backend APIs and a database, rather than relying on page-local state.
+The catalog API integration is complete for the current development fixture.
+Durable saved items and profiles should next use authenticated backend APIs and a
+database, rather than relying on page-local state.
 
 See [frontend guide](../docs/frontend.md), [architecture](../docs/architecture.md), and [project status](../docs/PROJECT_STATUS.md).

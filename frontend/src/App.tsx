@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import { mediaItems } from "./data/media";
-import type { MediaFilter } from "./types/media";
+import { getCatalog } from "./services/catalogApi";
+import type { Media, MediaFilter } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
@@ -19,13 +20,62 @@ type Page = (typeof navigationItems)[number][0];
 function App() {
   const [category, setCategory] = useState<MediaFilter>("All");
   const [search, setSearch] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(mediaItems.length);
   const [saved, setSaved] = useState<string[]>([]);
   const [activePage, setActivePage] = useState<Page>("Discover");
+  const [catalog, setCatalog] = useState<Media[]>(mediaItems);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activePage === "Taste Map" || activePage === "Your Profile") return;
+
+    const controller = new AbortController();
+    const searchQuery = search.trim();
+    const loadCatalog = window.setTimeout(async () => {
+      setIsCatalogLoading(true);
+      setCatalogError(null);
+
+      try {
+        const page = await getCatalog(
+          {
+            category: category === "All" ? undefined : category,
+            q: searchQuery || undefined,
+            page: pageNumber,
+            limit: 50,
+          },
+          controller.signal,
+        );
+
+        setCatalog(page.items);
+        setTotalPages(page.total_pages);
+        setTotalItems(page.total);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+
+        setCatalog(mediaItems);
+        setTotalPages(1);
+        setTotalItems(mediaItems.length);
+        setCatalogError(
+          "The catalog API is unavailable, so you are viewing the local demo collection.",
+        );
+      } finally {
+        if (!controller.signal.aborted) setIsCatalogLoading(false);
+      }
+    }, searchQuery ? 250 : 0);
+
+    return () => {
+      window.clearTimeout(loadCatalog);
+      controller.abort();
+    };
+  }, [activePage, category, search, pageNumber]);
 
   const visibleMedia = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return mediaItems.filter((item) => {
+    return catalog.filter((item) => {
       const matchesCategory =
         category === "All" || item.category === category;
 
@@ -41,7 +91,7 @@ function App() {
 
       return matchesCategory && matchesSearch && matchesLibrary;
     });
-  }, [category, search, activePage, saved]);
+  }, [catalog, category, search, activePage, saved]);
 
   function toggleSaved(id: string) {
     setSaved((current) =>
@@ -116,7 +166,10 @@ function App() {
             <span aria-hidden="true">⌕</span>
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPageNumber(1);
+              }}
               placeholder="Find your next obsession..."
               aria-label="Search media"
             />
@@ -146,7 +199,7 @@ function App() {
                 <strong>
                   {
                     new Set(
-                      mediaItems
+                      catalog
                         .filter((item) => saved.includes(item.id))
                         .map((item) => item.category),
                     ).size
@@ -210,13 +263,18 @@ function App() {
             )}
 
             <section className="discovery-section" id="discovery">
-              <div className="demo-notice" role="note">
+              <div
+                className={`demo-notice ${catalogError ? "catalog-warning" : ""}`}
+                role="status"
+              >
                 <span className="demo-notice-mark" aria-hidden="true">✦</span>
                 <span>
-                  <strong>Demo collection</strong>
-                  {activePage === "Library"
+                  <strong>{catalogError ? "Catalog offline" : "Catalog connected"}</strong>
+                  {catalogError
+                    ? ` ${catalogError}`
+                    : activePage === "Library"
                     ? " Saved items stay in this browser session and reset on refresh."
-                    : " These sample picks illustrate Tastera; they are not personalized yet."}
+                    : " These catalog picks are not personalized yet."}
                 </span>
               </div>
               <div className="section-heading">
@@ -234,7 +292,9 @@ function App() {
                 </div>
 
                 <span className="result-count">
-                  {visibleMedia.length.toString().padStart(2, "0")} ITEMS
+                  {(catalogError ? visibleMedia.length : totalItems)
+                    .toString()
+                    .padStart(2, "0")} ITEMS
                 </span>
               </div>
 
@@ -245,14 +305,21 @@ function App() {
                     key={item}
                     className={category === item ? "selected" : ""}
                     aria-pressed={category === item}
-                    onClick={() => setCategory(item)}
+                    onClick={() => {
+                      setCategory(item);
+                      setPageNumber(1);
+                    }}
                   >
                     {item}
                   </button>
                 ))}
               </div>
 
-              {visibleMedia.length > 0 ? (
+              {isCatalogLoading ? (
+                <div className="catalog-loading" role="status">
+                  Loading your discoveries…
+                </div>
+              ) : visibleMedia.length > 0 ? (
                 <div className="media-grid">
                   {visibleMedia.map((item) => (
                     <MediaCard
@@ -277,6 +344,26 @@ function App() {
                   </p>
                 </div>
               )}
+
+              {!isCatalogLoading && totalPages > 1 && (
+                <nav className="catalog-pagination" aria-label="Catalog pages">
+                  <button
+                    type="button"
+                    disabled={pageNumber <= 1}
+                    onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </button>
+                  <span>Page {pageNumber} of {totalPages}</span>
+                  <button
+                    type="button"
+                    disabled={pageNumber >= totalPages}
+                    onClick={() => setPageNumber((page) => Math.min(totalPages, page + 1))}
+                  >
+                    Next
+                  </button>
+                </nav>
+              )}
             </section>
           </>
         )}
@@ -287,6 +374,9 @@ function App() {
           </span>
           <span>MADE FOR THE CURIOUS.</span>
           <span>DISCOVER BEYOND THE OBVIOUS ↗</span>
+          <small className="tmdb-attribution">
+            This product uses the TMDB API but is not endorsed or certified by TMDB.
+          </small>
         </footer>
       </main>
     </div>
