@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.media import router as media_router
+from app.api.v1.recommendations import router as recommendations_router
 from app.api.v1.saved import router as saved_router
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(media_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(saved_router, prefix="/api/v1")
+app.include_router(recommendations_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])

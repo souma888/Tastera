@@ -19,8 +19,21 @@ export interface MediaPage {
   total_pages: number;
 }
 
+export interface Recommendation {
+  item: Media;
+  reason: string;
+  matched_genres: string[];
+}
+
+export interface RecommendationPage {
+  items: Recommendation[];
+  saved_count: number;
+  message: string;
+}
+
 export interface MediaCardProps {
   item: Media;
   isSaved: boolean;
   onToggleSaved: (id: string) => void;
+  recommendationReason?: string;
 }

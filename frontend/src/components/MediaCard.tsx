@@ -9,6 +9,7 @@ export default function MediaCard({
   item,
   isSaved,
   onToggleSaved,
+  recommendationReason,
 }: MediaCardProps) {
   return (
     <article className="media-card">
@@ -53,7 +54,7 @@ export default function MediaCard({
       <p className="creator">{item.creator}</p>
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>
-        {item.connection}
+        {recommendationReason ?? item.connection}
       </p>
     </article>
   );

@@ -4,6 +4,7 @@ import TasteMap from "./components/TasteMap";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
+  getRecommendations,
   getSavedMedia,
   registerAccount,
   removeSavedMedia,
@@ -12,7 +13,7 @@ import {
 } from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
-import type { Media, MediaFilter } from "./types/media";
+import type { Media, MediaFilter, Recommendation } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
@@ -46,6 +47,9 @@ function App() {
     Boolean(sessionStorage.getItem("tastera_access_token")),
   );
   const [savedActionError, setSavedActionError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendationMessage, setRecommendationMessage] = useState("");
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -55,15 +59,9 @@ function App() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
 
   useEffect(() => {
-    if (!authToken) {
-      setAccount(null);
-      setSavedItems([]);
-      setIsCheckingAccount(false);
-      return;
-    }
+    if (!authToken) return;
 
     let cancelled = false;
-    setIsCheckingAccount(true);
     Promise.all([getCurrentAccount(authToken), getSavedMedia(authToken)])
       .then(([currentAccount, items]) => {
         if (cancelled) return;
@@ -73,6 +71,9 @@ function App() {
       .catch(() => {
         if (cancelled) return;
         sessionStorage.removeItem("tastera_access_token");
+        setAccount(null);
+        setSavedItems([]);
+        setIsCheckingAccount(false);
         setAuthToken(null);
       })
       .finally(() => {
@@ -83,6 +84,33 @@ function App() {
       cancelled = true;
     };
   }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken || isCheckingAccount || savedItems.length === 0) return;
+
+    const controller = new AbortController();
+    Promise.resolve()
+      .then(() => {
+        if (controller.signal.aborted) return null;
+        setIsRecommendationsLoading(true);
+        return getRecommendations(authToken, controller.signal);
+      })
+      .then((page) => {
+        if (!page) return;
+        setRecommendations(page.items);
+        setRecommendationMessage(page.message);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setRecommendations([]);
+        setRecommendationMessage("Recommendations could not be loaded right now.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsRecommendationsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [authToken, isCheckingAccount, savedItems]);
 
   useEffect(() => {
     if (activePage !== "Discover") return;
@@ -188,6 +216,7 @@ function App() {
           ? await registerAccount(authEmail, authPassword)
           : await signIn(authEmail, authPassword);
       sessionStorage.setItem("tastera_access_token", result.access_token);
+      setIsCheckingAccount(true);
       setAccount(result.account);
       setSavedItems([]);
       setAuthToken(result.access_token);
@@ -207,6 +236,9 @@ function App() {
     setAccount(null);
     setSavedItems([]);
     setSavedActionError(null);
+    setRecommendations([]);
+    setRecommendationMessage("");
+    setIsRecommendationsLoading(false);
     if (activePage === "Library") setActivePage("Discover");
   }
 
@@ -387,6 +419,60 @@ function App() {
                 </div>
 
                 <div className="hero-index">01 — 04</div>
+              </section>
+            )}
+
+            {activePage === "Discover" && (
+              <section className="for-you-section" aria-labelledby="for-you-heading">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">BUILT FROM YOUR LIBRARY</span>
+                    <h2 id="for-you-heading">For you.</h2>
+                  </div>
+                  {recommendations.length > 0 && (
+                    <span className="result-count">{recommendations.length} PICKS</span>
+                  )}
+                </div>
+                {!account ? (
+                  <div className="for-you-empty">
+                    <p>Sign in and save a few favorites to get recommendations shaped by your genres.</p>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => {
+                        setAuthMode("sign-in");
+                        setAuthError(null);
+                        setIsAuthOpen(true);
+                      }}
+                    >
+                      Sign in to personalize <span>↗</span>
+                    </button>
+                  </div>
+                ) : isCheckingAccount || isRecommendationsLoading ? (
+                  <div className="catalog-loading" role="status">Finding your next favorites…</div>
+                ) : recommendations.length > 0 ? (
+                  <>
+                    <p className="for-you-message">{recommendationMessage}</p>
+                    <div className="media-grid">
+                      {recommendations.map(({ item, reason }) => (
+                        <MediaCard
+                          key={item.id}
+                          item={item}
+                          isSaved={saved.includes(item.id)}
+                          onToggleSaved={toggleSaved}
+                          recommendationReason={reason}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="for-you-empty">
+                    <p>{recommendationMessage || "Save a few items to your Library to get personalized picks."}</p>
+                    <button type="button" className="text-button" onClick={() => navigate("Library")}>
+                      Go to your Library →
+                    </button>
+                  </div>
+                )}
               </section>
             )}
 

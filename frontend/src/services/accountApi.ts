@@ -1,4 +1,4 @@
-import type { Media } from "../types/media";
+import type { Media, RecommendationPage } from "../types/media";
 
 export interface Account {
   id: string;
@@ -69,6 +69,13 @@ export async function getSavedMedia(token: string) {
     authorized(token),
   );
   return response.items;
+}
+
+export function getRecommendations(token: string, signal?: AbortSignal) {
+  return request<RecommendationPage>("/me/recommendations?limit=6", {
+    ...authorized(token),
+    signal,
+  });
 }
 
 export function saveMedia(token: string, mediaId: string) {
