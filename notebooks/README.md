@@ -19,7 +19,7 @@ This directory contains reproducible analysis and experiments for TASTERA. Noteb
 | Notebook | Purpose | Status |
 |---|---|---|
 | `01_dataset_audit.ipynb` | Inspect MovieLens schemas, quality, ID consistency, ratings, genres, tags and identifier coverage | Recorded audit and follow-up validation outputs exist. Rerun locally if the dataset changes or to verify the current environment. |
-| `02_baseline_recommenders.ipynb` | Compare rating-prediction baselines and inspect popularity/content-based recommendations | Path portability fix is committed and stale code-cell outputs have been cleared. **Rerun from top to bottom** to verify the notebook in the current environment. Rating metrics do not evaluate top-K ranking quality. |
+| `02_baseline_recommenders.ipynb` | Compare rating-prediction baselines and evaluate popularity, genre-content and item-item collaborative ranking | Executed against the current local MovieLens Latest Small files. It records a per-user chronological ranking holdout, ranking metrics, and the environment-independent experiment outputs. See `docs/experiments/02-baseline-recommenders.md`. |
 
 ## Related documentation
 
@@ -34,6 +34,7 @@ From the repository root, activate the project virtual environment and launch Ju
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+python -m pip install -r notebooks/requirements.txt
 python -m jupyter notebook
 ```
 

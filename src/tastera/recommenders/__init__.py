@@ -5,10 +5,12 @@ from .baselines import (
     PopularityRecommender,
     UserMeanRecommender,
 )
+from .item_item import ItemItemCollaborativeRecommender
 
 __all__ = [
     "ContentBasedRecommender",
     "GlobalMeanRecommender",
     "PopularityRecommender",
     "UserMeanRecommender",
+    "ItemItemCollaborativeRecommender",
 ]

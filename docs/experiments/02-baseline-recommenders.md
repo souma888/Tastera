@@ -8,21 +8,34 @@ Establish transparent baselines before implementing more advanced personalized r
 2. **User-mean rating predictor:** predicts a user's mean training rating. Unknown users fall back to the global training mean.
 3. **Popularity ranking:** ranks movies by number of training ratings, then by mean rating. A minimum rating-count threshold is applied.
 4. **Genre-content ranking:** identifies genres from a user's highly rated movies (rating >= 4.0) and ranks unseen movies by genre overlap.
+5. **Item-item collaborative filtering:** computes sparse cosine similarities between user-centered movie-rating vectors from training data and scores unseen movies from the user's training history.
 
 The first two methods are rating-prediction baselines. The latter two produce ranked recommendations. Their outputs should not be compared as if they measure the same task.
 
 ## Evaluation design
-The notebook creates a chronological holdout using the 80th percentile of rating timestamps. Ratings strictly earlier than the cutoff are training data; ratings at or after it are test data. The models are fitted on training data only.
+The rating-prediction section creates a global chronological holdout at the 80th percentile of rating timestamps. It reports MAE and RMSE for the global-mean and user-mean predictors; only the training split is used for fitting.
 
-The notebook reports MAE and RMSE for the two rating predictors. Popularity and content examples are shown as qualitative recommendation lists. A future ranking-evaluation stage should add metrics such as Recall@K, Precision@K, and NDCG@K, with an explicit definition of relevant items and user eligibility.
+The ranking section uses a separate per-user chronological holdout: each user's latest 20% of interactions (at least one) are test data. A held-out rating >= 4.0 is relevant. Users need at least five training ratings, one training rating >= 4.0, and one relevant test rating. Recommendations exclude all training items. Popularity and item-item similarity are fitted on ranking-training data only; the content model uses training likes plus catalog genres. The recorded run evaluated 590 of 610 users, with 80,419 training interactions, 20,417 test interactions, and 9,509 relevant test interactions. The executed notebook recorded Python 3.13.9, NumPy 2.3.5, pandas 2.3.3, SciPy 1.16.3, and scikit-learn 1.7.2.
+
+Reported metrics are Precision@10 (fixed denominator 10), Recall@10, binary NDCG@10, and catalog coverage@10 (unique recommended catalog items divided by the 9,742-title catalog). Results from the recorded run:
+
+| Ranking method | Precision@10 | Recall@10 | NDCG@10 | Catalog coverage@10 |
+|---|---:|---:|---:|---:|
+| Popularity | 0.0581 | 0.0490 | 0.0756 | 1.01% |
+| Item-item collaborative filtering | 0.0376 | 0.0366 | 0.0485 | 16.88% |
+| Genre-content | 0.0014 | 0.0012 | 0.0014 | 0.57% |
+
+Popularity is the strongest of these three by NDCG@10 on this split. Item-item collaborative filtering has much broader catalog coverage but lower ranking relevance. Genre-only matching is weak on this dataset and evaluation. These are baseline results, not a tuned or production-validated model.
 
 ## Limitations
 - MovieLens Latest Small is a benchmark dataset, not a representative sample of all viewers or current streaming behavior.
 - User-mean predictions are a simple baseline, not matrix factorization or a full collaborative-filtering model.
 - Genre overlap is deliberately simple and cannot capture plot, cast, mood, language, or nuanced user taste.
+- The per-user chronological split evaluates observed future ratings, not unobserved impressions; the >=4.0 relevance rule and eligible-user criteria affect the results.
+- The item-item baseline has no shrinkage, hyperparameter tuning, or cold-start fallback.
 - Popularity is prone to head-item bias.
 - Timestamp splitting is more realistic than a random split for some scenarios, but it is not a complete simulation of a production recommendation system.
-- Metrics should be interpreted alongside split details and data coverage.
+- Metrics should be interpreted alongside split details, coverage, and the user's current recommender feedback signals.
 
 ## Reproducibility
-Run `notebooks/02_baseline_recommenders.ipynb` from the repository. It saves rating metrics to `data/processed/baseline_rating_metrics.csv` and recommendation examples to `data/processed/`.
+Run `notebooks/02_baseline_recommenders.ipynb` from the repository. It saves rating metrics, ranking metrics, and recommendation examples to ignored files under `data/processed/` and retains compact results in the notebook output.
