@@ -21,7 +21,7 @@ class MediaItem(BaseModel):
     creator: str
     category: MediaCategory
     genre: str
-    image: HttpUrl
+    image: HttpUrl | None = None
     description: str | None = None
     connection: str = Field(
         description="Editorial explanation for this development catalog item."

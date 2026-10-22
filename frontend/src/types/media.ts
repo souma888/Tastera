@@ -7,7 +7,7 @@ export interface Media {
   creator: string;
   category: MediaCategory;
   genre: string;
-  image: string;
+  image: string | null;
   connection: string;
 }
 

@@ -26,14 +26,16 @@ export default function MediaCard({
           </div>
         </div>
 
-        <img
-          src={item.image}
-          alt={`${item.title} cover`}
-          loading="lazy"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
+        {item.image && (
+          <img
+            src={item.image}
+            alt={`${item.title} cover`}
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        )}
 
         <span className="media-type">{item.category}</span>
 

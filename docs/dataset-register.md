@@ -45,6 +45,37 @@ The user's successful local audit notebook run reproduced these dimensions. The 
 - The audit's follow-up duplicate (userId, movieId) and rating-scale validation must be run and reviewed before modeling decisions are finalized.
 - Re-run notebooks/01_dataset_audit.ipynb whenever the local dataset changes and keep conclusions tied to the executed version.
 
+## Book catalog source: Open Library monthly dumps
+
+| Field | Record |
+|---|---|
+| Dataset | Open Library Works and Authors monthly dumps |
+| Provider | Internet Archive / Open Library |
+| Official download and guidance | https://openlibrary.org/developers/dumps |
+| Local expected path | User-selected directory outside the repository; pass paths to `backend/app/import_openlibrary.py` |
+| Files | Works dump and Authors dump, plain text or gzip |
+| Role | Book titles, authors, descriptions, subjects, and stable Work identifiers |
+| Retrieval method | Manual download of monthly bulk dumps; importer streams them and builds a temporary SQLite author lookup |
+| Import limits | Default 500; maximum 5,000 added or updated records per run; subject filtered |
+| Images | No cover images imported; rights not established for catalog reuse |
+| License/terms status | Open Library recommends monthly dumps for bulk use and asks applications to follow its data guidance; check current dump licensing before redistribution or commercial use |
+| Attribution | Source is recorded as Open Library in imported catalog rows; keep provider attribution with redistributed data |
+| Git policy | Dump files and temporary author index stay outside Git |
+
+## Music catalog source: MusicBrainz core API
+
+| Field | Record |
+|---|---|
+| Dataset | Release-group search results (core metadata only) |
+| Provider | MetaBrainz Foundation / MusicBrainz |
+| API | https://musicbrainz.org/doc/MusicBrainz_API |
+| Retrieval method | Repeatable API importer in `backend/app/import_musicbrainz.py`; identifying User-Agent; minimum 1.1 seconds between requests |
+| Role | Album title, artist credit, first release date, and release-group MBID |
+| License/terms status | Core metadata is CC0. Supplementary tags/genres have separate CC BY-NC-SA terms and are excluded |
+| Images | Cover Art Archive images are not imported; artwork rights remain with owners |
+| Attribution | Imported rows identify MusicBrainz core as the source |
+| Git policy | No credentials required; no downloaded source files |
+
 ## Future candidate sources
 
 Do not integrate these until intended use, licensing, attribution, API limits, and storage needs have been reviewed.
@@ -52,8 +83,8 @@ Do not integrate these until intended use, licensing, attribution, API limits, a
 | Source | Potential role | Review before use |
 |---|---|---|
 | TMDB | Movie descriptions, genres, cast, release information and artwork metadata | API terms, attribution, commercial-use requirements, rate limits and caching rules |
-| Open Library | Book titles, authors, subjects and publication metadata | API usage guidance for interactive use; data-dump licenses and attribution for bulk data |
-| MusicBrainz | Music recordings, artists, releases and identifiers | Core versus supplementary-data licenses, API rate limits and service terms |
+| Open Library API | Interactive book lookup beyond the imported dump | API usage guidance; identify the application and cache appropriately; do not use it as a third-party catalog backend |
+| Cover Art Archive | Music or release artwork | Image rights remain with their respective owners; obtain rights before reuse |
 
 ## Update protocol
 

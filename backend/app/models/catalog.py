@@ -19,7 +19,7 @@ class MediaItemRecord(Base):
     category: Mapped[str] = mapped_column(String(50), index=True)
     primary_genre: Mapped[str] = mapped_column(String(100), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    artwork_url: Mapped[str] = mapped_column(Text)
+    artwork_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     connection: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(
