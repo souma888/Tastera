@@ -66,32 +66,55 @@ class UserMeanRecommender:
 
 
 class PopularityRecommender:
-    """Rank movies by training-set rating count, with mean rating as tie-breaker.
+    """Rank movies by rating count or a smoothed training-set mean.
 
     The minimum rating count prevents a movie with one high rating from outranking
-    established titles. Only training ratings should be passed to fit().
+    established titles. Bayesian scoring shrinks low-support means toward the
+    global training mean. Only training ratings should be passed to fit().
     """
 
     def fit(
-        self, ratings: pd.DataFrame, movies: pd.DataFrame, min_ratings: int = 20
+        self,
+        ratings: pd.DataFrame,
+        movies: pd.DataFrame,
+        min_ratings: int = 20,
+        score_mode: str = "count",
+        prior_weight: float = 20.0,
     ) -> "PopularityRecommender":
         _require_columns(ratings, _REQUIRED_RATINGS, "ratings")
         _require_columns(movies, _REQUIRED_MOVIES, "movies")
         if min_ratings < 1:
             raise ValueError("min_ratings must be at least 1")
+        if score_mode not in {"count", "bayesian"}:
+            raise ValueError("score_mode must be 'count' or 'bayesian'")
+        if prior_weight < 0:
+            raise ValueError("prior_weight cannot be negative")
         stats = (
             ratings.groupby("movieId")["rating"]
             .agg(mean_rating="mean", rating_count="count")
             .reset_index()
         )
+        global_mean = float(ratings["rating"].mean())
+        denominator = stats["rating_count"] + prior_weight
+        stats["bayesian_score"] = (
+            stats["rating_count"] * stats["mean_rating"]
+            + prior_weight * global_mean
+        ) / denominator.replace(0, 1)
         eligible = stats[stats["rating_count"] >= min_ratings]
+        order = (
+            ["rating_count", "mean_rating", "title"]
+            if score_mode == "count"
+            else ["bayesian_score", "rating_count", "title"]
+        )
+        ascending = [False, False, True]
         self.ranked_movies_ = (
             eligible.merge(movies[["movieId", "title", "genres"]], on="movieId", how="left")
-            .sort_values(["rating_count", "mean_rating", "title"],
-                         ascending=[False, False, True])
+            .sort_values(order, ascending=ascending)
             .reset_index(drop=True)
         )
         self.min_ratings_ = min_ratings
+        self.score_mode_ = score_mode
+        self.prior_weight_ = prior_weight
         return self
 
     def recommend(self, n: int = 10, exclude_movie_ids=None) -> pd.DataFrame:

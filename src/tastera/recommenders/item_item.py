@@ -17,7 +17,12 @@ class ItemItemCollaborativeRecommender:
     collaborative signal for additional candidates.
     """
 
-    def fit(self, ratings: pd.DataFrame, movies: pd.DataFrame) -> "ItemItemCollaborativeRecommender":
+    def fit(
+        self,
+        ratings: pd.DataFrame,
+        movies: pd.DataFrame,
+        shrinkage: float = 0.0,
+    ) -> "ItemItemCollaborativeRecommender":
         required_ratings = {"userId", "movieId", "rating"}
         required_movies = {"movieId", "title"}
         missing_ratings = required_ratings - set(ratings.columns)
@@ -28,6 +33,8 @@ class ItemItemCollaborativeRecommender:
             )
         if ratings.empty or movies.empty:
             raise ValueError("ratings and movies must not be empty")
+        if shrinkage < 0:
+            raise ValueError("shrinkage cannot be negative")
 
         self.movies_ = movies[["movieId", "title"]].drop_duplicates("movieId").copy()
         self.movie_ids_ = self.movies_["movieId"].to_numpy()
@@ -49,8 +56,19 @@ class ItemItemCollaborativeRecommender:
             dtype=np.float32,
         )
         self.similarity_ = cosine_similarity(self.user_item_.T, dense_output=False).tocsr()
+        if shrinkage:
+            binary_user_item = csr_matrix(
+                (np.ones(len(known), dtype=np.float32), (rows, columns)),
+                shape=(len(self.user_ids_), len(self.movie_ids_)),
+            )
+            co_ratings = (binary_user_item.T @ binary_user_item).tocsr()
+            co_ratings.setdiag(0)
+            co_ratings.eliminate_zeros()
+            co_ratings.data /= co_ratings.data + shrinkage
+            self.similarity_ = self.similarity_.multiply(co_ratings).tocsr()
         self.similarity_.setdiag(0)
         self.similarity_.eliminate_zeros()
+        self.shrinkage_ = shrinkage
         self.rated_by_user_ = {
             user_id: set(group["movieId"].tolist())
             for user_id, group in known.groupby("userId")

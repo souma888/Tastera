@@ -19,7 +19,7 @@ This directory contains reproducible analysis and experiments for TASTERA. Noteb
 | Notebook | Purpose | Status |
 |---|---|---|
 | `01_dataset_audit.ipynb` | Inspect MovieLens schemas, quality, ID consistency, ratings, genres, tags and identifier coverage | Recorded audit and follow-up validation outputs exist. Rerun locally if the dataset changes or to verify the current environment. |
-| `02_baseline_recommenders.ipynb` | Compare rating-prediction baselines and evaluate popularity, genre-content and item-item collaborative ranking | Executed against the current local MovieLens Latest Small files. It records a per-user chronological ranking holdout, ranking metrics, and the environment-independent experiment outputs. See `docs/experiments/02-baseline-recommenders.md`. |
+| `02_baseline_recommenders.ipynb` | Compare rating-prediction baselines and evaluate popularity, genre-content and item-item collaborative ranking | Executed against the current local MovieLens Latest Small files. It records a per-user chronological test holdout plus a separate validation-only hyperparameter comparison. See `docs/experiments/02-baseline-recommenders.md`. |
 
 ## Related documentation
 
