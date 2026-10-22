@@ -160,6 +160,27 @@ With the virtual environment active and current directory set to `backend/`:
 pytest
 ```
 
+## Compare recommendation strategies on app signals
+
+With a migrated database containing account saves and recommendation feedback,
+run this read-only leave-last-20%-out comparison from `backend/`:
+
+```powershell
+python -m app.evaluate_recommendations --category Movies --k 12
+python -m app.evaluate_recommendations --category all --k 12
+```
+
+It compares the movie genre baseline and co-save item-item ranker using Hit
+Rate@K, Recall@K, NDCG@K, catalog coverage, and intra-list genre diversity.
+Books and Music are measured with the genre baseline until their own interaction
+data supports separate models. At least five accounts with three or more
+positive items per category are required before metrics are reported. Saves and
+“More like this” are treated as positive outcomes; “Not for me” removes items
+from candidates. Because the app does not yet log recommendation impressions,
+these are interaction-based proxy metrics, not impression-aware online metrics.
+The command prints an insufficient-data status instead of a score when the
+minimum cohort is unavailable.
+
 ## Development conventions
 
 - Add product endpoints under a versioned prefix such as `/api/v1`.
