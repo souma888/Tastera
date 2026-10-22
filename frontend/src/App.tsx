@@ -185,6 +185,26 @@ function App() {
     });
   }, [activePage, catalog, category, savedItems, search]);
 
+  const profileStats = useMemo(() => {
+    const categoryCounts = savedItems.reduce<Record<string, number>>((counts, item) => {
+      counts[item.category] = (counts[item.category] ?? 0) + 1;
+      return counts;
+    }, {});
+    const genreCounts = savedItems.reduce<Record<string, number>>((counts, item) => {
+      counts[item.genre] = (counts[item.genre] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    return {
+      categoryCounts,
+      topGenres: Object.entries(genreCounts)
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+        .slice(0, 5),
+      moreFeedback: recommendationFeedbackItems.filter((entry) => entry.feedback === "more").length,
+      lessFeedback: recommendationFeedbackItems.filter((entry) => entry.feedback === "less").length,
+    };
+  }, [recommendationFeedbackItems, savedItems]);
+
   async function toggleSaved(id: string) {
     if (!authToken) {
       setAuthMode("sign-in");
@@ -327,10 +347,12 @@ function App() {
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="avatar">T</div>
+          <div className="avatar">{(account?.email?.[0] ?? "T").toUpperCase()}</div>
           <div>
-            <div className="profile-name">Your taste profile</div>
-            <div className="profile-subtitle">A work in progress</div>
+            <div className="profile-name">{account?.email ?? "Your taste profile"}</div>
+            <div className="profile-subtitle">
+              {account ? `${saved.length} saved ${saved.length === 1 ? "item" : "items"}` : "Sign in to personalize"}
+            </div>
           </div>
         </div>
       </aside>
@@ -379,33 +401,123 @@ function App() {
         {activePage === "Taste Map" ? (
           <TasteMap />
         ) : activePage === "Your Profile" ? (
-          <section className="map-placeholder profile-page">
-            <span className="eyebrow">YOUR TASTERA PROFILE</span>
-            <h1>
-              Your taste. <span>Your universe.</span>
-            </h1>
-            <p>
-              Your profile will eventually summarize your favorite genres,
-              themes, creators, and cross-media interests.
-            </p>
-
-            <div className="profile-summary">
-              <p>
-                <strong>{savedItems.length}</strong> saved{" "}
-                {saved.length === 1 ? "item" : "items"}
-              </p>
-              <p>
-                <strong>
-                  {
-                    new Set(
-                      savedItems
-                        .map((item) => item.category),
-                    ).size
-                  }
-                </strong>{" "}
-                media categories represented in your saved items
-              </p>
+          <section className="profile-page" aria-labelledby="profile-heading">
+            <div className="profile-header">
+              <div className="profile-avatar" aria-hidden="true">
+                {(account?.email?.[0] ?? "T").toUpperCase()}
+              </div>
+              <div>
+                <span className="eyebrow">YOUR TASTERA PROFILE</span>
+                <h1 id="profile-heading">
+                  Your taste. <span>Your universe.</span>
+                </h1>
+                <p>{account ? account.email : "A snapshot of what you have saved and explored."}</p>
+              </div>
             </div>
+
+            {!account ? (
+              <div className="profile-callout">
+                <div>
+                  <strong>Your taste profile starts with your Library.</strong>
+                  <p>Sign in and save a few movies, books, or albums. Your profile will summarize those choices here.</p>
+                </div>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    setAuthMode("sign-in");
+                    setAuthError(null);
+                    setIsAuthOpen(true);
+                  }}
+                >
+                  Sign in <span>↗</span>
+                </button>
+              </div>
+            ) : isCheckingAccount ? (
+              <div className="catalog-loading" role="status">Loading your taste profile…</div>
+            ) : (
+              <>
+                <div className="profile-stat-grid" aria-label="Your activity summary">
+                  <article className="profile-stat-card">
+                    <span>SAVED TO LIBRARY</span>
+                    <strong>{savedItems.length}</strong>
+                    <small>{savedItems.length === 1 ? "discovery" : "discoveries"}</small>
+                  </article>
+                  <article className="profile-stat-card">
+                    <span>MEDIA TYPES</span>
+                    <strong>{Object.values(profileStats.categoryCounts).filter(Boolean).length}</strong>
+                    <small>of 3 in your Library</small>
+                  </article>
+                  <article className="profile-stat-card">
+                    <span>MORE LIKE THIS</span>
+                    <strong>{profileStats.moreFeedback}</strong>
+                    <small>positive signals</small>
+                  </article>
+                  <article className="profile-stat-card">
+                    <span>NOT FOR ME</span>
+                    <strong>{profileStats.lessFeedback}</strong>
+                    <small>to tune future picks</small>
+                  </article>
+                </div>
+
+                <div className="profile-content-grid">
+                  <section className="profile-panel" aria-labelledby="profile-genres-heading">
+                    <div className="profile-panel-heading">
+                      <span className="eyebrow">FROM YOUR SAVED ITEMS</span>
+                      <h2 id="profile-genres-heading">Your current themes</h2>
+                    </div>
+                    {profileStats.topGenres.length ? (
+                      <div className="profile-genre-list">
+                        {profileStats.topGenres.map(([genre, count]) => (
+                          <div className="profile-genre-row" key={genre}>
+                            <span>{genre}</span>
+                            <div className="profile-genre-track" aria-hidden="true">
+                              <span style={{ width: `${(count / profileStats.topGenres[0][1]) * 100}%` }} />
+                            </div>
+                            <small>{count}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="profile-empty-copy">Save something you love and your genres will begin to appear here.</p>
+                    )}
+                    <div className="profile-category-tags">
+                      {(["Movies", "Books", "Music"] as const).map((mediaCategory) => (
+                        <span key={mediaCategory} className={profileStats.categoryCounts[mediaCategory] ? "has-items" : ""}>
+                          {mediaCategory}<b>{profileStats.categoryCounts[mediaCategory] ?? 0}</b>
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="profile-panel" aria-labelledby="profile-recent-heading">
+                    <div className="profile-panel-heading">
+                      <span className="eyebrow">YOUR LIBRARY</span>
+                      <h2 id="profile-recent-heading">Recently saved</h2>
+                    </div>
+                    {savedItems.length ? (
+                      <ul className="profile-recent-list">
+                        {savedItems.slice(0, 5).map((item) => (
+                          <li key={item.id}>
+                            <span className="profile-recent-category">
+                              {item.category === "Movies" ? "FILM" : item.category === "Books" ? "BOOK" : "MUSIC"}
+                            </span>
+                            <span className="profile-recent-title"><strong>{item.title}</strong><small>{item.creator}</small></span>
+                            <span className="profile-recent-genre">{item.genre}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="profile-empty-copy">Your saved discoveries will show up here.</p>
+                    )}
+                    <button type="button" className="text-button profile-library-link" onClick={() => navigate("Library")}>
+                      Open your Library →
+                    </button>
+                  </section>
+                </div>
+                <p className="profile-note">This snapshot reflects your saved items and recommendation feedback. It is not a trained personality or recommendation model.</p>
+              </>
+            )}
           </section>
         ) : (
           <>
