@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
+from app.services.import_tracking import catalog_import_run
 
 
 API_URL = "https://musicbrainz.org/ws/2/release-group"
@@ -33,6 +34,7 @@ class ImportSummary:
     added: int = 0
     updated: int = 0
     skipped: int = 0
+    run_id: int | None = None
 
 
 class RateLimitedClient:
@@ -171,30 +173,37 @@ def import_albums(
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     with httpx.Client(headers=headers, timeout=30) as http, SessionLocal() as session:
         client = RateLimitedClient(http, request_delay)
-        for page in range(pages):
-            payload = client.search(query=query, offset=page * 100)
-            results = payload.get("release-groups", [])
-            if not isinstance(results, list) or not results:
-                break
-            for item in results:
-                if not isinstance(item, dict):
-                    summary.skipped += 1
-                    continue
-                try:
-                    outcome = _upsert_release_group(session, item, genre.strip() or "Album")
-                    if outcome == "skipped":
+        with catalog_import_run(session, PROVIDER) as run:
+            summary.run_id = run.id
+            for page in range(pages):
+                payload = client.search(query=query, offset=page * 100)
+                results = payload.get("release-groups", [])
+                if not isinstance(results, list) or not results:
+                    break
+                for item in results:
+                    if not isinstance(item, dict):
                         summary.skipped += 1
+                        run.skipped += 1
                         continue
-                    session.commit()
-                    if outcome == "added":
-                        summary.added += 1
-                    else:
-                        summary.updated += 1
-                except (KeyError, TypeError, ValueError):
-                    session.rollback()
-                    summary.skipped += 1
-            if len(results) < 100:
-                break
+                    try:
+                        outcome = _upsert_release_group(session, item, genre.strip() or "Album")
+                        if outcome == "skipped":
+                            summary.skipped += 1
+                            run.skipped += 1
+                            continue
+                        if outcome == "added":
+                            summary.added += 1
+                            run.added += 1
+                        else:
+                            summary.updated += 1
+                            run.updated += 1
+                        session.commit()
+                    except (KeyError, TypeError, ValueError):
+                        session.rollback()
+                        summary.skipped += 1
+                        run.skipped += 1
+                if len(results) < 100:
+                    break
     return summary
 
 
@@ -215,7 +224,7 @@ def main() -> None:
     except (httpx.HTTPError, ValueError) as error:
         parser.error(str(error))
     print(
-        f"MusicBrainz import complete: {summary.added} added, "
+        f"MusicBrainz import run {summary.run_id} complete: {summary.added} added, "
         f"{summary.updated} updated, {summary.skipped} skipped."
     )
 

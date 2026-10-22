@@ -9,6 +9,7 @@ export interface Media {
   genre: string;
   image: string | null;
   connection: string;
+  saved_at?: string;
 }
 
 export interface MediaPage {

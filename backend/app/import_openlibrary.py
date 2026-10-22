@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
+from app.services.import_tracking import catalog_import_run
 
 
 PROVIDER = "openlibrary-work"
@@ -49,6 +50,7 @@ class ImportSummary:
     added: int = 0
     updated: int = 0
     skipped: int = 0
+    run_id: int | None = None
 
 
 def _open_text(path: Path) -> TextIO:
@@ -218,22 +220,28 @@ def import_books(
             raise ValueError("The Authors dump contained no usable author records.")
         with closing(sqlite3.connect(author_db)) as author_index, SessionLocal() as session:
             author_index.execute("PRAGMA query_only = ON")
-            for record in _iter_dump(works_path):
-                try:
-                    outcome = _upsert_book(session, record, author_index, subjects)
-                    if outcome == "skipped":
+            with catalog_import_run(session, PROVIDER) as run:
+                summary.run_id = run.id
+                for record in _iter_dump(works_path):
+                    try:
+                        outcome = _upsert_book(session, record, author_index, subjects)
+                        if outcome == "skipped":
+                            summary.skipped += 1
+                            run.skipped += 1
+                            continue
+                        if outcome == "added":
+                            summary.added += 1
+                            run.added += 1
+                        else:
+                            summary.updated += 1
+                            run.updated += 1
+                        session.commit()
+                        if summary.added + summary.updated >= limit:
+                            break
+                    except (KeyError, TypeError, ValueError):
+                        session.rollback()
                         summary.skipped += 1
-                        continue
-                    session.commit()
-                    if outcome == "added":
-                        summary.added += 1
-                    else:
-                        summary.updated += 1
-                    if summary.added + summary.updated >= limit:
-                        break
-                except (KeyError, TypeError, ValueError):
-                    session.rollback()
-                    summary.skipped += 1
+                        run.skipped += 1
     return summary
 
 
@@ -255,7 +263,7 @@ def main() -> None:
     except (FileNotFoundError, ValueError) as error:
         parser.error(str(error))
     print(
-        f"Open Library import complete: {summary.added} added, "
+        f"Open Library import run {summary.run_id} complete: {summary.added} added, "
         f"{summary.updated} updated, {summary.skipped} skipped."
     )
 

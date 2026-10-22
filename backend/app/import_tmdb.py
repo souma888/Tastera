@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
+from app.services.import_tracking import catalog_import_run
 
 
 TMDB_API = "https://api.themoviedb.org/3"
@@ -30,6 +31,7 @@ class ImportSummary:
     added: int = 0
     updated: int = 0
     skipped: int = 0
+    run_id: int | None = None
 
 
 def _request(client: httpx.Client, path: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -173,35 +175,41 @@ def import_popular_movies(
         headers={"Authorization": f"Bearer {token}", "accept": "application/json"},
         timeout=30,
     ) as client, SessionLocal() as session:
-        genres_response = _request(client, "/genre/movie/list", {"language": language})
-        genre_names = {int(genre["id"]): genre["name"] for genre in genres_response["genres"]}
-        genre_cache: dict[str, Genre] = {}
+        with catalog_import_run(session, PROVIDER) as run:
+            summary.run_id = run.id
+            genres_response = _request(client, "/genre/movie/list", {"language": language})
+            genre_names = {int(genre["id"]): genre["name"] for genre in genres_response["genres"]}
+            genre_cache: dict[str, Genre] = {}
 
-        for page in range(1, pages + 1):
-            results = _request(
-                client,
-                "/movie/popular",
-                {"language": language, "page": page},
-            ).get("results", [])
-            for movie in results:
-                external_id = str(movie.get("id", ""))
-                if not external_id.isdigit() or not (movie.get("title") or movie.get("original_title")):
-                    summary.skipped += 1
-                    continue
-                try:
-                    outcome = _upsert_movie(
-                        session, movie, genre_names, genre_cache, client
-                    )
-                    if outcome == "added":
-                        summary.added += 1
-                    else:
-                        summary.updated += 1
-                    session.commit()
-                except (httpx.HTTPError, KeyError, ValueError):
-                    session.rollback()
-                    summary.skipped += 1
-                if request_delay:
-                    time.sleep(request_delay)
+            for page in range(1, pages + 1):
+                results = _request(
+                    client,
+                    "/movie/popular",
+                    {"language": language, "page": page},
+                ).get("results", [])
+                for movie in results:
+                    external_id = str(movie.get("id", ""))
+                    if not external_id.isdigit() or not (movie.get("title") or movie.get("original_title")):
+                        summary.skipped += 1
+                        run.skipped += 1
+                        continue
+                    try:
+                        outcome = _upsert_movie(
+                            session, movie, genre_names, genre_cache, client
+                        )
+                        if outcome == "added":
+                            summary.added += 1
+                            run.added += 1
+                        else:
+                            summary.updated += 1
+                            run.updated += 1
+                        session.commit()
+                    except (httpx.HTTPError, KeyError, ValueError):
+                        session.rollback()
+                        summary.skipped += 1
+                        run.skipped += 1
+                    if request_delay:
+                        time.sleep(request_delay)
 
     return summary
 
@@ -221,7 +229,7 @@ def main() -> None:
         request_delay=args.request_delay,
     )
     print(
-        f"TMDb import complete: {summary.added} added, "
+        f"TMDb import run {summary.run_id} complete: {summary.added} added, "
         f"{summary.updated} updated, {summary.skipped} skipped."
     )
 

@@ -10,7 +10,7 @@ from app.core.database import get_session
 from app.core.security import get_current_account
 from app.models.account import AccountRecord, SavedMediaRecord
 from app.models.catalog import MediaItemRecord
-from app.schemas.accounts import SavedMediaPage
+from app.schemas.accounts import SavedMedia, SavedMediaPage
 from app.schemas.media import MediaItem
 from app.services.catalog import to_schema
 
@@ -22,13 +22,18 @@ AccountDep = Annotated[AccountRecord, Depends(get_current_account)]
 
 @router.get("", response_model=SavedMediaPage)
 def list_saved_media(session: SessionDep, account: AccountDep) -> SavedMediaPage:
-    records = session.scalars(
-        select(MediaItemRecord)
+    records = session.execute(
+        select(MediaItemRecord, SavedMediaRecord.saved_at)
         .join(SavedMediaRecord, SavedMediaRecord.media_item_id == MediaItemRecord.id)
         .where(SavedMediaRecord.account_id == account.id)
         .order_by(SavedMediaRecord.saved_at.desc(), MediaItemRecord.title)
     ).all()
-    return SavedMediaPage(items=[to_schema(record) for record in records])
+    return SavedMediaPage(
+        items=[
+            SavedMedia(**to_schema(record).model_dump(), saved_at=saved_at)
+            for record, saved_at in records
+        ]
+    )
 
 
 @router.put("/{media_id}", response_model=MediaItem)

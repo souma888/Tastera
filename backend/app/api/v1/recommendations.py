@@ -30,6 +30,7 @@ def get_recommendations(
     category: MediaCategory | None = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    exclude_ids: Annotated[list[str], Query()] = [],
     strategy: Literal["auto", "genre", "item_item"] = "auto",
 ) -> RecommendationPage:
     """Recommend unsaved items; optionally select a ranker for comparison."""
@@ -40,6 +41,7 @@ def get_recommendations(
         category=category,
         limit=limit,
         offset=offset,
+        exclude_ids=set(exclude_ids),
         strategy=strategy,
     )
 

@@ -32,6 +32,14 @@ const navigationItems = [
 
 type Page = (typeof navigationItems)[number][0];
 
+function formatSavedDate(value?: string) {
+  if (!value) return "Recently saved";
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf())
+    ? "Recently saved"
+    : `Saved ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}
+
 function App() {
   const [category, setCategory] = useState<MediaFilter>("All");
   const [search, setSearch] = useState("");
@@ -59,6 +67,7 @@ function App() {
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [recommendationTotal, setRecommendationTotal] = useState(0);
   const [recommendationNextOffset, setRecommendationNextOffset] = useState<number | null>(null);
+  const [seenRecommendationIds, setSeenRecommendationIds] = useState<string[]>([]);
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
   const [feedbackBusyIds, setFeedbackBusyIds] = useState<string[]>([]);
   const [feedbackActionError, setFeedbackActionError] = useState<string | null>(null);
@@ -70,12 +79,17 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthBusy, setIsAuthBusy] = useState(false);
 
-  function applyRecommendationPage(page: RecommendationPage) {
+  function applyRecommendationPage(page: RecommendationPage, resetSeen = false) {
     setRecommendations(page.items);
     setRecommendationFeedbackItems(page.feedback_items);
     setRecommendationMessage(page.message);
     setRecommendationTotal(page.total);
     setRecommendationNextOffset(page.next_offset);
+    setSeenRecommendationIds((current) =>
+      resetSeen
+        ? page.items.map(({ item }) => item.id)
+        : [...new Set([...current, ...page.items.map(({ item }) => item.id)])],
+    );
   }
 
   useEffect(() => {
@@ -119,7 +133,7 @@ function App() {
       })
       .then((page) => {
         if (!page) return;
-        applyRecommendationPage(page);
+        applyRecommendationPage(page, true);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -127,6 +141,7 @@ function App() {
         setRecommendationFeedbackItems([]);
         setRecommendationTotal(0);
         setRecommendationNextOffset(null);
+        setSeenRecommendationIds([]);
         setRecommendationMessage("Recommendations could not be loaded right now.");
       })
       .finally(() => {
@@ -238,7 +253,7 @@ function App() {
         setSavedItems((current) =>
           current.some((savedItem) => savedItem.id === id)
             ? current
-            : [item, ...current],
+            : [{ ...item, saved_at: new Date().toISOString() }, ...current],
         );
       }
     } catch (error) {
@@ -264,7 +279,7 @@ function App() {
         await clearRecommendationFeedback(authToken, id);
       }
       const page = await getRecommendations(authToken);
-      applyRecommendationPage(page);
+      applyRecommendationPage(page, true);
     } catch (error) {
       setFeedbackActionError(
         error instanceof Error ? error.message : "Could not save your recommendation feedback.",
@@ -279,7 +294,12 @@ function App() {
     setIsRecommendationsLoading(true);
     setFeedbackActionError(null);
     try {
-      const page = await getRecommendations(authToken, undefined, recommendationNextOffset);
+      const page = await getRecommendations(
+        authToken,
+        undefined,
+        0,
+        seenRecommendationIds,
+      );
       applyRecommendationPage(page);
     } catch (error) {
       setFeedbackActionError(
@@ -325,6 +345,7 @@ function App() {
     setRecommendationMessage("");
     setRecommendationTotal(0);
     setRecommendationNextOffset(null);
+    setSeenRecommendationIds([]);
     setIsRecommendationsLoading(false);
     if (activePage === "Library") setActivePage("Discover");
   }
@@ -593,7 +614,7 @@ function App() {
                             <span className="profile-recent-category">
                               {item.category === "Movies" ? "FILM" : item.category === "Books" ? "BOOK" : "MUSIC"}
                             </span>
-                            <span className="profile-recent-title"><strong>{item.title}</strong><small>{item.creator}</small></span>
+                            <span className="profile-recent-title"><strong>{item.title}</strong><small>{formatSavedDate(item.saved_at)} · {item.creator}</small></span>
                             <span className="profile-recent-genre">{item.genre}</span>
                           </li>
                         ))}
@@ -606,6 +627,32 @@ function App() {
                     </button>
                   </section>
                 </div>
+                <section className="profile-panel profile-feedback-panel" aria-labelledby="profile-feedback-heading">
+                  <div className="profile-panel-heading">
+                    <span className="eyebrow">YOUR RECOMMENDATION SIGNALS</span>
+                    <h2 id="profile-feedback-heading">What you respond to</h2>
+                  </div>
+                  {recommendationFeedbackItems.length ? (
+                    <ul className="profile-feedback-list">
+                      {recommendationFeedbackItems.slice(0, 4).map(({ item, feedback }) => (
+                        <li key={item.id}>
+                          <span className={`profile-feedback-mark ${feedback}`} aria-hidden="true">
+                            {feedback === "more" ? "+" : "−"}
+                          </span>
+                          <span className="profile-feedback-title">
+                            <strong>{item.title}</strong>
+                            <small>{item.category} · {item.genre}</small>
+                          </span>
+                          <span className="profile-feedback-value">
+                            {feedback === "more" ? "More like this" : "Not for me"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="profile-empty-copy">Use “More like this” or “Not for me” on a For You pick to shape future recommendations. Your latest signals will appear here.</p>
+                  )}
+                </section>
                 <p className="profile-note">This snapshot reflects your saved items and recommendation feedback. It is not a trained personality or recommendation model.</p>
               </>
             )}

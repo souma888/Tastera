@@ -72,6 +72,7 @@ def _recommend_by_item_similarity(
     category: MediaCategory | None,
     limit: int,
     offset: int,
+    exclude_ids: set[str],
     saved_ids: set[str],
     feedback_by_id: dict[str, str],
     feedback_records: list[MediaItemRecord],
@@ -89,7 +90,7 @@ def _recommend_by_item_similarity(
     positive_records = _load_records(session, positive_ids)
     seed_records = [record for record in positive_records if record.category == "Movies"]
     candidate_category = category or MediaCategory.MOVIES
-    excluded_ids = saved_ids | {
+    excluded_ids = saved_ids | exclude_ids | {
         media_id for media_id, value in feedback_by_id.items() if value == "less"
     }
     candidates = session.scalars(
@@ -239,6 +240,7 @@ def recommend_for_account(
     category: MediaCategory | None,
     limit: int,
     offset: int = 0,
+    exclude_ids: set[str] | None = None,
     strategy: str = "auto",
 ) -> RecommendationPage:
     """Rank unsaved catalog items by overlap with the account's saved genres."""
@@ -250,6 +252,7 @@ def recommend_for_account(
             )
         ).all()
     )
+    excluded_recommendation_ids = exclude_ids or set()
     if not saved_ids:
         if strategy == "item_item":
             return RecommendationPage(
@@ -283,6 +286,7 @@ def recommend_for_account(
             category=category,
             limit=limit,
             offset=offset,
+            exclude_ids=excluded_recommendation_ids,
             saved_ids=saved_ids,
             feedback_by_id=feedback_by_id,
             feedback_records=feedback_records,
@@ -322,7 +326,7 @@ def recommend_for_account(
             message="Your feedback has narrowed your current genre matches. Save or mark more items you enjoy to broaden the picks.",
         )
 
-    excluded_ids = saved_ids | {
+    excluded_ids = saved_ids | excluded_recommendation_ids | {
         media_id for media_id, value in feedback_by_id.items() if value == "less"
     }
     statement = select(MediaItemRecord).where(~MediaItemRecord.id.in_(excluded_ids))

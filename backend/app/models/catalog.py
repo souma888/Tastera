@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -78,3 +78,21 @@ class MediaGenre(Base):
 
     media_item: Mapped[MediaItemRecord] = relationship(back_populates="genre_links")
     genre: Mapped[Genre] = relationship(back_populates="media_links")
+
+
+class CatalogImportRunRecord(Base):
+    """Auditable counts and outcome for one catalog import execution."""
+
+    __tablename__ = "catalog_import_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(100), index=True)
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    added: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    updated: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    skipped: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

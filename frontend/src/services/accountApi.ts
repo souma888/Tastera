@@ -75,8 +75,11 @@ export function getRecommendations(
   token: string,
   signal?: AbortSignal,
   offset = 0,
+  excludeIds: string[] = [],
 ) {
-  return request<RecommendationPage>(`/me/recommendations?limit=12&offset=${offset}`, {
+  const query = new URLSearchParams({ limit: "12", offset: String(offset) });
+  excludeIds.forEach((id) => query.append("exclude_ids", id));
+  return request<RecommendationPage>(`/me/recommendations?${query.toString()}`, {
     ...authorized(token),
     signal,
   });

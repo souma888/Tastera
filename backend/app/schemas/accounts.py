@@ -1,5 +1,7 @@
 """Request and response schemas for accounts and saved items."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.media import MediaItem
@@ -22,5 +24,9 @@ class AuthResponse(BaseModel):
     account: Account
 
 
+class SavedMedia(MediaItem):
+    saved_at: datetime
+
+
 class SavedMediaPage(BaseModel):
-    items: list[MediaItem]
+    items: list[SavedMedia]
