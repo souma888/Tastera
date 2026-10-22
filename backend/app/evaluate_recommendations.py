@@ -273,7 +273,11 @@ def evaluate_category(
         "eligible_accounts": len(rows),
         "k": k,
         "method_results": results,
-        "status": "proxy evaluation; saved/positive-feedback events, not logged impressions",
+        "status": (
+            "preliminary proxy; fewer than 30 eligible accounts and no logged impressions"
+            if len(rows) < 30
+            else "proxy evaluation; saved/positive-feedback events, not logged impressions"
+        ),
     }
 
 
