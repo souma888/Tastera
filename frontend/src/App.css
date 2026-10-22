@@ -364,6 +364,41 @@
   margin-bottom: 14px;
 }
 
+.for-you-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  background: #b49aff0a;
+  color: var(--text-primary);
+  font-size: 10px;
+  transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.refresh-button span {
+  color: var(--lavender);
+  font-size: 15px;
+  line-height: 0.8;
+}
+
+.refresh-button:hover:not(:disabled) {
+  border-color: var(--lavender);
+  background: #b49aff18;
+}
+
+.refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .for-you-message,
 .for-you-empty p {
   color: var(--text-muted);
@@ -487,6 +522,10 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 24px 15px;
+}
+
+.recommendation-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .media-card {
@@ -1069,6 +1108,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .recommendation-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .hero {
     min-height: 320px;
     padding: 28px;
@@ -1079,6 +1122,10 @@
   .media-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px 13px;
+  }
+
+  .recommendation-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .main-content {

@@ -30,6 +30,9 @@ export interface RecommendationPage {
   items: Recommendation[];
   feedback_items: { item: Media; feedback: "more" | "less" }[];
   saved_count: number;
+  method: "genre" | "item_item";
+  total: number;
+  next_offset: number | null;
   message: string;
 }
 

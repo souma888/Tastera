@@ -15,7 +15,7 @@ import {
 } from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
-import type { Media, MediaFilter, Recommendation } from "./types/media";
+import type { Media, MediaFilter, Recommendation, RecommendationPage } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
@@ -57,6 +57,8 @@ function App() {
     { item: Media; feedback: "more" | "less" }[]
   >([]);
   const [recommendationMessage, setRecommendationMessage] = useState("");
+  const [recommendationTotal, setRecommendationTotal] = useState(0);
+  const [recommendationNextOffset, setRecommendationNextOffset] = useState<number | null>(null);
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
   const [feedbackBusyIds, setFeedbackBusyIds] = useState<string[]>([]);
   const [feedbackActionError, setFeedbackActionError] = useState<string | null>(null);
@@ -67,6 +69,14 @@ function App() {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthBusy, setIsAuthBusy] = useState(false);
+
+  function applyRecommendationPage(page: RecommendationPage) {
+    setRecommendations(page.items);
+    setRecommendationFeedbackItems(page.feedback_items);
+    setRecommendationMessage(page.message);
+    setRecommendationTotal(page.total);
+    setRecommendationNextOffset(page.next_offset);
+  }
 
   useEffect(() => {
     if (!authToken) return;
@@ -109,14 +119,14 @@ function App() {
       })
       .then((page) => {
         if (!page) return;
-        setRecommendations(page.items);
-        setRecommendationFeedbackItems(page.feedback_items);
-        setRecommendationMessage(page.message);
+        applyRecommendationPage(page);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setRecommendations([]);
         setRecommendationFeedbackItems([]);
+        setRecommendationTotal(0);
+        setRecommendationNextOffset(null);
         setRecommendationMessage("Recommendations could not be loaded right now.");
       })
       .finally(() => {
@@ -254,15 +264,29 @@ function App() {
         await clearRecommendationFeedback(authToken, id);
       }
       const page = await getRecommendations(authToken);
-      setRecommendations(page.items);
-      setRecommendationFeedbackItems(page.feedback_items);
-      setRecommendationMessage(page.message);
+      applyRecommendationPage(page);
     } catch (error) {
       setFeedbackActionError(
         error instanceof Error ? error.message : "Could not save your recommendation feedback.",
       );
     } finally {
       setFeedbackBusyIds((current) => current.filter((feedbackId) => feedbackId !== id));
+    }
+  }
+
+  async function refreshRecommendations() {
+    if (!authToken || recommendationNextOffset === null || isRecommendationsLoading) return;
+    setIsRecommendationsLoading(true);
+    setFeedbackActionError(null);
+    try {
+      const page = await getRecommendations(authToken, undefined, recommendationNextOffset);
+      applyRecommendationPage(page);
+    } catch (error) {
+      setFeedbackActionError(
+        error instanceof Error ? error.message : "Could not load another recommendation batch.",
+      );
+    } finally {
+      setIsRecommendationsLoading(false);
     }
   }
 
@@ -299,6 +323,8 @@ function App() {
     setRecommendations([]);
     setRecommendationFeedbackItems([]);
     setRecommendationMessage("");
+    setRecommendationTotal(0);
+    setRecommendationNextOffset(null);
     setIsRecommendationsLoading(false);
     if (activePage === "Library") setActivePage("Discover");
   }
@@ -644,8 +670,24 @@ function App() {
                     <span className="eyebrow">BUILT FROM YOUR LIBRARY</span>
                     <h2 id="for-you-heading">For you.</h2>
                   </div>
-                  {recommendations.length > 0 && (
-                    <span className="result-count">{recommendations.length} PICKS</span>
+                  {account && (
+                    <div className="for-you-actions">
+                      <span className="result-count">
+                        {recommendations.length > 0
+                          ? `${recommendations.length} OF ${recommendationTotal} PICKS`
+                          : "PERSONALIZED PICKS"}
+                      </span>
+                      <button
+                        type="button"
+                        className="refresh-button"
+                        onClick={refreshRecommendations}
+                        disabled={isRecommendationsLoading || recommendationNextOffset === null}
+                        title={recommendationNextOffset === null ? "You’ve seen all current picks." : "Load the next batch of recommendations"}
+                      >
+                        <span aria-hidden="true">↻</span>
+                        {isRecommendationsLoading ? "Loading…" : "Refresh picks"}
+                      </button>
+                    </div>
                   )}
                 </div>
                 {!account ? (
@@ -671,7 +713,7 @@ function App() {
                     {feedbackActionError && (
                       <p className="feedback-error" role="alert">{feedbackActionError}</p>
                     )}
-                    <div className="media-grid">
+                    <div className="media-grid recommendation-grid">
                       {recommendations.map(({ item, reason, feedback }) => (
                         <MediaCard
                           key={item.id}

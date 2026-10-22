@@ -71,8 +71,12 @@ export async function getSavedMedia(token: string) {
   return response.items;
 }
 
-export function getRecommendations(token: string, signal?: AbortSignal) {
-  return request<RecommendationPage>("/me/recommendations?limit=6", {
+export function getRecommendations(
+  token: string,
+  signal?: AbortSignal,
+  offset = 0,
+) {
+  return request<RecommendationPage>(`/me/recommendations?limit=12&offset=${offset}`, {
     ...authorized(token),
     signal,
   });

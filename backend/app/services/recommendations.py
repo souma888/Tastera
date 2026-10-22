@@ -71,6 +71,7 @@ def _recommend_by_item_similarity(
     account_id: str,
     category: MediaCategory | None,
     limit: int,
+    offset: int,
     saved_ids: set[str],
     feedback_by_id: dict[str, str],
     feedback_records: list[MediaItemRecord],
@@ -188,7 +189,9 @@ def _recommend_by_item_similarity(
             candidate_by_id[media_id].title.casefold(),
             media_id,
         ),
-    )[:limit]
+    )
+    total = len(ranked_ids)
+    ranked_ids = ranked_ids[offset : offset + limit]
     recommendations = []
     for media_id in ranked_ids:
         record = candidate_by_id[media_id]
@@ -219,6 +222,8 @@ def _recommend_by_item_similarity(
         ],
         saved_count=len(saved_ids),
         method="item_item",
+        total=total,
+        next_offset=offset + len(recommendations) if offset + len(recommendations) < total else None,
         message=(
             "Ranked with privacy-preserving co-save similarity across other Tastera accounts."
             if recommendations
@@ -233,6 +238,7 @@ def recommend_for_account(
     account_id: str,
     category: MediaCategory | None,
     limit: int,
+    offset: int = 0,
     strategy: str = "auto",
 ) -> RecommendationPage:
     """Rank unsaved catalog items by overlap with the account's saved genres."""
@@ -276,6 +282,7 @@ def recommend_for_account(
             account_id=account_id,
             category=category,
             limit=limit,
+            offset=offset,
             saved_ids=saved_ids,
             feedback_by_id=feedback_by_id,
             feedback_records=feedback_records,
@@ -364,8 +371,9 @@ def recommend_for_account(
         )
 
     ranked.sort(key=lambda row: (-row[0], row[1], row[2]))
+    total = len(ranked)
     recommendations = []
-    for _, _, _, record, labels, source_item, source_kind in ranked[:limit]:
+    for _, _, _, record, labels, source_item, source_kind in ranked[offset : offset + limit]:
         if source_kind == "saved":
             reason = f"Because you saved {source_item.title}: both share {', '.join(labels)}."
         else:
@@ -393,5 +401,7 @@ def recommend_for_account(
         ],
         saved_count=len(saved_ids),
         method="genre",
+        total=total,
+        next_offset=offset + len(recommendations) if offset + len(recommendations) < total else None,
         message=message,
     )

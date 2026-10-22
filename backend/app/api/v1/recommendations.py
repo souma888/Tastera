@@ -29,12 +29,18 @@ def get_recommendations(
     account: Annotated[AccountRecord, Depends(get_current_account)],
     category: MediaCategory | None = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
     strategy: Literal["auto", "genre", "item_item"] = "auto",
 ) -> RecommendationPage:
     """Recommend unsaved items; optionally select a ranker for comparison."""
 
     return recommend_for_account(
-        session, account_id=account.id, category=category, limit=limit, strategy=strategy
+        session,
+        account_id=account.id,
+        category=category,
+        limit=limit,
+        offset=offset,
+        strategy=strategy,
     )
 
 
