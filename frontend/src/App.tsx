@@ -25,6 +25,9 @@ const navigationItems = [
   ["Taste Map", "◎"],
   ["Library", "▤"],
   ["Your Profile", "◉"],
+  ["Guide", "?"],
+  ["About", "✦"],
+  ["Contact", "✉"],
 ] as const;
 
 type Page = (typeof navigationItems)[number][0];
@@ -303,7 +306,7 @@ function App() {
   function navigate(page: Page) {
     setActivePage(page);
 
-    if (page === "Taste Map" || page === "Your Profile") {
+    if (page === "Taste Map" || page === "Your Profile" || page === "Guide" || page === "About" || page === "Contact") {
       setSearch("");
       setCategory("All");
     }
@@ -398,7 +401,69 @@ function App() {
           </div>
         </header>
 
-        {activePage === "Taste Map" ? (
+        {activePage === "Guide" ? (
+          <section className="info-page guide-page" aria-labelledby="guide-heading">
+            <div className="info-hero">
+              <span className="eyebrow">A QUICK TOUR</span>
+              <h1 id="guide-heading">Find your next <span>favorite thing.</span></h1>
+              <p>Tastera connects movies, books, and music through the moods, themes, and creators they share.</p>
+            </div>
+            <div className="guide-grid">
+              <article className="guide-card">
+                <div className="guide-visual guide-visual-discover" aria-label="Illustration of the Discover screen">
+                  <div className="guide-window-bar"><i /><i /><i /><span>DISCOVER</span></div>
+                  <div className="guide-window-hero"><small>CURATED FOR THE CURIOUS</small><strong>Your universe.</strong><span>Explore beyond the obvious.</span></div>
+                  <div className="guide-mini-posters"><i>FILM</i><i>BOOK</i><i>MUSIC</i></div>
+                </div>
+                <div className="guide-card-copy"><span className="guide-step">01 / DISCOVER</span><h2>Browse across worlds</h2><p>Explore the catalog, filter by movies, books, or music, and search by title, creator, or genre. Open a card to see why it connects.</p></div>
+              </article>
+              <article className="guide-card">
+                <div className="guide-visual guide-visual-map" aria-label="Illustration of the Taste Map">
+                  <div className="guide-map-center">YOUR<br />TASTE</div><i className="guide-map-node node-a">FILM</i><i className="guide-map-node node-b">BOOK</i><i className="guide-map-node node-c">SOUND</i><i className="guide-map-node node-d">THEME</i><span className="guide-map-line line-a" /><span className="guide-map-line line-b" /><span className="guide-map-line line-c" /><span className="guide-map-line line-d" />
+                </div>
+                <div className="guide-card-copy"><span className="guide-step">02 / CONNECT</span><h2>Follow the connections</h2><p>The Taste Map visualizes shared themes and interests between discoveries, helping you move from one kind of story to another.</p></div>
+              </article>
+              <article className="guide-card">
+                <div className="guide-visual guide-visual-library" aria-label="Illustration of a saved Library">
+                  <div className="guide-library-heading"><span>YOUR LIBRARY</span><b>3 SAVED</b></div>
+                  <div className="guide-library-row"><i>01</i><span><b>Arrival</b><small>FILM · SCI-FI</small></span><em>♥</em></div>
+                  <div className="guide-library-row"><i>02</i><span><b>Annihilation</b><small>BOOK · SCIENCE FICTION</small></span><em>♥</em></div>
+                  <div className="guide-library-row"><i>03</i><span><b>Blue Train</b><small>MUSIC · JAZZ</small></span><em>♥</em></div>
+                </div>
+                <div className="guide-card-copy"><span className="guide-step">03 / MAKE IT YOURS</span><h2>Save and shape your taste</h2><p>Create an account to keep a Library across devices. Save items you love and use recommendation feedback to tune future picks.</p></div>
+              </article>
+            </div>
+            <div className="guide-tip"><span>✦</span><p><strong>Tip:</strong> Start by saving a few favorites from different categories. A broader Library gives your profile and recommendations more to work with.</p></div>
+            <button type="button" className="primary-button guide-cta" onClick={() => navigate("Discover")}>Start exploring <span>↗</span></button>
+          </section>
+        ) : activePage === "About" ? (
+          <section className="info-page about-page" aria-labelledby="about-heading">
+            <div className="info-hero">
+              <span className="eyebrow">ABOUT TASTERA</span>
+              <h1 id="about-heading">Curiosity has <span>no category.</span></h1>
+              <p>Tastera is a cross-media discovery app for people who love finding unexpected connections between the things they enjoy.</p>
+            </div>
+            <div className="about-feature-grid">
+              <article><span>01</span><h2>One place for many passions</h2><p>Discover movies, books, and music in a single catalog, then keep the finds that matter in your personal Library.</p></article>
+              <article><span>02</span><h2>Connections that travel</h2><p>Explore shared genres, moods, and themes across media with the Taste Map and recommendations shaped by your saved items.</p></article>
+              <article><span>03</span><h2>Built to grow with your taste</h2><p>Your feedback helps guide future recommendations. Tastera is an evolving project, with more ways to personalize discovery ahead.</p></article>
+            </div>
+            <div className="about-note"><span className="brand-mark">t.</span><p><strong>Discover beyond the obvious.</strong><br />Tastera brings catalog data and your own signals together to make the next great discovery easier to find.</p></div>
+          </section>
+        ) : activePage === "Contact" ? (
+          <section className="info-page contact-page" aria-labelledby="contact-heading">
+            <div className="info-hero">
+              <span className="eyebrow">GET IN TOUCH</span>
+              <h1 id="contact-heading">Questions, ideas, <span>hello?</span></h1>
+              <p>Reach out about Tastera, share feedback, or report something that needs attention. I’d be glad to hear from you.</p>
+            </div>
+            <div className="contact-grid">
+              <article className="contact-card"><span className="contact-icon">@</span><div><span className="eyebrow">EMAIL</span><a href="mailto:soumadipkaran8@gmail.com">soumadipkaran8@gmail.com</a><a href="mailto:soumadipkaran88@gmail.com">soumadipkaran88@gmail.com</a></div></article>
+              <article className="contact-card"><span className="contact-icon">↗</span><div><span className="eyebrow">WHATSAPP</span><a href="https://wa.me/917074796529" target="_blank" rel="noreferrer">+91 70747 96529</a><small>Open a WhatsApp conversation</small></div></article>
+            </div>
+            <p className="contact-response-note">For the quickest response, include “Tastera” in your message subject.</p>
+          </section>
+        ) : activePage === "Taste Map" ? (
           <TasteMap />
         ) : activePage === "Your Profile" ? (
           <section className="profile-page" aria-labelledby="profile-heading">
