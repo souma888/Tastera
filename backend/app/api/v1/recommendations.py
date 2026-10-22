@@ -1,6 +1,6 @@
 """Authenticated personalized recommendation endpoints."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
@@ -29,11 +29,12 @@ def get_recommendations(
     account: Annotated[AccountRecord, Depends(get_current_account)],
     category: MediaCategory | None = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
+    strategy: Literal["auto", "genre", "item_item"] = "auto",
 ) -> RecommendationPage:
-    """Recommend unsaved catalog items using shared normalized genres."""
+    """Recommend unsaved items; optionally select a ranker for comparison."""
 
     return recommend_for_account(
-        session, account_id=account.id, category=category, limit=limit
+        session, account_id=account.id, category=category, limit=limit, strategy=strategy
     )
 
 

@@ -32,4 +32,5 @@ class RecommendationPage(BaseModel):
     items: list[Recommendation]
     feedback_items: list[RecommendationFeedbackItem] = Field(default_factory=list)
     saved_count: int = Field(ge=0)
+    method: Literal["genre", "item_item"] = "genre"
     message: str
