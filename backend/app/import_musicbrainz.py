@@ -120,7 +120,18 @@ def _upsert_release_group(
     media = session.get(MediaItemRecord, identifier.media_item_id) if identifier else None
     genre = _get_genre(session, genre_name)
     date = item.get("first-release-date")
-    description = f"Album metadata from MusicBrainz. First release date: {date}." if date else "Album metadata from MusicBrainz."
+    secondary_types = item.get("secondary-types", [])
+    classifications = (
+        [value for value in secondary_types if isinstance(value, str) and value.strip()]
+        if isinstance(secondary_types, list)
+        else []
+    )
+    details = ["MusicBrainz core metadata; genre not provided"]
+    if classifications:
+        details.append(f"Release type: {', '.join(classifications)}")
+    if isinstance(date, str) and date.strip():
+        details.append(f"First release date: {date.strip()}")
+    description = ". ".join(details) + "."
     connection = "Imported from MusicBrainz core metadata; Tastera's editorial connection has not been reviewed."
 
     if media is None:
@@ -157,7 +168,7 @@ def import_albums(
     *,
     query: str = "primarytype:album",
     pages: int = 1,
-    genre: str = "Album",
+    genre: str = "Unclassified",
     request_delay: float = MIN_REQUEST_DELAY,
 ) -> ImportSummary:
     if not query.strip():
@@ -211,7 +222,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--query", default="primarytype:album", help="MusicBrainz core release-group search query.")
     parser.add_argument("--pages", type=int, default=1, help="Number of 100-item result pages (1–10).")
-    parser.add_argument("--genre", default="Album", help="Tastera-owned local genre label; does not import MusicBrainz tags.")
+    parser.add_argument("--genre", default="Unclassified", help="Tastera-owned genre label for this import. MusicBrainz core metadata does not supply genres; use a genre only for a curated query whose results have been checked.")
     parser.add_argument("--request-delay", type=float, default=MIN_REQUEST_DELAY, help="Seconds between API calls; minimum 1.1 to respect the service limit.")
     args = parser.parse_args()
     try:

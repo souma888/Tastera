@@ -25,6 +25,7 @@ GENRE_ALIASES = {
     "romantic comedy": "romance",
     "action & adventure": "action",
 }
+UNCLASSIFIED_MUSIC_GENRES = {"album", "unclassified", "unknown"}
 
 
 def _genre_key(label: str) -> str:
@@ -36,7 +37,14 @@ def _genres(record: MediaItemRecord) -> dict[str, str]:
     labels = [link.genre.name for link in record.genre_links]
     if record.primary_genre:
         labels.append(record.primary_genre)
-    return {_genre_key(label): label for label in labels if label.strip()}
+    normalized = {_genre_key(label): label for label in labels if label.strip()}
+    if record.category == "Music":
+        normalized = {
+            key: label
+            for key, label in normalized.items()
+            if key not in UNCLASSIFIED_MUSIC_GENRES
+        }
+    return normalized
 
 
 def _load_records(session: Session, ids: Iterable[str]) -> list[MediaItemRecord]:

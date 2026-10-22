@@ -14,6 +14,12 @@ export default function MediaCard({
   feedbackBusy = false,
   onRecommendationFeedback,
 }: MediaCardProps) {
+  const genreLabel =
+    item.category === "Music" &&
+    ["album", "unclassified", "unknown"].includes(item.genre.trim().toLowerCase())
+      ? "Genre not provided"
+      : item.genre;
+
   return (
     <article className="media-card">
       <div className="poster-wrap" style={{ "--poster-hue": getPosterHue(item.id) } as CSSProperties}>
@@ -54,7 +60,7 @@ export default function MediaCard({
         </button>
       </div>
 
-      <div className="card-meta">{item.genre.toUpperCase()}</div>
+      <div className="card-meta">{genreLabel.toUpperCase()}</div>
       <h3>{item.title}</h3>
       <p className="creator">{item.creator}</p>
       <p className="recommendation-reason">

@@ -1740,6 +1740,21 @@
     linear-gradient(145deg, hsl(var(--poster-hue) 26% 25%), #14121a 78%);
 }
 
+.poster-fallback.poster-music {
+  background:
+    radial-gradient(circle at 50% 39%, #d8c4ff 0 2.5%, #211c29 3% 7%, transparent 7.5%),
+    repeating-radial-gradient(circle at 50% 39%, #30283a 0 3px, #584767 4px, #211c29 7px),
+    linear-gradient(145deg, hsl(var(--poster-hue) 28% 26%), #14121a 78%);
+}
+
+.poster-fallback.poster-music::before {
+  top: 8%;
+  left: 12%;
+  width: 76%;
+  border: 1px solid #ffffff35;
+  box-shadow: 0 0 42px hsl(var(--poster-hue) 82% 70% / 16%);
+}
+
 .poster-fallback::before {
   position: absolute;
   top: 10%;
