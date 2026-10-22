@@ -19,7 +19,7 @@ The ranking section uses a per-user chronological holdout: each user's latest 20
 
 Hyperparameter tuning uses a later 20% slice of the remaining ranking-training period; all candidates use the same 64,081 tuning-training interactions and 592 validation users. The 16,338 validation interactions contain 7,415 relevant ratings. No validation or final-test ratings are used to fit a candidate. Tuned parameters include popularity minimum support (5, 20, or 50), Bayesian prior weight (10 or 40), and item-item co-rating shrinkage (0, 10, or 50). Select by validation NDCG@10, while also reviewing recall, catalog coverage, and intra-list genre diversity. The previously inspected final holdout is not reused to select or retest the tuned configuration.
 
-The executed notebook recorded Python 3.13.9, NumPy 2.3.5, pandas 2.3.3, SciPy 1.16.3, and scikit-learn 1.7.2.
+**Fresh reproduction (2026-10-22):** `notebooks/02_baseline_recommenders.ipynb` completed top-to-bottom with no cell errors using Python 3.13.3, NumPy 2.5.4, pandas 3.0.6, SciPy 1.18.1, and scikit-learn 1.9.1. The fresh run reproduced the previously recorded train/test sizes, ranking metrics, and validation selection (item-item collaborative filtering with shrinkage 50). Its generated CSV files are ignored under `data/processed/`.
 
 Reported metrics are Precision@10 (fixed denominator 10), Recall@10, binary NDCG@10, and catalog coverage@10 (unique recommended catalog items divided by the 9,742-title catalog). Results from the recorded run:
 
@@ -54,3 +54,5 @@ The validation-selected candidate is item-item collaborative filtering with co-r
 
 ## Reproducibility
 Run `notebooks/02_baseline_recommenders.ipynb` from the repository. It saves rating metrics, ranking metrics, and recommendation examples to ignored files under `data/processed/` and retains compact results in the notebook output.
+
+The rerun confirms that the existing exploratory split and validation experiment are reproducible. It does **not** create a genuinely untouched final assessment: this dataset's latest interactions were already inspected during the earlier experiment. Reserve a new later interaction window for final assessment, or collect a new dataset before making a final model-quality claim.

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Initial audit and follow-up rating-key validation completed in the recorded notebook run.** The summary below reflects the committed outputs of `notebooks/01_dataset_audit.ipynb`; rerun the notebook if the local dataset changes.
+**Freshly rerun on 2026-10-22.** `notebooks/01_dataset_audit.ipynb` completed top-to-bottom against the local MovieLens Latest Small files with no cell errors. The checks below were reproduced in Python 3.13.3, pandas 3.0.6, and NumPy 2.5.4. Rerun the notebook if the local dataset changes.
 
 ## Objective
 
