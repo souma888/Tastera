@@ -850,6 +850,73 @@
   margin-top: 16px;
 }
 
+.profile-signals-panel {
+  margin-bottom: 16px;
+}
+
+.profile-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-signal-card {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #0f0d13a8;
+}
+
+.profile-signal-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profile-signal-title strong {
+  color: var(--text-primary);
+  font: 500 14px var(--font-heading);
+}
+
+.profile-signal-title span,
+.profile-signal-card small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.profile-signal-card progress {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  appearance: none;
+  border: 0;
+  border-radius: 99px;
+  background: #ffffff12;
+}
+
+.profile-signal-card progress::-webkit-progress-bar {
+  border-radius: 99px;
+  background: #ffffff12;
+}
+
+.profile-signal-card progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lavender), #71d8e7);
+}
+
+.profile-signal-card progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lavender), #71d8e7);
+}
+
+.profile-signal-card .text-button {
+  justify-self: start;
+  padding: 0;
+}
+
 .profile-feedback-list {
   display: grid;
   gap: 0;

@@ -572,6 +572,45 @@ function App() {
                   </article>
                 </div>
 
+                <section className="profile-panel profile-signals-panel" aria-labelledby="profile-signals-heading">
+                  <div className="profile-panel-heading">
+                    <span className="eyebrow">KEEP EXPLORING</span>
+                    <h2 id="profile-signals-heading">Grow your taste signals</h2>
+                    <p className="profile-empty-copy">Your picks start with what you save. Add a few favorites in each category to build a broader profile.</p>
+                  </div>
+                  <div className="profile-signal-grid">
+                    {(["Movies", "Books", "Music"] as const).map((mediaCategory) => {
+                      const count = profileStats.categoryCounts[mediaCategory] ?? 0;
+                      const progress = Math.min(count, 3);
+                      return (
+                        <article className="profile-signal-card" key={mediaCategory}>
+                          <div className="profile-signal-title">
+                            <strong>{mediaCategory}</strong>
+                            <span>{count} saved</span>
+                          </div>
+                          <progress
+                            max={3}
+                            value={progress}
+                            aria-label={`${mediaCategory}: ${progress} of 3 starter saves`}
+                          />
+                          <small>{progress} / 3 starter saves</small>
+                          <button
+                            type="button"
+                            className="text-button"
+                            onClick={() => {
+                              setSearch("");
+                              setCategory(mediaCategory);
+                              navigate("Discover");
+                            }}
+                          >
+                            Explore {mediaCategory} →
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+
                 <div className="profile-content-grid">
                   <section className="profile-panel" aria-labelledby="profile-genres-heading">
                     <div className="profile-panel-heading">

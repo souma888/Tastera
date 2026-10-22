@@ -42,7 +42,10 @@ def _genres(item: MediaItemRecord) -> set[str]:
     names = {link.genre.name.casefold().strip() for link in item.genre_links}
     if item.primary_genre:
         names.add(item.primary_genre.casefold().strip())
-    return {name for name in names if name}
+    names = {name for name in names if name}
+    if item.category == "Music":
+        names -= {"album", "unclassified", "unknown"}
+    return names
 
 
 def _load_signals(
