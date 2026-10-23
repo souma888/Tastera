@@ -48,6 +48,7 @@ type HeroSlide = {
   category?: MediaFilter;
   artwork: Media[];
   landscapeImage?: string;
+  landscapeAlt?: string;
 };
 
 const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
@@ -395,6 +396,8 @@ function App() {
         destination: "Discover",
         category: "Books",
         artwork: [book],
+        landscapeImage: "/images/hero-book-world.png",
+        landscapeAlt: "A lone traveler looks across an otherworldly landscape at sunset.",
       },
       {
         eyebrow: "MUSIC · FIND YOUR SOUND",
@@ -405,6 +408,8 @@ function App() {
         destination: "Discover",
         category: "Music",
         artwork: [music],
+        landscapeImage: "/images/hero-music-shore.png",
+        landscapeAlt: "Headphones and a cassette player rest on a moonlit shore as lights trace across the water.",
       },
       {
         eyebrow: "TASTE MAP · FOLLOW THE THREADS",
@@ -1382,7 +1387,7 @@ function App() {
                   <span className="hero-slide-eyebrow">{activeHeroSlide.eyebrow}</span>
                   {activeHeroSlide.landscapeImage ? (
                     <div className="hero-single-art hero-landscape-art">
-                      <img className="hero-landscape-image" src={activeHeroSlide.landscapeImage} alt="Astronaut crossing an ice-covered landscape beneath a quiet sky" fetchPriority="high" />
+                      <img className="hero-landscape-image" src={activeHeroSlide.landscapeImage} alt={activeHeroSlide.landscapeAlt ?? "Featured landscape artwork"} fetchPriority="high" />
                     </div>
                   ) : activeHeroSlide.artwork.length === 1 ? (
                     <div className="hero-single-art">
