@@ -46,7 +46,7 @@ type HeroSlide = {
   destination: Page;
   category?: MediaFilter;
   artwork: Media[];
-  caption: string;
+  landscapeImage?: string;
 };
 
 const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
@@ -302,6 +302,11 @@ function App() {
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(mediaItems.length);
+  const [pageSize, setPageSize] = useState(() => {
+    const stored = Number(localStorage.getItem("tastera_catalog_page_size"));
+    return [50, 100, 150].includes(stored) ? stored : 50;
+  });
+  const [unavailableMusicArtwork, setUnavailableMusicArtwork] = useState<string[]>([]);
   const [savedItems, setSavedItems] = useState<Media[]>([]);
   const saved = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
   const [activePage, setActivePage] = useState<Page>(() =>
@@ -376,7 +381,7 @@ function App() {
         destination: "Discover",
         category: "Movies",
         artwork: [interstellar],
-        caption: "INTERSTELLAR · THE POWER OF HUMAN CONNECTION",
+        landscapeImage: "/images/hero-icy-world.png",
       },
       {
         eyebrow: "BOOKS · OPEN A NEW WORLD",
@@ -387,7 +392,6 @@ function App() {
         destination: "Discover",
         category: "Books",
         artwork: [book],
-        caption: `${book.title} · BOOKS`,
       },
       {
         eyebrow: "MUSIC · FIND YOUR SOUND",
@@ -398,7 +402,6 @@ function App() {
         destination: "Discover",
         category: "Music",
         artwork: [music],
-        caption: `${music.title} · MUSIC`,
       },
       {
         eyebrow: "TASTE MAP · FOLLOW THE THREADS",
@@ -408,7 +411,6 @@ function App() {
         action: "Explore your Taste Map",
         destination: "Taste Map",
         artwork: [arrival, otherBook, otherAlbum],
-        caption: "MOVIES · BOOKS · MUSIC",
       },
       {
         eyebrow: "YOUR SETTINGS · MAKE IT YOURS",
@@ -418,7 +420,6 @@ function App() {
         action: "Tune your mix",
         destination: "Settings",
         artwork: [dune, bladeRunner, finalAlbum],
-        caption: "YOUR CATEGORY MIX",
       },
     ];
   }, [catalog]);
@@ -539,18 +540,18 @@ function App() {
             category: category === "All" ? undefined : category,
             q: searchQuery || undefined,
             page: pageNumber,
-            limit: 50,
+            limit: pageSize,
           },
           controller.signal,
         );
 
-        setCatalog(page.items);
+        setCatalog(page.items.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
         setTotalPages(page.total_pages);
         setTotalItems(page.total);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
 
-        setCatalog(mediaItems);
+        setCatalog(mediaItems.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
         setTotalPages(1);
         setTotalItems(mediaItems.length);
         setCatalogError(
@@ -565,7 +566,7 @@ function App() {
       window.clearTimeout(loadCatalog);
       controller.abort();
     };
-  }, [activePage, category, search, pageNumber]);
+  }, [activePage, category, search, pageNumber, pageSize, unavailableMusicArtwork]);
 
   const visibleMedia = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -1297,7 +1298,7 @@ function App() {
         ) : (
           <>
             {activePage === "Discover" && (
-              <section className="hero" aria-label="Featured discoveries" aria-roledescription="carousel" aria-live="off">
+              <section className={`hero ${activeHeroSlide.landscapeImage ? "hero-has-landscape" : ""}`} aria-label="Featured discoveries" aria-roledescription="carousel" aria-live="off">
                 <div className="hero-copy">
                   <span className="eyebrow">
                     <span className="status-dot" /> DISCOVERY, REIMAGINED
@@ -1362,7 +1363,11 @@ function App() {
 
                 <div className="hero-art">
                   <span className="hero-slide-eyebrow">{activeHeroSlide.eyebrow}</span>
-                  {activeHeroSlide.artwork.length === 1 ? (
+                  {activeHeroSlide.landscapeImage ? (
+                    <div className="hero-single-art hero-landscape-art">
+                      <img className="hero-landscape-image" src={activeHeroSlide.landscapeImage} alt="Astronaut crossing an ice-covered landscape beneath a quiet sky" fetchPriority="high" />
+                    </div>
+                  ) : activeHeroSlide.artwork.length === 1 ? (
                     <div className="hero-single-art">
                       <img className="hero-art-backdrop" src={getHeroArtworkUrl(activeHeroSlide.artwork[0].image)} alt="" aria-hidden="true" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />
                       <img className="hero-art-poster" src={getHeroArtworkUrl(activeHeroSlide.artwork[0].image)} alt={`${activeHeroSlide.artwork[0].title} cover`} fetchPriority="high" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />
@@ -1374,10 +1379,6 @@ function App() {
                   )}
                   <div className="hero-art-overlay" />
                   <div className="hero-glow" />
-                  <div className="hero-caption">
-                    <span>FEATURED DISCOVERY</span>
-                    <strong>{activeHeroSlide.caption}</strong>
-                  </div>
                 </div>
 
                 <div className="hero-index">{String(heroSlideIndex + 1).padStart(2, "0")} — {String(heroSlides.length).padStart(2, "0")}</div>
@@ -1599,6 +1600,15 @@ function App() {
 
               {activePage === "Discover" && (
                 <div className="catalog-filter-row">
+                  <label htmlFor="catalog-page-size">Items per page</label>
+                  <select id="catalog-page-size" value={pageSize} onChange={(event) => {
+                    const next = Number(event.target.value);
+                    setPageSize(next);
+                    localStorage.setItem("tastera_catalog_page_size", String(next));
+                    setPageNumber(1);
+                  }}>
+                    {[50, 100, 150].map((count) => <option key={count} value={count}>{count}</option>)}
+                  </select>
                   <label htmlFor="catalog-genre-filter">Genre</label>
                   <select id="catalog-genre-filter" value={genreFilter} onChange={(event) => { setGenreFilter(event.target.value); setPageNumber(1); }}>
                     <option>All genres</option>
@@ -1634,6 +1644,7 @@ function App() {
                       item={item}
                       isSaved={saved.includes(item.id)}
                       onToggleSaved={toggleSaved}
+                      onArtworkUnavailable={(id) => setUnavailableMusicArtwork((current) => current.includes(id) ? current : [...current, id])}
                     />
                   ))}
                 </div>

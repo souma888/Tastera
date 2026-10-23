@@ -19,7 +19,7 @@ def get_media_catalog(
     category: MediaCategory | None = None,
     q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    limit: Annotated[int, Query(ge=1, le=150)] = 20,
 ) -> MediaPage:
     """List catalog media with optional category and text filtering."""
 

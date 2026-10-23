@@ -1,6 +1,12 @@
 import { useState, type CSSProperties } from "react";
 import type { MediaCardProps } from "../types/media";
 
+const alternateAlbumArtwork: Record<string, string> = {
+  "mezzanine": "https://coverartarchive.org/release/1698a8a8-903a-39af-8df3-a1c5b8c1d20f/front-500",
+  "jagged little pill": "https://coverartarchive.org/release/5ff897e7-a2d1-35bc-95da-b3a54714ffd6/front-500",
+  "kid a": "https://coverartarchive.org/release/9f30f080-dc44-3d82-8995-2345f87600f9/front-500",
+};
+
 function getPosterHue(id: string) {
   return [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 360;
 }
@@ -31,8 +37,12 @@ export default function MediaCard({
   recommendationFeedback,
   feedbackBusy = false,
   onRecommendationFeedback,
+  onArtworkUnavailable,
 }: MediaCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const [artworkAttempt, setArtworkAttempt] = useState(0);
+  const alternateArtwork = item.category === "Music" ? alternateAlbumArtwork[item.title.trim().toLowerCase()] : undefined;
+  const artworkSources = [...new Set([item.image, alternateArtwork].filter((source): source is string => Boolean(source)))];
+  const imageFailed = artworkAttempt >= artworkSources.length;
   const artworkCredit = getArtworkCredit(item);
   const genreLabel =
     item.category === "Music" &&
@@ -52,14 +62,21 @@ export default function MediaCard({
           </div>
         </div>
 
-        {item.image && !imageFailed && (
+        {!imageFailed && artworkSources.length > 0 && (
           <img
-            src={item.image}
+            src={artworkSources[artworkAttempt]}
             alt={`${item.title} ${item.category === "Music" ? "album artwork" : "cover"}`}
             loading="lazy"
             onError={(event) => {
-              event.currentTarget.style.display = "none";
-              setImageFailed(true);
+              if (artworkAttempt + 1 < artworkSources.length) {
+                event.currentTarget.removeAttribute("style");
+                setArtworkAttempt((attempt) => attempt + 1);
+              }
+              else {
+                event.currentTarget.style.display = "none";
+                setArtworkAttempt((attempt) => attempt + 1);
+                if (item.category === "Music") onArtworkUnavailable?.(item.id);
+              }
             }}
           />
         )}
@@ -81,7 +98,7 @@ export default function MediaCard({
         </button>
       </div>
 
-      {item.image && !imageFailed && artworkCredit && (
+      {!imageFailed && artworkSources.length > 0 && artworkCredit && (
         <a
           className="artwork-credit"
           href={artworkCredit.href}

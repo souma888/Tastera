@@ -45,4 +45,5 @@ export interface MediaCardProps {
   recommendationFeedback?: "more" | "less" | null;
   feedbackBusy?: boolean;
   onRecommendationFeedback?: (id: string, feedback: "more" | "less" | null) => void;
+  onArtworkUnavailable?: (id: string) => void;
 }

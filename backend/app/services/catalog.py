@@ -36,6 +36,13 @@ def list_media(
     """Return a deterministic filtered page from the catalog database."""
 
     statement: Select[tuple[MediaItemRecord]] = select(MediaItemRecord)
+    # Don't spend catalog slots on music records that have no album artwork.
+    statement = statement.where(
+        or_(
+            MediaItemRecord.category != MediaCategory.MUSIC.value,
+            MediaItemRecord.artwork_url.is_not(None),
+        )
+    )
     if category:
         statement = statement.where(MediaItemRecord.category == category.value)
 

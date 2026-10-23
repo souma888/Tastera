@@ -2435,6 +2435,17 @@
 .catalog-filter-row select { min-width: 150px; padding: 8px 30px 8px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); background: var(--card); }
 .catalog-filter-row option { background: #17141d; }
 .catalog-filter-row span { margin-left: 4px; }
+.catalog-filter-row select { min-width: 84px; }
+
+/* A cinematic landscape scene with clean copy space and no duplicate promo caption. */
+.hero-has-landscape { min-height: 390px; background: linear-gradient(110deg, #17121e, #15111b 64%, #1a1621); }
+.hero-has-landscape .hero-art { width: 72%; background: transparent; }
+.hero-landscape-art { position: absolute; inset: 0; overflow: hidden; }
+.hero-art .hero-landscape-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 52%; opacity: .94; }
+.hero-has-landscape .hero-art-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #17121e 0%, #17121ec9 18%, #17121e52 48%, transparent 92%), linear-gradient(0deg, #17121e88, transparent 42%); }
+.hero-has-landscape .hero-slide-eyebrow { display: none; }
+.hero-has-landscape .hero-glow { display: none; }
+.hero-caption { display: none; }
 
 .collections-page { max-width: 1500px; padding-bottom: 48px; }
 .collections-hero { padding: clamp(28px, 5vw, 64px) 0 34px; }
@@ -2643,6 +2654,10 @@
 }
 
 @media (max-width: 650px) {
+  .hero-has-landscape { min-height: 390px; }
+  .hero-has-landscape .hero-art { width: 100%; height: 56%; }
+  .hero-has-landscape .hero-art-overlay { background: linear-gradient(180deg, #17121e 0%, #17121e70 35%, #17121e25 72%, #17121e99 100%); }
+  .hero-art .hero-landscape-image { object-position: 72% 52%; }
   .hero {
     min-height: 360px;
     padding: 22px;
