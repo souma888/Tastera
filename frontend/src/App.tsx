@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
+import CollectionsPage from "./components/CollectionsPage";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
@@ -25,6 +26,7 @@ const navigationItems = [
   ["Discover", "⌂"],
   ["Taste Map", "◎"],
   ["Library", "▤"],
+  ["Collections", "▧"],
   ["Your Profile", "◉"],
   ["Settings", "⚙"],
   ["Guide", "?"],
@@ -61,6 +63,21 @@ const moodWords: Record<string, string[]> = {
   epic: ["sci-fi", "science fiction", "fantasy", "adventure", "orchestral"],
   intimate: ["romance", "drama", "indie", "acoustic", "memoir"],
 };
+
+function getHeroArtworkUrl(image: string | null) {
+  if (!image) return "";
+  return image
+    .replace(/\/t\/p\/w\d+\//, "/t/p/original/")
+    .replace(/-M\.jpg$/i, "-L.jpg")
+    .replace(/\/front-\d+$/, "/front-1200");
+}
+
+const discoveryPrompts: { label: string; category: MediaFilter; terms: string[] }[] = [
+  { label: "Thoughtful sci-fi", category: "All", terms: ["sci-fi", "science fiction", "thought", "philosoph", "space"] },
+  { label: "A book for a quiet weekend", category: "Books", terms: ["fiction", "novel", "quiet", "literary", "fantasy", "drama"] },
+  { label: "Films to watch with friends", category: "Movies", terms: ["comedy", "adventure", "animation", "action", "friend"] },
+  { label: "Music for a commute", category: "Music", terms: ["pop", "rock", "soul", "jazz", "indie", "electronic"] },
+];
 
 function readStoredMix(): CategoryMix {
   try {
@@ -280,7 +297,9 @@ function App() {
   const [totalItems, setTotalItems] = useState(mediaItems.length);
   const [savedItems, setSavedItems] = useState<Media[]>([]);
   const saved = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
-  const [activePage, setActivePage] = useState<Page>("Discover");
+  const [activePage, setActivePage] = useState<Page>(() =>
+    new URLSearchParams(window.location.search).get("page") === "Collections" || new URLSearchParams(window.location.search).has("sharedShelf") ? "Collections" : "Discover",
+  );
   const [recommendationMix, setRecommendationMix] = useState<CategoryMix>(readStoredMix);
   const [recommendationStrategy, setRecommendationStrategy] = useState<RecommendationStrategy>(readStoredStrategy);
   const [tastePreferences, setTastePreferences] = useState<TastePreferences>(readTastePreferences);
@@ -320,6 +339,8 @@ function App() {
   const [isTasteSetupOpen, setIsTasteSetupOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedSearchItem, setSelectedSearchItem] = useState<Media | null>(null);
+  const [activeDiscoveryPrompt, setActiveDiscoveryPrompt] = useState<(typeof discoveryPrompts)[number] | null>(null);
+  const [genreFilter, setGenreFilter] = useState("All genres");
 
   const heroSlides = useMemo<HeroSlide[]>(() => {
     const itemFor = (mediaCategory: MediaCategory) =>
@@ -546,6 +567,9 @@ function App() {
     return source.filter((item) => {
       const matchesCategory =
         category === "All" || item.category === category;
+      const matchesGenre = genreFilter === "All genres" || item.genre === genreFilter;
+      const promptText = `${item.title} ${item.creator} ${item.genre} ${item.connection}`.toLowerCase();
+      const matchesPrompt = !activeDiscoveryPrompt || activeDiscoveryPrompt.terms.some((term) => promptText.includes(term));
 
       const matchesSearch =
         query.length === 0 ||
@@ -554,9 +578,13 @@ function App() {
         item.genre.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query);
 
-      return matchesCategory && matchesSearch;
+      return matchesCategory && matchesGenre && matchesPrompt && matchesSearch;
     });
-  }, [activePage, catalog, category, savedItems, search]);
+  }, [activePage, activeDiscoveryPrompt, catalog, category, genreFilter, savedItems, search]);
+
+  const availableGenres = useMemo(() => [...new Set(catalog
+    .filter((item) => category === "All" || item.category === category)
+    .map((item) => item.genre.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [catalog, category]);
 
   const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
   const guestRecommendations = useMemo(() => {
@@ -754,9 +782,11 @@ function App() {
   function navigate(page: Page) {
     setActivePage(page);
 
-    if (page === "Taste Map" || page === "Your Profile" || page === "Settings" || page === "Guide" || page === "About" || page === "Contact") {
+    if (page !== "Discover" && page !== "Library") {
       setSearch("");
       setCategory("All");
+      setActiveDiscoveryPrompt(null);
+      setGenreFilter("All genres");
     }
   }
 
@@ -899,7 +929,9 @@ function App() {
           </div>
         </header>
 
-        {activePage === "Guide" ? (
+        {activePage === "Collections" ? (
+          <CollectionsPage catalog={catalog} />
+        ) : activePage === "Guide" ? (
           <section className="info-page guide-page" aria-labelledby="guide-heading">
             <div className="info-hero">
               <span className="eyebrow">TASTERA FIELD GUIDE · START HERE</span>
@@ -1323,16 +1355,16 @@ function App() {
 
                 <div className="hero-art">
                   <span className="hero-slide-eyebrow">{activeHeroSlide.eyebrow}</span>
-                  <div className={activeHeroSlide.artwork.length > 1 ? "hero-collage" : "hero-single-art"}>
-                    {activeHeroSlide.artwork.map((item) => (
-                      <img
-                        key={item.id}
-                        src={item.image ?? ""}
-                        alt={activeHeroSlide.artwork.length === 1 ? `${item.title} cover` : ""}
-                        onError={(event) => { event.currentTarget.style.opacity = "0"; }}
-                      />
-                    ))}
-                  </div>
+                  {activeHeroSlide.artwork.length === 1 ? (
+                    <div className="hero-single-art">
+                      <img className="hero-art-backdrop" src={getHeroArtworkUrl(activeHeroSlide.artwork[0].image)} alt="" aria-hidden="true" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />
+                      <img className="hero-art-poster" src={getHeroArtworkUrl(activeHeroSlide.artwork[0].image)} alt={`${activeHeroSlide.artwork[0].title} cover`} fetchPriority="high" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />
+                    </div>
+                  ) : (
+                    <div className="hero-collage">
+                      {activeHeroSlide.artwork.map((item) => <img key={item.id} src={getHeroArtworkUrl(item.image)} alt={`${item.title} cover`} onError={(event) => { event.currentTarget.style.opacity = "0"; }} />)}
+                    </div>
+                  )}
                   <div className="hero-art-overlay" />
                   <div className="hero-glow" />
                   <div className="hero-caption">
@@ -1516,6 +1548,29 @@ function App() {
                 </div>
               </div>
 
+              {activePage === "Discover" && (
+                <section className="discovery-prompts" aria-label="Mood and occasion discovery">
+                  <div className="discovery-prompts-heading"><span className="eyebrow">WHAT ARE YOU IN THE MOOD FOR?</span><span>Browse by feeling or moment</span></div>
+                  <div className="discovery-prompt-list">
+                    {discoveryPrompts.map((prompt) => (
+                      <button
+                        type="button"
+                        key={prompt.label}
+                        className={activeDiscoveryPrompt?.label === prompt.label ? "selected" : ""}
+                        aria-pressed={activeDiscoveryPrompt?.label === prompt.label}
+                        onClick={() => {
+                          const next = activeDiscoveryPrompt?.label === prompt.label ? null : prompt;
+                          setActiveDiscoveryPrompt(next);
+                          setCategory(next?.category ?? "All");
+                          setGenreFilter("All genres");
+                          setPageNumber(1);
+                        }}
+                      >{prompt.label}</button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <div className="category-tabs" aria-label="Filter by category">
                 {categories.map((item) => (
                   <button
@@ -1525,6 +1580,8 @@ function App() {
                     aria-pressed={category === item}
                     onClick={() => {
                       setCategory(item);
+                      setActiveDiscoveryPrompt(null);
+                      setGenreFilter("All genres");
                       setPageNumber(1);
                     }}
                   >
@@ -1532,6 +1589,17 @@ function App() {
                   </button>
                 ))}
               </div>
+
+              {activePage === "Discover" && (
+                <div className="catalog-filter-row">
+                  <label htmlFor="catalog-genre-filter">Genre</label>
+                  <select id="catalog-genre-filter" value={genreFilter} onChange={(event) => { setGenreFilter(event.target.value); setPageNumber(1); }}>
+                    <option>All genres</option>
+                    {availableGenres.map((genre) => <option key={genre}>{genre}</option>)}
+                  </select>
+                  <span>Catalog is ordered by popularity. More filters appear as reliable metadata becomes available.</span>
+                </div>
+              )}
 
               {search.trim() && (
                 <p className="search-result-summary" role="status" aria-live="polite">
