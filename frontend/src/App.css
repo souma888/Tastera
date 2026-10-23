@@ -2317,6 +2317,119 @@
   font-size: 10px;
 }
 
+/* Detailed guide and creator information */
+.guide-detailed-grid { align-items: stretch; }
+.guide-detailed-grid .guide-card { display: flex; flex-direction: column; }
+.guide-real-visual {
+  position: relative;
+  display: flex;
+  height: 230px;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at 75% 50%, #53346e88, transparent 62%), #111015;
+}
+.guide-real-visual::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #100e14 0%, #100e1466 40%, transparent 100%), linear-gradient(0deg, #100e14c9, transparent 56%);
+  content: "";
+  pointer-events: none;
+}
+.guide-real-visual > img {
+  position: absolute;
+  top: 14%;
+  right: 9%;
+  width: 39%;
+  height: 78%;
+  border: 1px solid #ffffff3b;
+  border-radius: 9px;
+  box-shadow: 0 16px 36px #0009;
+  object-fit: cover;
+  transform: rotate(3deg);
+}
+.guide-visual-book > img { transform: rotate(-3deg); }
+.guide-visual-music > img { width: 43%; transform: rotate(0); }
+.guide-visual-label {
+  position: absolute;
+  z-index: 2;
+  top: 17px;
+  left: 18px;
+  color: var(--lavender);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.15px;
+}
+.guide-real-caption {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  max-width: 61%;
+  align-self: flex-end;
+  gap: 5px;
+  padding: 18px;
+  text-shadow: 0 2px 8px #000;
+}
+.guide-real-caption small { color: var(--lavender); font-size: 8px; font-weight: 700; letter-spacing: 1px; }
+.guide-real-caption strong { font: 600 18px/1.15 var(--font-heading); }
+.guide-real-caption span { color: var(--text-secondary); font-size: 10px; }
+.guide-card-copy { display: flex; flex: 1; flex-direction: column; align-items: flex-start; }
+.guide-card-copy .text-button { margin-top: auto; padding-top: 16px; }
+.guide-map-artwork { position: absolute; inset: 47px 16px 13px; display: flex; align-items: center; justify-content: center; gap: 9px; }
+.guide-map-artwork img { width: 28%; height: 76%; border: 1px solid #ffffff33; border-radius: 6px; box-shadow: 0 10px 24px #0009; object-fit: cover; }
+.guide-map-artwork img:first-child { transform: rotate(-8deg) translateY(9px); }
+.guide-map-artwork img:nth-child(2) { z-index: 1; transform: translateY(-4px) scale(1.08); }
+.guide-map-artwork img:last-child { transform: rotate(8deg) translateY(9px); }
+.guide-map-visual-caption { position: absolute; z-index: 3; right: 16px; bottom: 14px; left: 16px; display: grid; gap: 4px; text-align: center; text-shadow: 0 2px 9px #000; }
+.guide-map-visual-caption strong { font: 600 13px var(--font-heading); }
+.guide-map-visual-caption span { color: var(--lavender); font-size: 7px; font-weight: 700; letter-spacing: 1px; }
+.guide-visual-settings { justify-content: center; background: radial-gradient(ellipse at 70% 42%, #75519c88, transparent 60%), linear-gradient(140deg, #1e1928, #111015); }
+.guide-settings-preview { position: relative; z-index: 2; display: grid; width: 76%; gap: 8px; padding: 16px; border: 1px solid #ffffff1d; border-radius: 12px; background: #111015d9; box-shadow: 0 15px 35px #0008; }
+.guide-settings-preview b { color: var(--lavender); font-size: 8px; letter-spacing: 1.2px; }
+.guide-settings-preview strong { margin-bottom: 2px; font: 600 16px var(--font-heading); }
+.guide-settings-preview span { color: var(--text-secondary); font-size: 8px; letter-spacing: .7px; }
+.guide-settings-preview i { height: 4px; border-radius: 99px; background: linear-gradient(90deg, var(--lavender) 60%, #ffffff1a 60%); }
+.guide-settings-preview i:nth-of-type(2) { background: linear-gradient(90deg, #dfabff 20%, #ffffff1a 20%); }
+.guide-settings-preview i:nth-of-type(3) { background: linear-gradient(90deg, #7dd9dc 20%, #ffffff1a 20%); }
+.guide-step { margin-bottom: 2px; }
+.guide-tip { margin-top: 24px; }
+
+.about-story-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.about-story-card { padding: 26px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(145deg, #1b1721, #141219); }
+.about-story-card h2 { margin: 12px 0; font: 600 22px/1.2 var(--font-heading); }
+.about-story-card p,
+.about-story-card li { color: var(--text-secondary); font-size: 13px; line-height: 1.8; }
+.about-story-card p { margin: 0 0 12px; }
+.about-story-card ul { display: grid; gap: 8px; margin: 0; padding-left: 19px; }
+.about-story-primary { background: radial-gradient(ellipse at top right, #9f72d122, transparent 55%), linear-gradient(145deg, #221a2c, #141219); }
+.about-links { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 16px; }
+.about-links a { color: var(--lavender); font-size: 12px; font-weight: 600; }
+.about-links a:hover { color: var(--text-primary); }
+
+.contact-intro { display: flex; max-width: 920px; align-items: flex-start; gap: 16px; margin: -10px 0 24px; padding: 20px; border: 1px solid #b49aff33; border-radius: var(--radius-lg); background: linear-gradient(120deg, #211a2d, #15131b); }
+.contact-avatar { display: grid; width: 48px; height: 48px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--lavender); color: #17121f; font: 700 20px var(--font-heading); }
+.contact-intro > div { display: grid; gap: 4px; }
+.contact-intro strong { font: 600 17px var(--font-heading); }
+.contact-intro span { color: var(--lavender); font-size: 11px; }
+.contact-intro p { max-width: 700px; margin: 5px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.contact-grid-detailed { max-width: 1080px; }
+.contact-grid-detailed .contact-card { min-height: 150px; transition: border-color 160ms ease, transform 160ms ease; }
+.contact-grid-detailed .contact-card:hover { transform: translateY(-2px); border-color: #8067a4; }
+.contact-response-note { max-width: 900px; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .about-story-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+  .guide-detailed-grid { grid-template-columns: 1fr; }
+  .guide-detailed-grid .guide-card:last-child { grid-column: auto; }
+  .guide-real-visual { height: 220px; }
+  .contact-grid-detailed { grid-template-columns: 1fr; }
+  .contact-intro { gap: 12px; padding: 16px; }
+  .about-story-card { padding: 20px; }
+}
+
 @media (max-width: 650px) {
   .hero {
     min-height: 360px;

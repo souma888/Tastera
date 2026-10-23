@@ -106,6 +106,9 @@
   min-height: 560px;
   overflow: hidden;
   isolation: isolate;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   border: 1px solid var(--taste-border);
   border-radius: 18px;
   background:
@@ -114,6 +117,56 @@
     linear-gradient(90deg, #ffffff05 1px, transparent 1px),
     #100e15;
   background-size: auto, 32px 32px, 32px 32px, auto;
+}
+
+.taste-canvas.is-panning { cursor: grabbing; }
+
+.taste-world {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.map-controls {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.map-controls button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid #ffffff24;
+  border-radius: 9px;
+  background: #17141dcc;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  backdrop-filter: blur(8px);
+}
+
+.map-controls button:hover { border-color: var(--taste-purple); color: var(--taste-purple); }
+.map-controls .map-reset { font-size: 10px; }
+
+.map-interaction-hint {
+  position: absolute;
+  z-index: 2;
+  right: 16px;
+  bottom: 48px;
+  max-width: 250px;
+  margin: 0;
+  color: #c4b8d5;
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: right;
+  pointer-events: none;
 }
 
 .taste-canvas::after {
@@ -480,6 +533,10 @@
     gap: 9px;
     font-size: 8px;
   }
+
+  .map-controls { top: 10px; right: 10px; gap: 4px; }
+  .map-controls button { min-width: 30px; height: 30px; padding: 0 7px; }
+  .map-interaction-hint { right: 10px; bottom: 48px; left: 10px; max-width: none; text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

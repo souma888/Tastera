@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Media } from "../types/media";
 import "./TasteMap.css";
 
@@ -16,6 +16,7 @@ type TasteNode = {
   connection: string;
 };
 type TasteLink = { from: string; to: string; id: string };
+type PanGesture = { pointerId: number; startX: number; startY: number; originX: number; originY: number };
 type TasteMapProps = {
   savedItems: Media[];
   feedbackItems: { item: Media; feedback: "more" | "less" }[];
@@ -117,6 +118,9 @@ function makeGraph(
 export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
   const [selectedId, setSelectedId] = useState("you");
   const [filter, setFilter] = useState<Filter>("all");
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panGesture = useRef<PanGesture | null>(null);
   const graph = useMemo(() => makeGraph(savedItems, feedbackItems), [savedItems, feedbackItems]);
   const selected = graph.nodes.find((node) => node.id === selectedId) ?? graph.nodes[0];
   const categoryNodeIds = new Set(graph.nodes.filter((node) => node.kind === filter).map((node) => node.id));
@@ -137,6 +141,46 @@ export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
     music: "MUSIC",
     theme: "SHARED GENRE",
   };
+
+  function beginPan(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || (event.target instanceof Element && event.target.closest(".taste-node, .map-controls"))) return;
+    panGesture.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: viewport.x,
+      originY: viewport.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsPanning(true);
+  }
+
+  function movePan(event: ReactPointerEvent<HTMLDivElement>) {
+    const gesture = panGesture.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const maxX = bounds.width * (0.22 + Math.abs(viewport.zoom - 1) * 0.38);
+    const maxY = bounds.height * (0.22 + Math.abs(viewport.zoom - 1) * 0.38);
+    setViewport((current) => ({
+      ...current,
+      x: Math.max(-maxX, Math.min(maxX, gesture.originX + event.clientX - gesture.startX)),
+      y: Math.max(-maxY, Math.min(maxY, gesture.originY + event.clientY - gesture.startY)),
+    }));
+  }
+
+  function endPan(event: ReactPointerEvent<HTMLDivElement>) {
+    if (panGesture.current?.pointerId !== event.pointerId) return;
+    panGesture.current = null;
+    setIsPanning(false);
+  }
+
+  function zoomMap(event: ReactWheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setViewport((current) => ({
+      ...current,
+      zoom: Math.max(0.65, Math.min(1.8, current.zoom + (event.deltaY < 0 ? 0.1 : -0.1))),
+    }));
+  }
 
   return (
     <section className="taste-page">
@@ -165,42 +209,63 @@ export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
       </div>
 
       <div className="taste-layout">
-        <div className="taste-canvas">
+        <div
+          className={`taste-canvas ${isPanning ? "is-panning" : ""}`}
+          onPointerDown={beginPan}
+          onPointerMove={movePan}
+          onPointerUp={endPan}
+          onPointerCancel={endPan}
+          onWheel={zoomMap}
+          aria-label="Interactive taste map. Drag to pan and scroll to zoom."
+        >
           <div className="constellation-label"><span className="constellation-dot" />YOUR SAVED TASTE GRAPH</div>
-          <svg className="taste-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            {graph.links.map((link) => {
-              if (!visibleIds.has(link.from) || !visibleIds.has(link.to)) return null;
-              const from = graph.nodes.find((node) => node.id === link.from);
-              const to = graph.nodes.find((node) => node.id === link.to);
-              if (!from || !to) return null;
-              const isSelected = selectedId === link.from || selectedId === link.to;
+          <div className="map-controls" aria-label="Taste Map controls">
+            <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => setViewport((current) => ({ ...current, zoom: Math.min(1.8, current.zoom + 0.15) }))}>+</button>
+            <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => setViewport((current) => ({ ...current, zoom: Math.max(0.65, current.zoom - 0.15) }))}>−</button>
+            <button type="button" className="map-reset" onClick={() => setViewport({ x: 0, y: 0, zoom: 1 })}>Reset view</button>
+          </div>
+          <div
+            className="taste-world"
+            style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})` }}
+          >
+            <svg className="taste-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {graph.links.map((link) => {
+                if (!visibleIds.has(link.from) || !visibleIds.has(link.to)) return null;
+                const from = graph.nodes.find((node) => node.id === link.from);
+                const to = graph.nodes.find((node) => node.id === link.to);
+                if (!from || !to) return null;
+                const isSelected = selectedId === link.from || selectedId === link.to;
+                return (
+                  <path
+                    key={link.id}
+                    d={`M ${from.x} ${from.y} Q ${(from.x + to.x) / 2 + 2} ${(from.y + to.y) / 2 - 2} ${to.x} ${to.y}`}
+                    className={isSelected ? "taste-link active" : "taste-link"}
+                  />
+                );
+              })}
+            </svg>
+            {graph.nodes.map((node) => {
+              const isVisible = visibleIds.has(node.id);
               return (
-                <path
-                  key={link.id}
-                  d={`M ${from.x} ${from.y} Q ${(from.x + to.x) / 2 + 2} ${(from.y + to.y) / 2 - 2} ${to.x} ${to.y}`}
-                  className={isSelected ? "taste-link active" : "taste-link"}
-                />
+                <button
+                  key={node.id}
+                  type="button"
+                  className={["taste-node", `node-${node.kind}`, selectedId === node.id ? "is-selected" : "", !isVisible ? "is-filtered-out" : ""].join(" ")}
+                  style={{ left: `${node.x}%`, top: `${node.y}%`, "--node-size": `${node.size}px` } as CSSProperties}
+                  onClick={() => setSelectedId(node.id)}
+                  onMouseEnter={() => setSelectedId(node.id)}
+                  onFocus={() => setSelectedId(node.id)}
+                  aria-pressed={selectedId === node.id}
+                  aria-label={`Explore ${node.label}`}
+                  title={`${node.label}. ${node.connection}`}
+                >
+                  <span className="taste-node-dot" />
+                  <span className="taste-node-label">{node.label}</span>
+                </button>
               );
             })}
-          </svg>
-          {graph.nodes.map((node) => {
-            const isVisible = visibleIds.has(node.id);
-            return (
-              <button
-                key={node.id}
-                type="button"
-                className={["taste-node", `node-${node.kind}`, selectedId === node.id ? "is-selected" : "", !isVisible ? "is-filtered-out" : ""].join(" ")}
-                style={{ left: `${node.x}%`, top: `${node.y}%`, "--node-size": `${node.size}px` } as CSSProperties}
-                onClick={() => setSelectedId(node.id)}
-                aria-pressed={selectedId === node.id}
-                aria-label={`Explore ${node.label}`}
-                title={node.label}
-              >
-                <span className="taste-node-dot" />
-                <span className="taste-node-label">{node.label}</span>
-              </button>
-            );
-          })}
+          </div>
+          <p className="map-interaction-hint">Drag empty space to pan · Scroll to zoom · Hover a node to trace its links</p>
           <div className="constellation-legend">
             <span><i className="legend-movie" /> Movies</span>
             <span><i className="legend-book" /> Books</span>
