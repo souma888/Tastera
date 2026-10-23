@@ -34,6 +34,17 @@ const navigationItems = [
 type Page = (typeof navigationItems)[number][0];
 type RecommendationStrategy = "auto" | "genre" | "item_item";
 type CategoryMix = Record<MediaCategory, number>;
+type HeroSlide = {
+  eyebrow: string;
+  headline: string;
+  highlight: string;
+  description: string;
+  action: string;
+  destination: Page;
+  category?: MediaFilter;
+  artwork: Media[];
+  caption: string;
+};
 
 const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
 const recommendationBatchSize = 12;
@@ -197,6 +208,83 @@ function App() {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthBusy, setIsAuthBusy] = useState(false);
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
+
+  const heroSlides = useMemo<HeroSlide[]>(() => {
+    const itemFor = (mediaCategory: MediaCategory) =>
+      catalog.find((item) => item.category === mediaCategory && item.image) ??
+      mediaItems.find((item) => item.category === mediaCategory && item.image)!;
+    const movie = itemFor("Movies");
+    const book = itemFor("Books");
+    const music = itemFor("Music");
+
+    return [
+      {
+        eyebrow: "MOVIES · FIND YOUR NEXT FAVORITE",
+        headline: "Stories that",
+        highlight: "stay with you.",
+        description: "Find films that match your curiosity, mood, and the worlds you already love.",
+        action: "Browse movies",
+        destination: "Discover",
+        category: "Movies",
+        artwork: [movie],
+        caption: `${movie.title} · MOVIES`,
+      },
+      {
+        eyebrow: "BOOKS · OPEN A NEW WORLD",
+        headline: "Get lost in",
+        highlight: "a good story.",
+        description: "Explore books with the ideas, settings, and feelings you want more of.",
+        action: "Explore books",
+        destination: "Discover",
+        category: "Books",
+        artwork: [book],
+        caption: `${book.title} · BOOKS`,
+      },
+      {
+        eyebrow: "MUSIC · FIND YOUR SOUND",
+        headline: "Set the mood.",
+        highlight: "Press play.",
+        description: "Discover albums that belong on the soundtrack to whatever comes next.",
+        action: "Explore music",
+        destination: "Discover",
+        category: "Music",
+        artwork: [music],
+        caption: `${music.title} · MUSIC`,
+      },
+      {
+        eyebrow: "TASTE MAP · FOLLOW THE THREADS",
+        headline: "See what",
+        highlight: "connects you.",
+        description: "Trace the genres and shared interests that link the things you save and enjoy.",
+        action: "Explore your Taste Map",
+        destination: "Taste Map",
+        artwork: [movie, book, music],
+        caption: "MOVIES · BOOKS · MUSIC",
+      },
+      {
+        eyebrow: "YOUR SETTINGS · MAKE IT YOURS",
+        headline: "Shape your",
+        highlight: "next discovery.",
+        description: "Choose the balance of movies, books, and music you want in your For You picks.",
+        action: "Tune your mix",
+        destination: "Settings",
+        artwork: [book, music, movie],
+        caption: "YOUR CATEGORY MIX",
+      },
+    ];
+  }, [catalog]);
+
+  useEffect(() => {
+    if (activePage !== "Discover" || isHeroPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      setHeroSlideIndex((index) => (index + 1) % heroSlides.length);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [activePage, heroSlides.length, isHeroPaused]);
+
+  const activeHeroSlide = heroSlides[heroSlideIndex] ?? heroSlides[0];
 
   function applyRecommendationPage(page: RecommendationPage, resetSeen = false) {
     setRecommendations(page.items);
@@ -554,19 +642,42 @@ function App() {
           </div>
 
           <div className="topbar-actions">
-            <label className="search-box">
+            <form
+              className="search-box"
+              role="search"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (activePage !== "Library") navigate("Discover");
+              }}
+            >
               <span aria-hidden="true">⌕</span>
               <input
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
                   setPageNumber(1);
+                  if (event.target.value.trim() && activePage !== "Discover" && activePage !== "Library") {
+                    navigate("Discover");
+                  }
                 }}
-                placeholder="Find your next obsession..."
+                placeholder="Search titles, creators, or genres..."
                 aria-label="Search media"
               />
-              <span className="search-hint">TITLE · CREATOR · GENRE</span>
-            </label>
+              {search && (
+                <button
+                  type="button"
+                  className="search-clear"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setSearch("");
+                    setPageNumber(1);
+                  }}
+                >
+                  ×
+                </button>
+              )}
+              <button type="submit" className="search-submit" aria-label="Search">⌕</button>
+            </form>
             {account ? (
               <button type="button" className="account-button" onClick={signOut}>
                 <span className="account-email">{account.email}</span>
@@ -915,53 +1026,90 @@ function App() {
         ) : (
           <>
             {activePage === "Discover" && (
-              <section className="hero">
+              <section className="hero" aria-label="Featured discoveries" aria-roledescription="carousel" aria-live="off">
                 <div className="hero-copy">
                   <span className="eyebrow">
                     <span className="status-dot" /> DISCOVERY, REIMAGINED
                   </span>
 
                   <h1>
-                    Your taste.
+                    {activeHeroSlide.headline}
                     <br />
-                    <span>Your universe.</span>
+                    <span>{activeHeroSlide.highlight}</span>
                   </h1>
 
-                  <p>
-                    More than recommendations. Discover the stories, sounds
-                    and ideas you didn&apos;t know you&apos;d love.
-                  </p>
+                  <p>{activeHeroSlide.description}</p>
 
                   <button
                     type="button"
                     className="primary-button"
-                    onClick={() =>
-                      document
-                        .getElementById("discovery")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
+                    onClick={() => {
+                      setSearch("");
+                      setPageNumber(1);
+                      setCategory(activeHeroSlide.category ?? "All");
+                      navigate(activeHeroSlide.destination);
+                      if (activeHeroSlide.destination === "Discover") {
+                        window.setTimeout(() => document.getElementById("discovery")?.scrollIntoView({ behavior: "smooth" }), 0);
+                      }
+                    }}
                   >
-                    Explore your world <span>↗</span>
+                    {activeHeroSlide.action} <span>↗</span>
                   </button>
+                  <div className="hero-controls" aria-label="Featured slide controls">
+                    <button
+                      type="button"
+                      className="hero-arrow"
+                      aria-label="Previous featured item"
+                      onClick={() => setHeroSlideIndex((index) => (index - 1 + heroSlides.length) % heroSlides.length)}
+                    >←</button>
+                    <div className="hero-dots" aria-label="Choose featured item">
+                      {heroSlides.map((slide, index) => (
+                        <button
+                          type="button"
+                          key={slide.eyebrow}
+                          className={index === heroSlideIndex ? "active" : ""}
+                          aria-label={`Show ${slide.eyebrow.toLowerCase()}`}
+                          aria-pressed={index === heroSlideIndex}
+                          onClick={() => setHeroSlideIndex(index)}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="hero-arrow"
+                      aria-label="Next featured item"
+                      onClick={() => setHeroSlideIndex((index) => (index + 1) % heroSlides.length)}
+                    >→</button>
+                    <button
+                      type="button"
+                      className="hero-pause"
+                      aria-label={isHeroPaused ? "Resume featured rotation" : "Pause featured rotation"}
+                      onClick={() => setIsHeroPaused((paused) => !paused)}
+                    >{isHeroPaused ? "Play" : "Pause"}</button>
+                  </div>
                 </div>
 
                 <div className="hero-art">
-                  <img
-                    src="https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg"
-                    alt="Interstellar cinematic landscape"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                  />
+                  <span className="hero-slide-eyebrow">{activeHeroSlide.eyebrow}</span>
+                  <div className={activeHeroSlide.artwork.length > 1 ? "hero-collage" : "hero-single-art"}>
+                    {activeHeroSlide.artwork.map((item) => (
+                      <img
+                        key={item.id}
+                        src={item.image ?? ""}
+                        alt={activeHeroSlide.artwork.length === 1 ? `${item.title} cover` : ""}
+                        onError={(event) => { event.currentTarget.style.opacity = "0"; }}
+                      />
+                    ))}
+                  </div>
                   <div className="hero-art-overlay" />
                   <div className="hero-glow" />
                   <div className="hero-caption">
                     <span>FEATURED DISCOVERY</span>
-                    <strong>Explore beyond the obvious.</strong>
+                    <strong>{activeHeroSlide.caption}</strong>
                   </div>
                 </div>
 
-                <div className="hero-index">01 — 04</div>
+                <div className="hero-index">{String(heroSlideIndex + 1).padStart(2, "0")} — {String(heroSlides.length).padStart(2, "0")}</div>
               </section>
             )}
 
@@ -1148,6 +1296,14 @@ function App() {
                 ))}
               </div>
 
+              {search.trim() && (
+                <p className="search-result-summary" role="status" aria-live="polite">
+                  {isCatalogLoading && activePage === "Discover"
+                    ? `Searching for “${search.trim()}”…`
+                    : `${activePage === "Library" ? visibleMedia.length : totalItems} ${activePage === "Library" ? "saved matches" : "catalog matches"} for “${search.trim()}”`}
+                </p>
+              )}
+
               {activePage === "Library" && isCheckingAccount ? (
                 <div className="catalog-loading" role="status">
                   Loading your Library…
@@ -1170,18 +1326,22 @@ function App() {
               ) : (
                 <div className="empty-state">
                   <h3>
-                    {activePage === "Library"
-                      ? "Your library is empty."
-                      : "Nothing here just yet."}
+                    {search.trim()
+                      ? `No matches for “${search.trim()}”`
+                      : activePage === "Library"
+                        ? "Your library is empty."
+                        : "Nothing here just yet."}
                   </h3>
                   <p>
-                    {activePage === "Library"
-                      ? account
-                        ? "Save a discovery with the heart button and it will appear here."
-                        : "Sign in to save discoveries to your personal Library."
-                      : "Try another search or select a different category."}
+                    {search.trim()
+                      ? "Try a different title, creator, genre, or category."
+                      : activePage === "Library"
+                        ? account
+                          ? "Save a discovery with the heart button and it will appear here."
+                          : "Sign in to save discoveries to your personal Library."
+                        : "Try another search or select a different category."}
                   </p>
-                  {activePage === "Library" && !account && (
+                  {activePage === "Library" && !account && !search.trim() && (
                     <button
                       type="button"
                       className="primary-button library-signin-button"
