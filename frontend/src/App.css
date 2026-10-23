@@ -2373,6 +2373,24 @@
 .taste-choice-card:hover { border-color: #8971b4; }
 .taste-choice-card.selected { border-color: var(--lavender); background: #b49aff18; box-shadow: 0 0 0 1px #b49aff44; }
 .taste-choice-card img { width: 100%; aspect-ratio: 0.77; border-radius: 6px; background: #27212f; object-fit: cover; }
+.taste-choice-card-art { position: relative; display: grid; aspect-ratio: .77; place-items: center; overflow: hidden; border-radius: 6px; background: radial-gradient(ellipse at 70% 25%, #9676c84d, transparent 55%), linear-gradient(145deg, #30243c, #15121a 72%); }
+.taste-choice-card-art > img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; object-fit: cover; }
+.taste-choice-card-art.fallback { background: radial-gradient(ellipse at 75% 20%, #b39aff50, transparent 53%), repeating-linear-gradient(135deg, #b39aff0b 0 2px, transparent 2px 11px), linear-gradient(145deg, #30243c, #15121a 72%); }
+.taste-choice-art-fallback { display: grid; place-items: center; gap: 10px; color: #d9c9ff; text-align: center; }
+.taste-choice-art-fallback b { font: 500 clamp(26px,4vw,44px)/1 var(--font-heading); }
+.taste-choice-art-fallback small { color: #c5b7de; font-size: 7px; letter-spacing: 1px; }
+.taste-choice-title { position: relative; }
+.taste-choice-check { position: absolute; z-index: 2; top: 5px; right: 5px; display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid #ffffff55; border-radius: 50%; background: #100e14dc; color: white; font-size: 12px; }
+.taste-choice-card.selected .taste-choice-check { border-color: var(--lavender); color: var(--lavender); }
+.taste-search-panel { margin: 0 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: #ffffff04; }
+.taste-search-panel > div:first-child { display: grid; gap: 4px; margin-bottom: 10px; }
+.taste-search-panel > div:first-child strong { font-size: 12px; }
+.taste-search-panel > div:first-child span, .taste-search-status { color: var(--text-muted); font-size: 10px; }
+.taste-search-controls { display: grid; grid-template-columns: 140px minmax(0,1fr); gap: 8px; }
+.taste-search-controls input, .taste-search-controls select { min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: #100e14; color: var(--text-primary); }
+.taste-search-controls input:focus, .taste-search-controls select:focus { border-color: var(--lavender); }
+.taste-search-status { margin: 8px 0 0; }
+.taste-search-results { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; max-height: 250px; overflow: auto; margin-top: 10px; padding: 2px; }
 .taste-choice-card span,.taste-choice-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .taste-choice-card span { font-size: 10px; font-weight: 600; }
 .taste-choice-card small { color: var(--text-muted); font-size: 9px; }
@@ -2474,6 +2492,21 @@
   .collection-detail-heading { flex-direction: column; }
 }
 
+.contact-icon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.contact-icon svg .logo-fill { fill: currentColor; stroke: none; }
+.contact-instagram { color: #f0a4d1; background: #b4477d22; }
+.contact-whatsapp { color: #68d69b; background: #26a26922; }
+.contact-github { color: #f1edf8; background: #ffffff13; }
+.taste-choice-card-art, .taste-choice-art-fallback { white-space: normal !important; text-overflow: clip !important; }
+
+@media (max-width: 900px) {
+  .taste-search-results { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+  .taste-search-results { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .taste-search-controls { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 900px) {
   .account-menu .account-email { max-width: 120px; }
   .taste-choice-cards { grid-template-columns: repeat(4,minmax(0,1fr)); }
@@ -2523,8 +2556,9 @@
   border: 1px solid #ffffff3b;
   border-radius: 9px;
   box-shadow: 0 16px 36px #0009;
-  object-fit: cover;
+  object-fit: contain;
   transform: rotate(3deg);
+  background: radial-gradient(ellipse at 50% 44%, #8a70b040, transparent 58%), #15121b;
 }
 .guide-visual-book > img { transform: rotate(-3deg); }
 .guide-visual-music > img { width: 43%; transform: rotate(0); }
@@ -2553,12 +2587,12 @@
 .guide-real-caption span { color: var(--text-secondary); font-size: 10px; }
 .guide-card-copy { display: flex; flex: 1; flex-direction: column; align-items: flex-start; }
 .guide-card-copy .text-button { margin-top: auto; padding-top: 16px; }
-.guide-map-artwork { position: absolute; inset: 47px 16px 13px; display: flex; align-items: center; justify-content: center; gap: 9px; }
-.guide-map-artwork img { width: 28%; height: 76%; border: 1px solid #ffffff33; border-radius: 6px; box-shadow: 0 10px 24px #0009; object-fit: cover; }
+.guide-map-artwork { position: absolute; inset: 47px 16px 48px; display: flex; align-items: center; justify-content: center; gap: 9px; }
+.guide-map-artwork img { width: 28%; height: 100%; border: 1px solid #ffffff33; border-radius: 6px; box-shadow: 0 10px 24px #0009; object-fit: contain; background: #17141d; }
 .guide-map-artwork img:first-child { transform: rotate(-8deg) translateY(9px); }
 .guide-map-artwork img:nth-child(2) { z-index: 1; transform: translateY(-4px) scale(1.08); }
 .guide-map-artwork img:last-child { transform: rotate(8deg) translateY(9px); }
-.guide-map-visual-caption { position: absolute; z-index: 3; right: 16px; bottom: 14px; left: 16px; display: grid; gap: 4px; text-align: center; text-shadow: 0 2px 9px #000; }
+.guide-map-visual-caption { position: absolute; z-index: 3; right: 0; bottom: 0; left: 0; display: grid; min-height: 48px; align-content: center; gap: 4px; padding: 7px 12px; background: linear-gradient(0deg, #100e14f2, #100e14cc); text-align: center; text-shadow: 0 2px 9px #000; }
 .guide-map-visual-caption strong { font: 600 13px var(--font-heading); }
 .guide-map-visual-caption span { color: var(--lavender); font-size: 7px; font-weight: 700; letter-spacing: 1px; }
 .guide-visual-settings { justify-content: center; background: radial-gradient(ellipse at 70% 42%, #75519c88, transparent 60%), linear-gradient(140deg, #1e1928, #111015); }

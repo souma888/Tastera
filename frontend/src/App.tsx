@@ -68,8 +68,14 @@ function getHeroArtworkUrl(image: string | null) {
   if (!image) return "";
   return image
     .replace(/\/t\/p\/w\d+\//, "/t/p/original/")
-    .replace(/-M\.jpg$/i, "-L.jpg")
-    .replace(/\/front-\d+$/, "/front-1200");
+    .replace(/-M(?=\.jpg(?:\?|$))/i, "-L");
+}
+
+function ContactLogo({ kind }: { kind: "email" | "instagram" | "whatsapp" | "github" }) {
+  if (kind === "email") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z" /><path d="m4 7 8 6 8-6" /></svg>;
+  if (kind === "instagram") return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" /><circle cx="12" cy="12" r="4.1" /><circle className="logo-fill" cx="17.7" cy="6.6" r="1.1" /></svg>;
+  if (kind === "whatsapp") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.1 11.8a8.1 8.1 0 0 1-12 7.1L3.5 20l1.2-4.4a8.1 8.1 0 1 1 15.4-3.8Z" /><path d="M9.1 8.2c.2-.5.5-.5.8-.5h.4c.2 0 .4.1.5.4l.7 1.7c.1.3.1.5-.1.7l-.5.6c-.2.2-.2.4 0 .6.4.7 1.1 1.3 1.8 1.7.3.2.5.2.7-.1l.7-.8c.2-.2.4-.2.7-.1l1.6.8c.3.1.4.3.4.5 0 .3-.2 1.1-.7 1.5-.5.5-1.2.7-1.9.6-1-.2-2.2-.7-3.5-1.8-1.1-1-1.9-2.2-2.2-3.2-.3-.8-.1-1.7.2-2.3.1-.2.3-.4.5-.4Z" /></svg>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path className="logo-fill" d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.6v-2.1c-3.1.7-3.8-1.3-3.8-1.3-.5-1.3-1.2-1.6-1.2-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1.7 1.8 3.1 1.4.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.5 0-1.2.4-2.1 1.1-2.9-.1-.3-.5-1.4.1-2.8 0 0 .9-.3 2.9 1.1a10 10 0 0 1 5.3 0c2-1.4 2.9-1.1 2.9-1.1.6 1.4.2 2.5.1 2.8.7.8 1.1 1.7 1.1 2.9 0 4.3-2.6 5.2-5.1 5.5.4.3.8 1 .8 2v2.7c0 .4.2.7.8.6A11.2 11.2 0 0 0 12 .8Z" /></svg>;
 }
 
 const discoveryPrompts: { label: string; category: MediaFilter; terms: string[] }[] = [
@@ -108,17 +114,18 @@ function readTastePreferences(): TastePreferences {
     const value = JSON.parse(localStorage.getItem("tastera_taste_setup") ?? "null") as Partial<TastePreferences> | null;
     return {
       favoriteIds: Array.isArray(value?.favoriteIds) ? value.favoriteIds.filter((item): item is string => typeof item === "string") : [],
+      favoriteItems: Array.isArray(value?.favoriteItems) ? value.favoriteItems.filter((item): item is Media => Boolean(item && typeof item.id === "string" && typeof item.title === "string" && ["Movies", "Books", "Music"].includes(item.category))) : [],
       favoriteArtists: Array.isArray(value?.favoriteArtists) ? value.favoriteArtists.filter((item): item is string => typeof item === "string") : [],
       genres: Array.isArray(value?.genres) ? value.genres.filter((item): item is string => typeof item === "string") : [],
       moods: Array.isArray(value?.moods) ? value.moods.filter((item): item is string => typeof item === "string") : [],
     };
   } catch {
-    return { favoriteIds: [], favoriteArtists: [], genres: [], moods: [] };
+    return { favoriteIds: [], favoriteItems: [], favoriteArtists: [], genres: [], moods: [] };
   }
 }
 
 function scoreTaste(item: Media, preferences: TastePreferences, catalog: Media[], feedbackItems: { item: Media; feedback: "more" | "less" }[] = []) {
-  const favoriteItems = catalog.filter((candidate) => preferences.favoriteIds.includes(candidate.id));
+  const favoriteItems = [...new Map([...catalog, ...preferences.favoriteItems].map((candidate) => [candidate.id, candidate])).values()].filter((candidate) => preferences.favoriteIds.includes(candidate.id));
   const genre = item.genre.toLowerCase();
   const creator = item.creator.toLowerCase();
   let score = preferences.genres.some((choice) => genre === choice.toLowerCase()) ? 10 : 0;
@@ -140,7 +147,7 @@ function scoreTaste(item: Media, preferences: TastePreferences, catalog: Media[]
 }
 
 function tasteExplanation(item: Media, preferences: TastePreferences, catalog: Media[]) {
-  const selected = catalog.filter((candidate) => preferences.favoriteIds.includes(candidate.id));
+  const selected = [...new Map([...catalog, ...preferences.favoriteItems].map((candidate) => [candidate.id, candidate])).values()].filter((candidate) => preferences.favoriteIds.includes(candidate.id));
   const source = selected.find((candidate) => candidate.genre.toLowerCase() === item.genre.toLowerCase() && candidate.id !== item.id);
   if (source) return `Because you picked ${source.title}: both share ${item.genre}.`;
   const sameCreator = selected.find((candidate) => candidate.creator.toLowerCase() === item.creator.toLowerCase() && candidate.id !== item.id);
@@ -215,7 +222,7 @@ async function getMixedRecommendationBatch(
   strategy: RecommendationStrategy,
   excludeIds: string[] = [],
   signal?: AbortSignal,
-  preferences: TastePreferences = { favoriteIds: [], favoriteArtists: [], genres: [], moods: [] },
+  preferences: TastePreferences = { favoriteIds: [], favoriteItems: [], favoriteArtists: [], genres: [], moods: [] },
   catalog: Media[] = [],
   savedItems: Media[] = [],
   feedbackItems: { item: Media; feedback: "more" | "less" }[] = [],
@@ -318,7 +325,7 @@ function App() {
   const [recommendationFeedbackItems, setRecommendationFeedbackItems] = useState<
     { item: Media; feedback: "more" | "less" }[]
   >([]);
-  const recommendationCatalog = useMemo(() => [...new Map([...mediaItems, ...catalog].map((item) => [item.id, item])).values()], [catalog]);
+  const recommendationCatalog = useMemo(() => [...new Map([...mediaItems, ...catalog, ...tastePreferences.favoriteItems].map((item) => [item.id, item])).values()], [catalog, tastePreferences.favoriteItems]);
   const recommendationContext = useRef({ catalog: recommendationCatalog, feedbackItems: recommendationFeedbackItems });
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [recommendationTotal, setRecommendationTotal] = useState(0);
@@ -942,7 +949,7 @@ function App() {
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-discover">
                   <span className="guide-visual-label">TASTERA CATALOG · MOVIES</span>
-                  <img src={guideArtwork.movie.image ?? ""} alt={`${guideArtwork.movie.title} artwork`} />
+                  <img src={getHeroArtworkUrl(guideArtwork.movie.image)} alt={`${guideArtwork.movie.title} artwork`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.movie.genre} · {guideArtwork.movie.category}</small><strong>{guideArtwork.movie.title}</strong><span>{guideArtwork.movie.creator}</span></div>
                 </div>
                 <div className="guide-card-copy"><span className="guide-step">01 / DISCOVER</span><h2>Start with a world</h2><p>Use the Movies, Books, and Music filters to narrow the catalog. Search across titles, creators, and genres; change pages to keep exploring beyond the first set of popular picks.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Movies")}>Browse movies →</button></div>
@@ -950,7 +957,7 @@ function App() {
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-book">
                   <span className="guide-visual-label">TASTERA CATALOG · BOOKS</span>
-                  <img src={guideArtwork.book.image ?? ""} alt={`${guideArtwork.book.title} cover`} />
+                  <img src={getHeroArtworkUrl(guideArtwork.book.image)} alt={`${guideArtwork.book.title} cover`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.book.genre} · {guideArtwork.book.category}</small><strong>{guideArtwork.book.title}</strong><span>{guideArtwork.book.creator}</span></div>
                 </div>
                 <div className="guide-card-copy"><span className="guide-step">02 / SEARCH & SAVE</span><h2>Keep the things that click</h2><p>Open a card to see its creator, genre, artwork, and “Why it connects” note. Tap the heart to save it to your Library. Sign in first to keep saves across devices.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Books")}>Find a book →</button></div>
@@ -958,7 +965,7 @@ function App() {
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-music">
                   <span className="guide-visual-label">TASTERA CATALOG · MUSIC</span>
-                  <img src={guideArtwork.music.image ?? ""} alt={`${guideArtwork.music.title} album artwork`} />
+                  <img src={getHeroArtworkUrl(guideArtwork.music.image)} alt={`${guideArtwork.music.title} album artwork`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.music.genre} · {guideArtwork.music.category}</small><strong>{guideArtwork.music.title}</strong><span>{guideArtwork.music.creator}</span></div>
                 </div>
                 <div className="guide-card-copy"><span className="guide-step">03 / LIBRARY</span><h2>Build your own shelf</h2><p>Your Library brings saved films, books, and albums together. From your Profile, see category balance, recurring genres, recent saves, and the feedback you have given.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Library")}>Open your Library →</button></div>
@@ -967,7 +974,7 @@ function App() {
                 <div className="guide-real-visual guide-visual-map">
                   <span className="guide-visual-label">TASTERA · YOUR TASTE MAP</span>
                   <div className="guide-map-artwork">
-                    {[guideArtwork.movie, guideArtwork.book, guideArtwork.music].map((item) => <img key={item.id} src={item.image ?? ""} alt="" />)}
+                    {[guideArtwork.movie, guideArtwork.book, guideArtwork.music].map((item) => <img key={item.id} src={getHeroArtworkUrl(item.image)} alt="" onError={(event) => event.currentTarget.remove()} />)}
                   </div>
                   <div className="guide-map-visual-caption"><strong>Stories share more than a shelf.</strong><span>GENRE · MOOD · YOUR SIGNALS</span></div>
                 </div>
@@ -1008,11 +1015,11 @@ function App() {
             </div>
             <div className="contact-intro"><span className="contact-avatar">S</span><div><strong>Soumadip Karan</strong><span>Creator & developer of Tastera</span><p>For bug reports, include the page name, what you expected, and what happened. For catalog suggestions, include the title and whether it is a movie, book, or album.</p></div></div>
             <div className="contact-grid contact-grid-detailed">
-              <article className="contact-card"><span className="contact-icon">@</span><div><span className="eyebrow">EMAIL · BEST FOR FEEDBACK</span><a href="mailto:soumadipkaran8@gmail.com?subject=Tastera%20feedback">soumadipkaran8@gmail.com</a><a href="mailto:soumadipkaran88@gmail.com?subject=Tastera%20feedback">soumadipkaran88@gmail.com</a><small>Send an idea, bug report, or catalog correction.</small></div></article>
-              <article className="contact-card"><span className="contact-icon">◉</span><div><span className="eyebrow">INSTAGRAM</span><a href="https://www.instagram.com/soumadip1608?exln=b2xwZTRmdHNqdmlj" target="_blank" rel="noreferrer">@soumadip1608 ↗</a><small>Follow or send a direct message.</small></div></article>
-              <article className="contact-card"><span className="contact-icon">↗</span><div><span className="eyebrow">WHATSAPP</span><a href="https://wa.me/917074796529" target="_blank" rel="noreferrer">+91 70747 96529 ↗</a><small>Open a WhatsApp conversation.</small></div></article>
-              <article className="contact-card"><span className="contact-icon">⌘</span><div><span className="eyebrow">TASTERA SOURCE CODE</span><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">github.com/souma888/Tastera ↗</a><small>Browse the code and report project issues.</small></div></article>
-              <article className="contact-card"><span className="contact-icon">GH</span><div><span className="eyebrow">DEVELOPER PROFILE</span><a href="https://github.com/souma888" target="_blank" rel="noreferrer">github.com/souma888 ↗</a><small>See my other work on GitHub.</small></div></article>
+              <article className="contact-card"><span className="contact-icon"><ContactLogo kind="email" /></span><div><span className="eyebrow">EMAIL · BEST FOR FEEDBACK</span><a href="mailto:soumadipkaran8@gmail.com?subject=Tastera%20feedback">soumadipkaran8@gmail.com</a><a href="mailto:soumadipkaran88@gmail.com?subject=Tastera%20feedback">soumadipkaran88@gmail.com</a><small>Send an idea, bug report, or catalog correction.</small></div></article>
+              <article className="contact-card"><span className="contact-icon contact-instagram"><ContactLogo kind="instagram" /></span><div><span className="eyebrow">INSTAGRAM</span><a href="https://www.instagram.com/soumadip1608?exln=b2xwZTRmdHNqdmlj" target="_blank" rel="noreferrer">@soumadip1608 ↗</a><small>Follow or send a direct message.</small></div></article>
+              <article className="contact-card"><span className="contact-icon contact-whatsapp"><ContactLogo kind="whatsapp" /></span><div><span className="eyebrow">WHATSAPP</span><a href="https://wa.me/917074796529" target="_blank" rel="noreferrer">+91 70747 96529 ↗</a><small>Open a WhatsApp conversation.</small></div></article>
+              <article className="contact-card"><span className="contact-icon contact-github"><ContactLogo kind="github" /></span><div><span className="eyebrow">TASTERA SOURCE CODE</span><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">github.com/souma888/Tastera ↗</a><small>Browse the code and report project issues.</small></div></article>
+              <article className="contact-card"><span className="contact-icon contact-github"><ContactLogo kind="github" /></span><div><span className="eyebrow">DEVELOPER PROFILE</span><a href="https://github.com/souma888" target="_blank" rel="noreferrer">github.com/souma888 ↗</a><small>See my other work on GitHub.</small></div></article>
             </div>
             <p className="contact-response-note">Please don’t send passwords or private account details. A page name and a short description are enough for me to investigate most issues.</p>
           </section>
