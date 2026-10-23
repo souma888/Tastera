@@ -31,7 +31,6 @@ SOURCE_WITH_GENRES = "MusicBrainz CC0 + supplementary genres CC BY-NC-SA 3.0"
 MIN_REQUEST_DELAY = 1.1
 USER_AGENT = "Tastera/0.1 (https://soumadip-tastera.vercel.app/)"
 CAA_FRONT_URL = "https://coverartarchive.org/release-group/{}/front-500"
-CAA_METADATA_URL = "https://coverartarchive.org/release-group/{}"
 POPULAR_GENRE_TAGS = (
     "rock", "pop", "hip hop", "jazz", "electronic", "rhythm and blues",
     "country", "metal", "soul", "classical", "folk", "reggae", "punk",
@@ -148,29 +147,25 @@ def _community_popularity(item: dict[str, Any]) -> int:
 
 
 def _cover_artwork(client: httpx.Client, release_group_id: str) -> str | None:
-    """Return a confirmed front-cover thumbnail URL, or None if CAA has no cover."""
-    response = client.get(
-        CAA_METADATA_URL.format(release_group_id),
-        headers={"Accept": "application/json"},
-    )
-    if response.status_code == 404:
-        return None
-    response.raise_for_status()
-    payload = response.json()
-    images = payload.get("images", []) if isinstance(payload, dict) else []
-    if not isinstance(images, list):
-        return None
-    for image in images:
-        if not isinstance(image, dict) or image.get("front") is not True:
-            continue
-        thumbnails = image.get("thumbnails", {})
-        if isinstance(thumbnails, dict):
-            artwork = thumbnails.get("500") or thumbnails.get("large") or thumbnails.get("250")
-            if isinstance(artwork, str) and artwork.startswith("https://"):
-                return artwork
-        artwork = image.get("image")
-        if isinstance(artwork, str) and artwork.startswith("https://"):
-            return artwork
+    """Return a confirmed CAA front-cover URL, or None if there is no cover.
+
+    CAA documents a 307 from its front-cover endpoint as confirmation that a
+    front image exists. Keep its stable URL rather than following the redirect
+    during import: the target is hosted by Internet Archive and can be
+    temporarily unavailable even when CAA has valid artwork metadata.
+    """
+    url = CAA_FRONT_URL.format(release_group_id)
+    for attempt in range(3):
+        response = client.get(url, follow_redirects=False)
+        if response.status_code == 404:
+            return None
+        if response.status_code == 307:
+            return url
+        if response.status_code == 429 or response.status_code >= 500:
+            if attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+        response.raise_for_status()
     return None
 
 
