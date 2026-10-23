@@ -33,7 +33,7 @@ Routes use the `/api/v1` prefix. Private endpoints require `Authorization: Beare
 
 | Method and path | Purpose |
 |---|---|
-| `GET /media?category=&q=&page=&limit=` | Search and paginate Movies, Books, or Music |
+| `GET /media?category=&q=&page=&limit=` | Search and paginate Movies, Books, or Music; `limit` is capped at 150 |
 | `GET /media/{media_id}` | Fetch a catalog item |
 | `POST /auth/register` | Register and issue a signed token |
 | `POST /auth/login` | Sign in and issue a signed token |
@@ -45,7 +45,7 @@ Routes use the `/api/v1` prefix. Private endpoints require `Authorization: Beare
 | `PUT /me/recommendations/feedback/{media_id}` | Store `more` or `less` feedback |
 | `DELETE /me/recommendations/feedback/{media_id}` | Clear feedback for an item |
 
-The generated `/docs` page is the source of truth for request/response schemas and status codes. Catalog pagination returns `items`, `page`, `limit`, `total`, and `total_pages`; the API currently caps page size at 50. Recommendation `limit` is capped at 20.
+The generated `/docs` page is the source of truth for request/response schemas and status codes. Catalog pagination returns `items`, `page`, `limit`, `total`, and `total_pages`; `limit` accepts 1–150. Text search covers title, creator, and primary genre. The Connection Explorer reuses this endpoint with genre/creator search; there is no separate relationship graph or creator API. Recommendation `limit` is capped at 20.
 
 ## Import movies from TMDb
 

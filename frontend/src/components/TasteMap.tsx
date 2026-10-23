@@ -14,12 +14,17 @@ type TasteNode = {
   size: number;
   description: string;
   connection: string;
+  genre?: string;
 };
 type TasteLink = { from: string; to: string; id: string };
 type PanGesture = { pointerId: number; startX: number; startY: number; originX: number; originY: number };
 type TasteMapProps = {
   savedItems: Media[];
   feedbackItems: { item: Media; feedback: "more" | "less" }[];
+  catalog: Media[];
+  onExploreItem: (item: Media) => void;
+  onExploreTheme: (genre: string) => void;
+  onOpenCreator: (creator: string) => void;
 };
 
 const filterOptions: { label: string; value: Filter }[] = [
@@ -32,6 +37,10 @@ const filterOptions: { label: string; value: Filter }[] = [
 
 function nodeKind(category: Media["category"]): NodeKind {
   return category === "Movies" ? "movie" : category === "Books" ? "book" : "music";
+}
+
+function genreKeys(value: string) {
+  return value.toLowerCase().replace(/\bsci[ -]?fi\b/g, "science fiction").split(/[,;|/]/).map((part) => part.trim()).filter(Boolean);
 }
 
 function makeGraph(
@@ -86,6 +95,7 @@ function makeGraph(
       size: 64,
       description: `This genre appears on ${theme.items.length} item${theme.items.length === 1 ? "" : "s"} in your taste signals.`,
       connection: "Each line joins this genre to an item in your Library or recommendation feedback.",
+      genre: theme.label,
     });
     links.push({ from: "you", to: id, id: `you-${id}` });
   });
@@ -115,7 +125,7 @@ function makeGraph(
   return { nodes, links, trackedCount: tracked.length };
 }
 
-export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
+export default function TasteMap({ savedItems, feedbackItems, catalog, onExploreItem, onExploreTheme, onOpenCreator }: TasteMapProps) {
   const [selectedId, setSelectedId] = useState("you");
   const [filter, setFilter] = useState<Filter>("all");
   const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
@@ -141,6 +151,15 @@ export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
     music: "MUSIC",
     theme: "SHARED GENRE",
   };
+  const selectedEntry = [...savedItems, ...feedbackItems.map((entry) => entry.item)].find((item) => item.id === selected.id);
+  const relatedCatalogItems = catalog.filter((item) => {
+    if (item.id === selected.id) return false;
+    if (selected.kind === "theme") return genreKeys(item.genre).includes(genreKeys(selected.genre ?? "")[0] ?? "");
+    if (selectedEntry) return genreKeys(item.genre).some((genre) => genreKeys(selectedEntry.genre).includes(genre)) || item.creator.toLowerCase() === selectedEntry.creator.toLowerCase();
+    const tasteGenres = [...savedItems, ...feedbackItems.map((entry) => entry.item)].flatMap((entry) => genreKeys(entry.genre));
+    return genreKeys(item.genre).some((genre) => tasteGenres.includes(genre));
+  }).slice(0, 6);
+  const relatedTitle = selected.kind === "theme" ? `Catalog items tagged ${selected.genre}` : selectedEntry ? `Related to ${selectedEntry.title}` : "Items in your taste neighborhood";
 
   function beginPan(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || (event.target instanceof Element && event.target.closest(".taste-node, .map-controls"))) return;
@@ -283,6 +302,19 @@ export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
           <h2>{selected.label}</h2>
           <p>{selected.description}</p>
           <div className="connection-note"><span>WHY IT CONNECTS</span><p>{selected.connection}</p></div>
+          <section className="taste-related-items" aria-labelledby="taste-related-heading">
+            <span className="detail-kind">EXPLORE THE CATALOG</span>
+            <h3 id="taste-related-heading">{relatedTitle}</h3>
+            {relatedCatalogItems.length ? relatedCatalogItems.map((item) => <article className="taste-related-item" key={item.id}>
+              <button type="button" className="taste-related-open" onClick={() => onExploreItem(item)}>
+                {item.image ? <img src={item.image} alt="" loading="lazy" /> : <span className="taste-related-placeholder">{item.category}</span>}
+                <span><b>{item.title}</b><small>{item.category} · {item.creator}</small></span>
+              </button>
+              {item.creator && <button type="button" className="taste-related-creator" onClick={() => onOpenCreator(item.creator)}>Creator page ↗</button>}
+            </article>) : <p className="taste-related-empty">No matching item is on this catalog page yet. Change page size or browse Discover for more.</p>}
+            {selected.kind === "theme" && <p className="taste-related-proof">Links here use the catalog genre tag and your own saved/feedback connections.</p>}
+            {selected.kind === "theme" && selected.genre && <button type="button" className="taste-related-browse" onClick={() => onExploreTheme(selected.genre!)}>Browse all {selected.genre} items ↗</button>}
+          </section>
           <div className="detail-footer"><span className="connection-pulse" />Built from your saved and rated items</div>
         </aside>
       </div>

@@ -446,6 +446,19 @@
   box-shadow: 0 0 12px #f4ce8780;
 }
 
+.taste-related-items { display: grid; width: 100%; gap: 8px; margin-top: 20px; }
+.taste-related-items > .detail-kind { color: var(--text-muted); font-size: 8px; }
+.taste-related-items h3 { margin: 0 0 2px; font: 600 14px/1.35 var(--font-heading); }
+.taste-related-item { display: grid; gap: 5px; padding: 7px; border: 1px solid #ffffff12; border-radius: 9px; background: #ffffff04; }
+.taste-related-open { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 0; border: 0; color: var(--text-primary); background: none; text-align: left; cursor: pointer; }
+.taste-related-open img,.taste-related-placeholder { display: grid; width: 36px; height: 46px; flex: 0 0 auto; place-items: center; border-radius: 5px; background: #292039; color: var(--taste-purple); object-fit: cover; font-size: 6px; }
+.taste-related-open > span:last-child { display: grid; min-width: 0; gap: 4px; }
+.taste-related-open b { overflow-wrap: anywhere; font-size: 9px; line-height: 1.35; }
+.taste-related-open small { color: var(--text-muted); font-size: 8px; line-height: 1.4; }
+.taste-related-creator { justify-self: start; padding: 0; color: var(--taste-purple); background: none; font-size: 8px; }
+.taste-related-proof,.taste-related-empty { margin: 3px 0 0; color: var(--text-muted); font-size: 8px; line-height: 1.5; }
+.taste-related-browse { justify-self: start; margin-top: 4px; padding: 8px 10px; border: 1px solid #b49aff50; border-radius: 8px; background: #b49aff10; color: var(--taste-purple); font-size: 9px; }
+
 .taste-disclaimer {
   margin: 0;
   color: var(--text-muted);

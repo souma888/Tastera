@@ -1,49 +1,46 @@
 # TASTERA Project Workflow
 
-**Reviewed:** 2026-10-18. The app is deployed and the foundation is working; this workflow starts from the current product, not the original prototype plan.
+**Reviewed:** 2026-10-23. This workflow describes the live product and the next measurable improvements.
 
 ## Current state
 
 ```text
-Vercel frontend → Render FastAPI → Neon PostgreSQL
-                     ├─ Catalog API (Movies, Books, Music)
-                     ├─ Accounts and saved Library
-                     └─ Genre recommendations + stored feedback
+Vercel React frontend → Render FastAPI → Neon PostgreSQL
+                           ├─ catalog search and pagination
+                           ├─ accounts, saved Library, and feedback
+                           └─ genre/co-save recommendation baseline
 ```
 
-Discover uses catalog API search, categories, and pagination. The backend also supports account registration/sign-in, saved media, recommendations, and persisted `more`/`less` feedback. The local fallback has six demo items. TMDb movie import is manual. Profile is incomplete, Taste Map is static prototype data, and Books/Music coverage is limited. Recommendation ranking is a simple genre baseline, not evaluated ML.
+The frontend provides Discover, Profile, Library, Settings, Taste Map, Collections, Guide, About, and Contact views. Cross-media pathways and creator pages reuse catalog metadata and API text search. Taste Map connections come from account activity and shared genre tags. The pathways explain their evidence; they do not predict personal preference. Books and Music imports are repeatable commands, but catalog completeness and image reliability remain ongoing work.
 
 ## Work order
 
-Follow the user's stated product priorities first:
+1. **Improve evidence quality:** add source-attributed structured themes, settings, influences, and creator relationships where provider data supports them; normalize aliases and preserve provenance.
+2. **Improve catalog usefulness:** expand Books/Music with mainstream and well-covered items; repair duplicates, genre metadata, and artwork; keep importer runs repeatable and observable.
+3. **Evaluate recommendation quality:** collect enough user signals to compare relevance, coverage, and diversity, then preserve an untouched final holdout where feasible.
+4. **Build category-specific recommenders:** evaluate book and music approaches when interaction data is adequate; treat cross-media ranking as a separate study.
+5. **Reliability and security:** cover account isolation, saves, feedback, discovery pathways, and pagination with tests; add account recovery/security controls and operational backup/monitoring guidance.
+6. **MovieLens research:** reproduce notebook runs before making fresh claims. MovieLens is movie-only and cannot validate cross-media performance.
 
-1. **Profile:** inspect available account data; define and build a useful data-backed profile view.
-2. **Books and Music:** choose sources whose terms permit the intended use, increase catalog coverage, and document a safe repeatable import process.
-3. **For You refresh:** allow a signed-in user to request another recommendation batch, with clear loading/error states and limited duplicate results.
-4. **Quality and reliability:** test account isolation, saves, feedback and undo; evaluate ranking quality, coverage, and diversity.
-5. **Taste Map:** derive displayed nodes and connections from traceable data, deduplicate accidental duplicate edges, and make the view accessible.
-6. **Operations and security:** add monitoring, backup/restore and release guidance; plan email verification, recovery, session revocation, and rate limiting.
-7. **Research:** rerun MovieLens notebooks and establish a leakage-aware top-K evaluation before making model-quality claims.
-
-The current priorities and known limitations are maintained in [Project Status](PROJECT_STATUS.md); the [roadmap](roadmap.md) tracks implementation scope.
+See [Project Status](PROJECT_STATUS.md) for the feature inventory and [roadmap](roadmap.md) for planned milestones.
 
 ## Development loop
 
-1. Check branch and working tree before changing files. Preserve existing user changes.
-2. Select one complete user-visible or foundational outcome and define what success looks like.
-3. Inspect the relevant API, data model, and current UI. Keep docs aligned with actual behavior.
-4. Implement across the necessary frontend/backend/data layers, including useful loading, empty, and error states.
-5. Run the relevant existing checks when appropriate and report exactly what ran. Do not claim an unrun check passed.
-6. Update project status and technical docs in the same work item.
-7. Ask before committing unless the user explicitly asks for a commit in that request. Push/deploy only when asked or clearly authorized.
+1. Check the current branch and working tree; preserve uncommitted user data.
+2. Inspect the relevant UI, API contract, and source metadata.
+3. Implement the user-visible behavior with clear empty, loading, and error states.
+4. Keep guide/about text and repository docs aligned with behavior and limitations.
+5. Run relevant existing build/lint/validation commands and report exactly what ran.
+6. Update current status and technical guides with each completed milestone.
+7. The user asks to be consulted before commits as a standing rule; a direct request to commit/push authorizes the requested commit and push.
 
 ## Deployment and data notes
 
-- Frontend: Vercel. Backend: Render. Production database: Neon PostgreSQL.
-- Backend configuration is managed in the host environment: `TASTERA_DATABASE_URL`, `TASTERA_AUTH_SECRET`, and `TASTERA_CORS_ORIGINS`.
-- Do not expose secrets in frontend variables, commits, screenshots, or chat. TMDb token is only needed for manual catalog imports, not routine browsing.
-- Do not put raw MovieLens files or private user data in Git. Record actual source, terms, and experiment outputs; do not invent metrics.
-- Keep recommendations described as genre-weighted baseline until a defined evaluation supports stronger claims.
+- Frontend: Vercel. Backend: Render. Production database: Neon.
+- Backend configuration uses `TASTERA_DATABASE_URL`, `TASTERA_AUTH_SECRET`, and `TASTERA_CORS_ORIGINS`.
+- Do not expose secrets in frontend variables, commits, screenshots, or chat. The TMDb token is only needed for manual imports.
+- Keep raw datasets, private account data, and credentials out of Git. Record source terms and actual experiment outputs; do not invent metrics.
+- Describe For You as the current baseline until a defined evaluation supports stronger claims.
 
 ## References
 

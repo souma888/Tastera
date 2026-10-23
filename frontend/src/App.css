@@ -662,6 +662,11 @@
   font-size: 10px;
   line-height: 1.5;
 }
+.creator-link { padding: 0; color: inherit; background: none; font: inherit; text-align: left; }
+.creator-link:hover { color: var(--lavender); text-decoration: underline; }
+.media-explore-link { margin-top: 8px; padding: 0; color: var(--lavender); background: none; font-size: 10px; font-weight: 600; }
+.media-explore-link span { margin-left: 4px; }
+.media-explore-link:hover { color: var(--text-primary); }
 
 .recommendation-reason {
   display: grid;
@@ -2607,6 +2612,11 @@
 .guide-map-visual-caption strong { font: 600 13px var(--font-heading); }
 .guide-map-visual-caption span { color: var(--lavender); font-size: 7px; font-weight: 700; letter-spacing: 1px; }
 .guide-visual-settings { justify-content: center; background: radial-gradient(ellipse at 70% 42%, #75519c88, transparent 60%), linear-gradient(140deg, #1e1928, #111015); }
+.guide-visual-pathways { justify-content: center; background: radial-gradient(ellipse at 50% 45%, #75519c66, transparent 62%), linear-gradient(140deg, #201827, #111015); }
+.guide-pathway-preview { position: relative; z-index: 2; display: flex; width: 88%; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 24px 10px; border: 1px solid #ffffff20; border-radius: 14px; background: #100e14c9; box-shadow: 0 15px 34px #0008; }
+.guide-pathway-preview > span { padding: 11px 12px; border: 1px solid #b49aff55; border-radius: 9px; color: var(--text-primary); background: #b49aff12; font-size: 9px; font-weight: 700; letter-spacing: .7px; }
+.guide-pathway-preview > i { color: var(--lavender); font-style: normal; }
+.guide-pathway-preview > small { flex-basis: 100%; margin-top: 8px; color: var(--lavender); font-size: 7px; text-align: center; letter-spacing: 1px; }
 .guide-settings-preview { position: relative; z-index: 2; display: grid; width: 76%; gap: 8px; padding: 16px; border: 1px solid #ffffff1d; border-radius: 12px; background: #111015d9; box-shadow: 0 15px 35px #0008; }
 .guide-settings-preview b { color: var(--lavender); font-size: 8px; letter-spacing: 1.2px; }
 .guide-settings-preview strong { margin-bottom: 2px; font: 600 16px var(--font-heading); }

@@ -9,6 +9,8 @@ export interface Media {
   genre: string;
   image: string | null;
   connection: string;
+  description?: string | null;
+  source?: string;
   saved_at?: string;
 }
 
@@ -46,4 +48,6 @@ export interface MediaCardProps {
   feedbackBusy?: boolean;
   onRecommendationFeedback?: (id: string, feedback: "more" | "less" | null) => void;
   onArtworkUnavailable?: (id: string) => void;
+  onExplore?: (item: Media) => void;
+  onOpenCreator?: (creator: string) => void;
 }

@@ -1,62 +1,62 @@
 # TASTERA Architecture
 
-**Reviewed:** 2026-10-18. This describes the current deployed product and separates implemented behavior from future direction.
+**Reviewed:** 2026-10-23. This document describes the deployed product and separates catalog exploration from personalized recommendations.
 
-## Current system
+## Runtime system
 
 ```text
 Browser
   └── React + TypeScript + Vite (Vercel)
-        ├── catalog, account, saved-media, recommendation API clients
-        ├── sessionStorage bearer token
-        └── six-item fallback catalog when API is unavailable
+        ├── catalog, account, saved-media, and recommendation clients
+        ├── Connection Explorer (creator, genre, editorial-theme evidence)
+        ├── user-data Taste Map and Profile
+        ├── browser session token and local settings/collections
+        └── six-record offline fallback catalog
               │ HTTPS
               ▼
         FastAPI (Render)
-          ├── /api/v1/media             catalog/search/detail
+          ├── /api/v1/media             search and pagination (up to 150/page)
           ├── /api/v1/auth              register/login/current account
-          ├── /api/v1/me/saved          account-scoped library
-          └── /api/v1/me/recommendations genre baseline and feedback
+          ├── /api/v1/me/saved          account-scoped Library
+          └── /api/v1/me/recommendations ranking and feedback
               │ SQLAlchemy + Alembic
               ▼
         Neon PostgreSQL (production)
         SQLite (local default)
 ```
 
-Offline research is separate from request-time recommendations:
+Offline catalog import and MovieLens research are separate from request-time inference:
 
 ```text
-MovieLens data (local only) → audit/baseline notebooks → research notes
-TMDb popular movies → manual importer → catalog database
+TMDb popular movies ─┐
+Open Library works ──┼── manual import commands ──> catalog database
+MusicBrainz albums ──┘
+MovieLens data (local only) ──> research notebooks and evaluation notes
 ```
 
-The frontend is deployed at [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app), and the API at [tastera.onrender.com](https://tastera.onrender.com). Deployment environment variables and hosting configuration are managed by the service dashboards; do not infer secrets or values from this document.
+The frontend is deployed at [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app); the API is at [tastera.onrender.com](https://tastera.onrender.com). Hosting credentials and environment variables are configured in provider dashboards and are never stored in these docs.
 
-## Implemented data and behavior
+## Catalog and pathway flow
 
-- SQLAlchemy catalog records support Movies, Books, and Music; the TMDb importer currently handles popular movies and is run manually.
-- Alembic migrations manage the catalog, `accounts`, `saved_media`, and `recommendation_feedback` tables.
-- Passwords are hashed with Argon2. Signed bearer tokens expire after 12 hours; the browser stores them in session storage.
-- Saved items and recommendation feedback are scoped to the authenticated account.
-- Recommendations score catalog candidates using saved genres and persisted “more”/“less” signals. This is a simple, transparent baseline; it has not been established as a trained or evaluated ML model.
-- Profile and Taste Map do not yet reflect a complete live user model; the graph is prototype data.
+1. Discover calls `GET /api/v1/media` with category, search text, page, and page size. Text search matches title, creator, and genre; rows are ordered by source popularity.
+2. Opening an item starts the Connection Explorer. It queries the same catalog API by genre and creator, combines results with the currently loaded catalog, then matches exact normalized genre tags, creator credits, and eligible editorial-theme terms.
+3. The UI labels the evidence type and separately marks saved/feedback activity. Creator pages reuse creator search and retain exact normalized credit matching.
+4. Taste Map uses account saves and feedback as nodes and shared catalog genres as the graph's relationship nodes. Selecting a genre exposes matching catalog items; selecting an item exposes related records from the catalog currently loaded in the client.
 
-## Request flow
+The app has no persisted relationship graph or separate creator/theme endpoint. Setting and influence metadata are not consistently available. Editorial note overlap is an interpretation, not a verified external fact. No link is presented as proof of preference.
 
-1. The browser calls the versioned FastAPI API. Discover requests catalog data; account views send a bearer token.
-2. FastAPI validates requests and derives the account from the validated token for private endpoints.
-3. SQLAlchemy reads or writes the configured database. Alembic controls schema changes.
-4. The API returns data for the frontend to render. The frontend can use its small fallback catalog for catalog browsing if API loading fails; private features require a working API and account session.
+## Accounts and recommendations
+
+- Passwords use Argon2 and signed bearer tokens expire after 12 hours. The browser holds the token in session storage.
+- Saved items and feedback are scoped to the authenticated account.
+- For You uses saved genres, onboarding preferences, explicit `more`/`less` feedback, category mix, and popularity. Movie item-item co-save similarity is used when available. This is a transparent baseline, not a trained and validated multi-category model.
+- Profile counts and summarizes account saves and recommendation feedback. Onboarding choices, recommendation mix/strategy, and collections are browser-local.
 
 ## Security and operations
 
-- Configure `TASTERA_DATABASE_URL`, `TASTERA_AUTH_SECRET`, and `TASTERA_CORS_ORIGINS` in the backend host. Never place backend secrets in `VITE_*` variables or Git.
-- Use HTTPS and limit CORS to trusted frontend origins in deployment.
-- Current account limitations include no email verification, password recovery, session revocation, or authentication rate limiting.
-- A manual TMDb import is not a scheduled or monitored ingestion pipeline. Books and Music need broader reviewed sources and coverage.
+- Configure `TASTERA_DATABASE_URL`, `TASTERA_AUTH_SECRET`, and `TASTERA_CORS_ORIGINS` in the backend host. Never put these in Vite variables or Git.
+- The account system still lacks email verification, password recovery, session revocation, and authentication rate limiting.
+- Catalog imports are manual. Monitoring, automated scheduling, and a complete backup/restore and rollback runbook remain open.
+- Provider terms and attribution differ by source. See the [dataset register](dataset-register.md).
 
-## Direction
-
-The next product work is data-backed Profile, better Books/Music coverage, and a For You refresh action. Later work can make the Taste Map evidence-based, improve recommendation evaluation and diversity, and automate catalog ingestion. Add vector search, graph infrastructure, or a trained model only when the data and measured need support them.
-
-See [backend guide](backend.md), [frontend guide](frontend.md), and [project status](PROJECT_STATUS.md).
+See [backend guide](backend.md), [frontend guide](frontend.md), [project status](PROJECT_STATUS.md), and [ML roadmap](ml-roadmap.md).

@@ -1,48 +1,39 @@
 # TASTERA Implementation Roadmap
 
-**Reviewed:** 2026-10-18. Shipped capabilities are listed as complete; open work is not presented as already implemented.
+**Reviewed:** 2026-10-23. Completed capabilities are distinguished from remaining product and operational work.
 
-## Current baseline
+## Current product baseline
 
-The deployed application has a Vercel React frontend, Render FastAPI backend, and Neon PostgreSQL database. It supports catalog browsing, accounts, a saved Library, and genre-based recommendations with persistent feedback. See [project status](PROJECT_STATUS.md) for the detailed feature inventory and limitations.
+Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon PostgreSQL in production. The app supports movie/book/music discovery, accounts, saved items, user feedback, Profile, For You, Taste Map, collections, and in-app project information. Catalog cards and Taste Map genres link into evidence-labeled cross-media and creator exploration. See [Project Status](PROJECT_STATUS.md) for current behavior and limits.
 
-## Next product priorities
+## Completed product priorities
 
-These are the user's requested next changes, in order:
+- Built a data-backed Profile using saves, category/genre summaries, recent activity, and recommendation feedback.
+- Added repeatable TMDb, Open Library, and MusicBrainz import commands, with popularity/rating selection and artwork handling appropriate to each source. Coverage and import monitoring still need work.
+- Added For You batch refresh, duplicate avoidance, a configurable category mix, and recommendation feedback.
+- Added title/creator/genre search, popular-first browsing, page-size selection, onboarding tastes, recommendation explanations, and catalog-based relationship/creator exploration.
+- Made the Taste Map reflect saved/feedback activity and shared catalog genres; added traceability, related catalog results, selection, panning, and zoom.
+- Expanded Guide/About/Contact sections to describe the product and its available features.
 
-1. **Complete Profile:** replace the placeholder with useful account-backed taste and activity information, using existing saved items and feedback where possible.
-2. **Expand Books and Music:** increase useful catalog coverage from reviewed, permitted sources; document source and attribution requirements and make imports repeatable.
-3. **Refresh For You:** add a control near recommendations to request a different batch, especially movies. Define whether refresh rotates candidates or changes ranking and avoid repeating the same batch unnecessarily.
+## Next product work
 
-## Remaining work after those priorities
+1. **Improve relationship evidence:** add source-attributed normalized themes, settings, influences, adaptations, and creator relationships as catalog sources support them. Keep inferred or editorial relationships clearly distinguished from facts.
+2. **Normalize creator identities:** merge known aliases and credit variants while preserving the source credit and provenance.
+3. **Improve Books and Music coverage:** curate mainstream catalog additions, genre completeness, duplicates, and resilient cover/artwork URLs; record each import's added/updated/skipped totals.
+4. **Evaluate recommendations:** collect enough opt-in app interactions, compare relevance, catalog coverage, and diversity, and retain an untouched final evaluation where feasible.
+5. **Build category-specific recommenders:** evaluate books and music methods only after there is enough suitable catalog and interaction data. Treat cross-media ranking as a separate research question.
 
-### Product and recommendation quality
+## Reliability, security, and research
 
-- Verify feedback and undo against the deployed account flow; add backend/API tests for recommendations, feedback persistence, and account isolation.
-- Evaluate recommendation relevance, catalog coverage, and diversity with a defined protocol. Current genre weighting is a baseline, not a validated model.
-- Make the Taste Map use traceable catalog/user relationships and fix the duplicate-looking connection issue.
+- Add API and browser-flow tests for accounts, user isolation, saves, feedback, pagination, creator/theme search, and pathways.
+- Address email verification, password recovery, session revocation, and authentication rate limiting.
+- Add service/database monitoring, backups and restore guidance, migration checks, import-run observability, and release/rollback procedures.
+- Re-run MovieLens notebooks before asserting fresh reproducibility. MovieLens can support movie-only offline research; it cannot establish book/music or cross-media quality.
 
-### Data and operations
+## Architecture notes
 
-- Establish repeatable Books and Music import paths and catalog deduplication/provenance.
-- Add monitoring for API health, database/migration operations, and ingestion outcomes; document backup/restore and release/rollback procedures.
-- Review account security gaps: email verification, recovery, session revocation, and rate limiting.
+Current cross-media pathways are explainable catalog exploration, not personalized predictions. Shared genre and creator credit are direct catalog evidence; overlapping concepts in editorial notes are interpretive. Setting and influence data is not sufficiently structured yet. The current exact creator and genre search is limited to the API's 150-item query page.
 
-### Research
+## Development practice
 
-- Rerun the MovieLens audit and baseline notebooks in the current environment before treating recorded results as freshly reproduced.
-- Define a leakage-aware top-K evaluation and compare methods on the same split/candidate set. MovieLens supports movie-only research, not cross-media quality claims.
-
-## Completed foundation
-
-- React/Vite frontend and FastAPI backend are deployed separately.
-- Database-backed catalog with migrations and an idempotent editorial seed.
-- Catalog API with detail lookup, search, categories, and pagination.
-- Manual TMDb popular-movie import with provider-ID deduplication/upsert behavior.
-- Account registration/sign-in, Argon2 password hashing, signed bearer sessions, and account-scoped saved items.
-- For You genre baseline with persisted per-account “more”/“less” feedback.
-- MovieLens research notebooks and documented baseline implementations (fresh reproducibility remains to be confirmed).
-
-## How to use this roadmap
-
-Keep one user-visible outcome at a time. Update [project status](PROJECT_STATUS.md) when behavior changes, the relevant setup/API guide when commands or contracts change, and research notes only with results actually observed. Do not commit credentials or raw datasets. Ask the user before committing changes, per their standing instruction; an explicit request to commit authorizes that commit.
+Keep one user-visible outcome complete at a time. Update [project status](PROJECT_STATUS.md), the affected technical guide, and this roadmap when behavior changes. Do not commit credentials, raw datasets, or private user data. The user asked for approval before commits as a standing preference; an explicit request to commit/push authorizes that work.

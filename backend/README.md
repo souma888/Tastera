@@ -13,15 +13,17 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /api/v1/auth/me`: returns the signed-in account.
 - `GET`, `PUT`, and `DELETE /api/v1/me/saved`: read and update that account's saved media.
 - `GET /api/v1/me/recommendations`: ranks unsaved items by saved genres and explicit feedback.
+- Catalog search and creator/theme exploration reuse `GET /api/v1/media`; there is no separate cross-media relationship endpoint. The frontend compares normalized creator credits and genre tags and labels editorial and user-activity signals separately.
 - `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
   `more` / `less` recommendation signal for the signed-in account.
 - `tests/test_health.py`: tests the health endpoint.
 
 The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
-through `TASTERA_DATABASE_URL`. It includes an editorial development seed and a
-repeatable TMDb popular-movie importer. Recommendation feedback is a simple
-genre-weight signal, not a trained model. Ratings and password recovery are not
-implemented yet. See
+through `TASTERA_DATABASE_URL`. It includes repeatable TMDb, Open Library, and
+MusicBrainz importers. Catalog page size is capped at 150; unartworked Music
+records are excluded from catalog browse results. Recommendation feedback is a
+transparent baseline signal, not a trained cross-media model. Ratings and
+password recovery are not implemented yet. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
 ## Requirements

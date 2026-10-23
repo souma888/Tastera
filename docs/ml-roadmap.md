@@ -2,7 +2,7 @@
 
 ## What exists today
 
-The deployed app also serves a simple genre-weighted recommendation baseline through the backend. It uses saved genres and per-account `more`/`less` feedback. This is useful product functionality, but it is not the same as a trained/evaluated model and does not establish cross-media recommendation quality. The research items below remain open unless actual run results are recorded.
+The deployed app serves a genre-weighted recommendation baseline through the backend and offers explainable cross-media catalog pathways based on creator credits, genre tags, and eligible editorial notes. Those pathways are discovery links, not predicted user preference. The baseline is not a trained/evaluated multi-category model and does not establish cross-media recommendation quality. The research items below remain open unless actual run results are recorded.
 
 The repository includes an offline recommendation research foundation:
 
@@ -56,11 +56,11 @@ Explore interaction-matrix methods only after establishing a clean split and bas
 
 Evaluate a hybrid of content relevance, interaction signals, and popularity. If justified by results, add diversity/novelty reranking and explanations. Keep a simple fallback for new users and items with little metadata.
 
-## Stage 7 — Cross-media representation
+## Stage 7 — Cross-media representation and prediction
 
-Cross-media recommendations require additional evidence. Potential ingredients include normalized metadata, shared creators, themes, tags, licensed descriptions, semantic embeddings, and explicit relationships with provenance. Similar embeddings alone are not proof that a user will like both items.
+The product now has evidence-labeled cross-media pathways and creator pages. It uses normalized creator credits and genre tags, and marks matching words in Tastera editorial notes as interpretive. These features help people browse related catalog records; they do not claim that the user will like a linked item. The current schema does not consistently include settings, influences, adaptations, or canonical creator identities.
 
-Do not claim a cross-media model until it has been implemented and evaluated on an appropriate dataset or carefully designed user study.
+To develop personalized cross-media recommendations, collect appropriate cross-category interactions and source-attributed metadata, define what counts as relevance, and evaluate on a leakage-aware user/time split. MovieLens alone cannot establish book/music or cross-media quality. Do not claim a cross-media recommender until it has been implemented and evaluated on suitable evidence.
 
 ## Stage 8 — Serving and reproducibility
 

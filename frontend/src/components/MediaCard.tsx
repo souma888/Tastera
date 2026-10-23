@@ -38,6 +38,8 @@ export default function MediaCard({
   feedbackBusy = false,
   onRecommendationFeedback,
   onArtworkUnavailable,
+  onExplore,
+  onOpenCreator,
 }: MediaCardProps) {
   const [artworkAttempt, setArtworkAttempt] = useState(0);
   const alternateArtwork = item.category === "Music" ? alternateAlbumArtwork[item.title.trim().toLowerCase()] : undefined;
@@ -111,11 +113,14 @@ export default function MediaCard({
 
       <div className="card-meta">{genreLabel.toUpperCase()}</div>
       <h3>{item.title}</h3>
-      <p className="creator">{item.creator}</p>
+      <p className="creator">
+        {onOpenCreator ? <button type="button" className="creator-link" onClick={() => onOpenCreator(item.creator)}>{item.creator} · View creator</button> : item.creator}
+      </p>
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>
         {recommendationReason ?? item.connection}
       </p>
+      {onExplore && <button type="button" className="media-explore-link" onClick={() => onExplore(item)}>Explore connections <span aria-hidden="true">↗</span></button>}
       {onRecommendationFeedback && (
         <div
           className="recommendation-feedback"

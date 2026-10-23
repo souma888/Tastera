@@ -3,6 +3,7 @@ import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
 import CollectionsPage from "./components/CollectionsPage";
+import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
@@ -351,6 +352,8 @@ function App() {
   const [isTasteSetupOpen, setIsTasteSetupOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedSearchItem, setSelectedSearchItem] = useState<Media | null>(null);
+  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [activeDiscoveryPrompt, setActiveDiscoveryPrompt] = useState<(typeof discoveryPrompts)[number] | null>(null);
   const [genreFilter, setGenreFilter] = useState("All genres");
 
@@ -944,7 +947,7 @@ function App() {
             <div className="info-hero">
               <span className="eyebrow">TASTERA FIELD GUIDE · START HERE</span>
               <h1 id="guide-heading">A little map to <span>your next favorite.</span></h1>
-              <p>Browse movies, books, and albums in one place. Save what catches your attention, then use your taste signals to find the next connection. The panels below use real artwork from Tastera’s catalog.</p>
+              <p>Browse movies, books, and albums in one place. Search, save favorites, trace catalog-backed connections, and follow creators across the media they make. The panels below use real artwork from Tastera’s catalog.</p>
             </div>
             <div className="guide-grid guide-detailed-grid">
               <article className="guide-card">
@@ -953,7 +956,7 @@ function App() {
                   <img src={getHeroArtworkUrl(guideArtwork.movie.image)} alt={`${guideArtwork.movie.title} artwork`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.movie.genre} · {guideArtwork.movie.category}</small><strong>{guideArtwork.movie.title}</strong><span>{guideArtwork.movie.creator}</span></div>
                 </div>
-                <div className="guide-card-copy"><span className="guide-step">01 / DISCOVER</span><h2>Start with a world</h2><p>Use the Movies, Books, and Music filters to narrow the catalog. Search across titles, creators, and genres; change pages to keep exploring beyond the first set of popular picks.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Movies")}>Browse movies →</button></div>
+                <div className="guide-card-copy"><span className="guide-step">01 / DISCOVER</span><h2>Start with a world</h2><p>Use the Movies, Books, and Music filters to narrow the catalog. Search titles, creators, and genres, filter by genre, and choose 50, 100, or 150 items per page. Open a card to follow its creator or explore evidence-backed connections.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Movies")}>Browse movies →</button></div>
               </article>
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-book">
@@ -979,7 +982,7 @@ function App() {
                   </div>
                   <div className="guide-map-visual-caption"><strong>Stories share more than a shelf.</strong><span>GENRE · MOOD · YOUR SIGNALS</span></div>
                 </div>
-                <div className="guide-card-copy"><span className="guide-step">04 / TASTE MAP</span><h2>Follow the lines</h2><p>Each node represents your taste, a saved or rated item, or a shared genre. Drag the map to move around, scroll to zoom, and hover or focus a node to trace its connections and read why it is linked.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Taste Map")}>Explore the Taste Map →</button></div>
+                <div className="guide-card-copy"><span className="guide-step">04 / TASTE MAP</span><h2>Follow the lines</h2><p>Each node represents your taste, a saved or rated item, or a shared catalog genre. Drag to pan, scroll to zoom, and select a genre to browse matching catalog records. Item matches show the genre credit and your activity separately.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Taste Map")}>Explore the Taste Map →</button></div>
               </article>
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-settings">
@@ -987,6 +990,13 @@ function App() {
                   <div className="guide-settings-preview"><b>FOR YOU</b><strong>Make your mix.</strong><span>60% MOVIES</span><i /><span>20% BOOKS</span><i /><span>20% MUSIC</span><i /></div>
                 </div>
                 <div className="guide-card-copy"><span className="guide-step">05 / FOR YOU & SETTINGS</span><h2>Tune the next batch</h2><p>For You uses your saves and “More like this” / “Not for me” feedback. In Settings, adjust the movie, book, and music balance and choose the movie ranking method. These preferences are currently saved in this browser.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Settings")}>Adjust your settings →</button></div>
+              </article>
+              <article className="guide-card">
+                <div className="guide-real-visual guide-visual-pathways">
+                  <span className="guide-visual-label">TASTERA · FOLLOW A CONNECTION</span>
+                  <div className="guide-pathway-preview"><span>FILM</span><i>→</i><span>BOOK</span><i>→</i><span>ALBUM</span><small>CREATOR · GENRE · EDITORIAL THEME</small></div>
+                </div>
+                <div className="guide-card-copy"><span className="guide-step">06 / PATHWAYS & CREATORS</span><h2>Follow a name or an idea</h2><p>From a title, explore related movies, books, and music. Each path explains whether it shares a catalog genre, creator credit, or a theme word in Tastera’s editorial notes. Open a creator page to see their catalog credits across media.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover")}>Find a connection →</button></div>
               </article>
             </div>
             <div className="guide-tip"><span>✦</span><p><strong>Good first session:</strong> save two or three favorites from different categories, give a couple of recommendation picks feedback, then revisit your Profile and Taste Map. More signals make both views more useful.</p></div>
@@ -1001,8 +1011,8 @@ function App() {
             </div>
             <div className="about-story-grid">
               <article className="about-story-card about-story-primary"><span className="eyebrow">THE IDEA</span><h2>Discovery should feel connected.</h2><p>Most catalogs stop at their own category. Tastera starts with movies, books, and music together, then gives people ways to move between them through genres, creators, shared themes, and their own taste signals.</p><p>The aim is not to tell you what you should like. It is to make the next interesting thing easier to find—and to make the path between discoveries visible.</p></article>
-              <article className="about-story-card"><span className="eyebrow">HOW IT WORKS TODAY</span><h2>A useful foundation, still growing.</h2><ul><li>Browse and search a shared catalog across three media types.</li><li>Save discoveries to an account-backed Library.</li><li>Use saves and feedback to shape For You recommendations.</li><li>Explore the Taste Map to see how your saved and rated items connect.</li></ul></article>
-              <article className="about-story-card"><span className="eyebrow">RECOMMENDATIONS, HONESTLY</span><h2>Personalized signals, not magic.</h2><p>The current app combines genre matching, popularity signals, and movie co-save similarity where enough community activity exists. Book and music recommendations remain simpler genre matches. Tastera is still collecting feedback; it does not claim a fully trained cross-media AI model.</p><p>Your saves and “More like this” / “Not for me” responses help the system improve over time.</p></article>
+              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Save discoveries to an account-backed Library, organize browser-based collections, and share a collection link.</li><li>Set favorite titles, artists, genres, and moods to personalize guest picks before creating an account.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
+              <article className="about-story-card"><span className="eyebrow">CONNECTIONS, HONESTLY</span><h2>Every path shows its evidence.</h2><p>Creator pages group records with the same creator credit. Pathways can use an exact shared catalog genre, the same creator, or a shared word from Tastera editorial notes. Saved and feedback activity is called out separately, so it is not mistaken for catalog similarity.</p><p>Setting and influence credits are not consistently present in the catalog yet, so Tastera does not claim those links when the underlying data is missing. These pathways are explainable discovery links, not a trained cross-media ranking model.</p></article>
               <article className="about-story-card"><span className="eyebrow">BUILT IN PUBLIC</span><h2>An evolving independent project.</h2><p>Tastera is being developed by Soumadip Karan. The code, issues, and project progress are available in the public repository. Catalog information and artwork come from third-party sources; provider attribution and image rights remain with their respective owners.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View the GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Meet the developer on GitHub ↗</a></div></article>
             </div>
             <div className="about-note"><span className="brand-mark">t.</span><p><strong>Discover beyond the obvious.</strong><br />The long-term direction is a transparent, evidence-led discovery experience across media—with better catalogs, clearer connections, and recommendations that earn your trust.</p></div>
@@ -1088,7 +1098,14 @@ function App() {
             </section>
           </section>
         ) : activePage === "Taste Map" ? (
-          <TasteMap savedItems={savedItems} feedbackItems={recommendationFeedbackItems} />
+          <TasteMap
+            savedItems={savedItems}
+            feedbackItems={recommendationFeedbackItems}
+            catalog={recommendationCatalog}
+            onExploreItem={setSelectedSearchItem}
+            onExploreTheme={setSelectedTheme}
+            onOpenCreator={setSelectedCreator}
+          />
         ) : activePage === "Your Profile" ? (
           <section className="profile-page" aria-labelledby="profile-heading">
             <div className="profile-header">
@@ -1422,7 +1439,7 @@ function App() {
                     <>
                       <p className="for-you-message">Your first picks are based on the favorites, artists, genres, and moods you chose. Sign in to save items and keep your taste across devices.</p>
                       <div className="media-grid recommendation-grid">
-                        {guestRecommendations.map((recommendation) => <MediaCard key={recommendation.item.id} item={recommendation.item} isSaved={false} onToggleSaved={toggleSaved} recommendationReason={recommendation.reason} />)}
+                        {guestRecommendations.map((recommendation) => <MediaCard key={recommendation.item.id} item={recommendation.item} isSaved={false} onToggleSaved={toggleSaved} recommendationReason={recommendation.reason} onExplore={setSelectedSearchItem} onOpenCreator={setSelectedCreator} />)}
                       </div>
                     </>
                   ) : (
@@ -1446,6 +1463,8 @@ function App() {
                           item={item}
                           isSaved={saved.includes(item.id)}
                           onToggleSaved={toggleSaved}
+                          onExplore={setSelectedSearchItem}
+                          onOpenCreator={setSelectedCreator}
                           recommendationReason={reason}
                           recommendationFeedback={feedback}
                           feedbackBusy={feedbackBusyIds.includes(item.id)}
@@ -1644,6 +1663,8 @@ function App() {
                       item={item}
                       isSaved={saved.includes(item.id)}
                       onToggleSaved={toggleSaved}
+                      onExplore={setSelectedSearchItem}
+                      onOpenCreator={setSelectedCreator}
                       onArtworkUnavailable={(id) => setUnavailableMusicArtwork((current) => current.includes(id) ? current : [...current, id])}
                     />
                   ))}
@@ -1731,20 +1752,18 @@ function App() {
 
       {isTasteSetupOpen && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} onSave={saveTasteSetup} onCancel={() => setIsTasteSetupOpen(false)} />}
 
-      {selectedSearchItem && (
-        <div className="search-preview-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedSearchItem(null); }}>
-          <section className="search-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="search-preview-title">
-            <button type="button" className="search-preview-close" onClick={() => setSelectedSearchItem(null)} aria-label="Close preview">×</button>
-            <div className="search-preview-poster">{selectedSearchItem.image && <img src={selectedSearchItem.image} alt={`${selectedSearchItem.title} artwork`} />}</div>
-            <div className="search-preview-copy">
-              <span className="eyebrow">{selectedSearchItem.category} · {selectedSearchItem.genre}</span>
-              <h2 id="search-preview-title">{selectedSearchItem.title}</h2>
-              <p className="search-preview-creator">{selectedSearchItem.creator}</p>
-              <p>{selectedSearchItem.connection}</p>
-              <button type="button" className="primary-button" onClick={() => toggleSaved(selectedSearchItem.id)}>{saved.includes(selectedSearchItem.id) ? "Saved to your Library" : "Save to Library"}<span>♡</span></button>
-            </div>
-          </section>
-        </div>
+      {(selectedSearchItem || selectedCreator || selectedTheme) && (
+        <ConnectionExplorer
+          key={selectedSearchItem?.id ?? selectedCreator ?? selectedTheme}
+          item={selectedSearchItem}
+          creator={selectedCreator}
+          theme={selectedTheme}
+          catalog={recommendationCatalog}
+          savedItems={savedItems}
+          feedbackItems={recommendationFeedbackItems}
+          onToggleSaved={toggleSaved}
+          onClose={() => { setSelectedSearchItem(null); setSelectedCreator(null); setSelectedTheme(null); }}
+        />
       )}
 
       {isAuthOpen && (

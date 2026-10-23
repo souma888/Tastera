@@ -6,14 +6,16 @@ The client uses React, TypeScript, and Vite. Production frontend: [soumadip-tast
 
 ## Current behavior
 
-- **Discover:** paginated catalog API, category filters, and search. A six-item local catalog is used when the API cannot be reached.
-- **Account:** registration/sign-in through the backend. The signed bearer token is held in `sessionStorage` and expires after 12 hours.
-- **Library:** account-scoped saved media persisted by the backend.
-- **For You:** recommendations from the backend genre-weighting baseline; signed-in users can submit persisted “More like this” or “Not for me” feedback.
-- **Taste Map:** predefined prototype graph, not derived from catalog relationships or the user's data. A duplicate-looking edge issue is known.
-- **Profile:** placeholder; data-backed profile work remains open.
+- **Discover:** catalog search across titles, creators, and genres; category and genre filters; popularity ordering; 50/100/150 item pages; paginated results and six local demo records when the API is unavailable.
+- **Connection Explorer:** cards and recommendations open a detail view with cross-media pathways, exact creator pages, and genre exploration. Relationships state whether the basis is a matching creator credit, catalog genre, shared word in eligible editorial notes, or the user's own activity.
+- **Taste Map:** uses the signed-in user's saved items and recommendation feedback, builds deduplicated genre links, and provides selection, pan/zoom, related catalog records, and an exact-tag genre lookup.
+- **Account and Library:** sign-up/sign-in through the API; saved media persists per account. The bearer token is in `sessionStorage`.
+- **For You and Settings:** guest taste onboarding; personalized mixed batches; refresh; editable category proportions and movie strategy; and saved/feedback explanations.
+- **Profile:** category and genre summaries, recent saves, and feedback counts.
+- **Collections:** themed shelves and shareable snapshot links. Collection state is local to the browser; shared edits do not sync back to the original.
+- **Guide, About, Contact:** in-app product walkthrough, feature/limitation summary, and developer contact links.
 
-Movies, Books, and Music are supported categories, but Books and Music have limited coverage. Recommendations are not a trained ML system and do not yet provide cross-media ranking.
+The connection explorer is a metadata-based discovery feature, not a personalized cross-media prediction model. It only shows setting/influence links when those fields become supported by reliable source data; current editorial-theme overlaps are explicitly marked interpretive.
 
 ## Local development
 
@@ -38,16 +40,18 @@ npm run build
 npm run lint
 ```
 
-A successful build/lint does not verify production API connectivity, account isolation, or the complete browser flow.
+These checks validate frontend compilation and lint rules. They do not verify production API connectivity or the complete browser flow.
 
 ## Main source areas
 
 | Path | Responsibility |
 |---|---|
 | `frontend/src/App.tsx` | Main view selection and UI state |
+| `frontend/src/components/ConnectionExplorer.tsx` | Cross-media, creator, and genre catalog explorer |
+| `frontend/src/components/TasteMap.tsx` | User activity map and related item browsing |
+| `frontend/src/components/MediaCard.tsx` | Catalog and recommendation cards |
 | `frontend/src/services/` | HTTP clients for catalog and user features |
-| `frontend/src/components/` | Shared media cards and visual components |
 | `frontend/src/data/media.ts` | Offline fallback content |
 | `frontend/src/types/` | Frontend data types |
 
-See [project status](PROJECT_STATUS.md) for the current feature backlog.
+See [project status](PROJECT_STATUS.md) for current limitations and [roadmap](roadmap.md) for remaining work.
