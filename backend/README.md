@@ -140,30 +140,36 @@ API, and link back to Open Library; see its [cover guidance](https://openlibrary
 and [data guidance](https://openlibrary.org/developers) before redistribution
 or commercial use.
 
-## Import music metadata from MusicBrainz
+## Import popular music albums with covers
 
-The importer fetches album release-group metadata, requests community genre
-tags, maps only a curated list of positive-vote genres, and links to the
-Cover Art Archive's front thumbnail. MusicBrainz core metadata is CC0, but the
-genre tags are supplementary data under CC BY-NC-SA 3.0. The artwork remains
-hosted by the Cover Art Archive; availability varies and images may be
-copyrighted. The importer uses an identifying User-Agent and spaces
-MusicBrainz requests by at least 1.1 seconds.
+The default importer combines MusicBrainz searches across common genres,
+deduplicates release groups, and ranks candidates by community tag votes as a
+rough popularity signal. It checks Cover Art Archive metadata and imports only
+albums with a confirmed front-cover image, up to 500. This is a community-data
+popularity proxy, not a chart or sales ranking; a run can return fewer than 500
+if its searches do not find enough well-tagged albums with cover art. It no
+longer treats the first two pages of a generic album query as a useful catalog.
 
 ```powershell
-python -m app.import_musicbrainz --query "primarytype:album" --pages 2
+python -m app.import_musicbrainz --limit 500 --prune-unselected
 ```
 
-Each page can return up to 100 items. `--pages` accepts 1–10; use a narrower
-MusicBrainz release-group search query to select a category. Re-run the same
-query to backfill artwork and genre tags on existing rows. Imports upsert by
-release-group MBID and report added, updated, and skipped counts. See the
-[MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API),
-[rate limit](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting), and
-[data license](https://musicbrainz.org/doc/About/Data_License) guidance. MusicBrainz
-core metadata is CC0; supplementary tags require attribution and non-commercial
-share-alike treatment. Do not assume Cover Art Archive images are freely
-licensed for redistribution or commercial use.
+`--prune-unselected` removes older MusicBrainz imports outside the newly selected
+covered set, while preserving records saved or feedback-rated by an account.
+Omit it to leave existing catalog rows in place. `--query` is available for a
+one-off targeted search; the default genre searches provide wider coverage.
+The importer uses an identifying User-Agent and spaces MusicBrainz queries by at
+least 1.1 seconds. It reports candidate, verified-cover, selected, added,
+updated, and skipped counts.
+
+See the [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API),
+[rate limit](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting),
+[data license](https://musicbrainz.org/doc/About/Data_License), and
+[Cover Art Archive API](https://musicbrainz.org/doc/Cover_Art_Archive/API).
+MusicBrainz core metadata is CC0; supplementary tags require attribution and
+non-commercial share-alike treatment. Cover-art rights vary by image, so do not
+assume Cover Art Archive images are freely licensed for redistribution or
+commercial use.
 
 ## Test
 

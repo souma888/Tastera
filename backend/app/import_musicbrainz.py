@@ -9,6 +9,7 @@ Cover Art Archive thumbnails without copying them into Tastera.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -18,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.models.account import RecommendationFeedbackRecord, SavedMediaRecord
 from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
 from app.services.import_tracking import catalog_import_run
 
@@ -29,6 +31,12 @@ SOURCE_WITH_GENRES = "MusicBrainz CC0 + supplementary genres CC BY-NC-SA 3.0"
 MIN_REQUEST_DELAY = 1.1
 USER_AGENT = "Tastera/0.1 (https://soumadip-tastera.vercel.app/)"
 CAA_FRONT_URL = "https://coverartarchive.org/release-group/{}/front-500"
+CAA_METADATA_URL = "https://coverartarchive.org/release-group/{}"
+POPULAR_GENRE_TAGS = (
+    "rock", "pop", "hip hop", "jazz", "electronic", "rhythm and blues",
+    "country", "metal", "soul", "classical", "folk", "reggae", "punk",
+    "disco", "funk", "latin", "ambient", "soundtrack",
+)
 
 GENRE_TAGS = {
     "alternative rock": "Alternative Rock",
@@ -88,7 +96,7 @@ class RateLimitedClient:
         self.delay = max(delay, MIN_REQUEST_DELAY)
         self.last_request = 0.0
 
-    def search(self, *, query: str, offset: int) -> dict[str, Any]:
+    def search(self, *, query: str, offset: int, limit: int = 100) -> dict[str, Any]:
         wait = self.delay - (time.monotonic() - self.last_request)
         if wait > 0:
             time.sleep(wait)
@@ -99,7 +107,7 @@ class RateLimitedClient:
                 params={
                     "query": query,
                     "fmt": "json",
-                    "limit": 100,
+                    "limit": limit,
                     "offset": offset,
                     "inc": "genres",
                 },
@@ -118,6 +126,52 @@ class RateLimitedClient:
             payload = response.json()
             return payload if isinstance(payload, dict) else {}
         return {}
+
+
+def _community_tags(item: dict[str, Any]) -> Any:
+    """Support both legacy `tags` and newer `genres` response field names."""
+    return item.get("tags") or item.get("genres", [])
+
+
+def _community_popularity(item: dict[str, Any]) -> int:
+    """Sum positive MusicBrainz tag votes as a rough discovery/popularity signal."""
+    tags = _community_tags(item)
+    if not isinstance(tags, list):
+        return 0
+    return sum(
+        tag.get("count", 0)
+        for tag in tags
+        if isinstance(tag, dict)
+        and isinstance(tag.get("count"), int)
+        and tag["count"] > 0
+    )
+
+
+def _cover_artwork(client: httpx.Client, release_group_id: str) -> str | None:
+    """Return a confirmed front-cover thumbnail URL, or None if CAA has no cover."""
+    response = client.get(
+        CAA_METADATA_URL.format(release_group_id),
+        headers={"Accept": "application/json"},
+    )
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    payload = response.json()
+    images = payload.get("images", []) if isinstance(payload, dict) else []
+    if not isinstance(images, list):
+        return None
+    for image in images:
+        if not isinstance(image, dict) or image.get("front") is not True:
+            continue
+        thumbnails = image.get("thumbnails", {})
+        if isinstance(thumbnails, dict):
+            artwork = thumbnails.get("500") or thumbnails.get("large") or thumbnails.get("250")
+            if isinstance(artwork, str) and artwork.startswith("https://"):
+                return artwork
+        artwork = image.get("image")
+        if isinstance(artwork, str) and artwork.startswith("https://"):
+            return artwork
+    return None
 
 
 def _artist_credit(value: Any) -> str:
@@ -171,6 +225,7 @@ def _upsert_release_group(
     session: Session,
     item: dict[str, Any],
     genre_names: list[str],
+    artwork_url: str,
 ) -> str:
     external_id = item.get("id")
     title = item.get("title")
@@ -201,18 +256,25 @@ def _upsert_release_group(
         else []
     )
     details = ["MusicBrainz core metadata"]
-    tags = item.get("tags")
+    tags = _community_tags(item)
     supplementary_genres = _community_genre_names(tags)
+    community_tags_used = isinstance(tags, list) and any(
+        isinstance(tag, dict)
+        and isinstance(tag.get("count"), int)
+        and tag["count"] > 0
+        for tag in tags
+    )
     if supplementary_genres:
         details.append("genre tags from MusicBrainz supplementary data (CC BY-NC-SA 3.0)")
+    elif community_tags_used:
+        details.append("community tag counts used for ranking (CC BY-NC-SA 3.0)")
     if classifications:
         details.append(f"Release type: {', '.join(classifications)}")
     if isinstance(date, str) and date.strip():
         details.append(f"First release date: {date.strip()}")
     description = ". ".join(details) + "."
     connection = "Imported from MusicBrainz; album artwork is linked from the Cover Art Archive."
-    artwork_url = CAA_FRONT_URL.format(external_id)
-    source = SOURCE_WITH_GENRES if supplementary_genres else SOURCE
+    source = SOURCE_WITH_GENRES if community_tags_used else SOURCE
 
     if media is None:
         media = MediaItemRecord(
@@ -246,15 +308,16 @@ def _upsert_release_group(
 
 def import_albums(
     *,
-    query: str = "primarytype:album",
-    pages: int = 1,
+    query: str | None = None,
+    limit: int = 500,
     genre: str = "Unclassified",
     request_delay: float = MIN_REQUEST_DELAY,
+    prune_unselected: bool = False,
 ) -> ImportSummary:
-    if not query.strip():
+    if query is not None and not query.strip():
         raise ValueError("query cannot be blank")
-    if pages < 1 or pages > 10:
-        raise ValueError("pages must be between 1 and 10")
+    if limit < 1 or limit > 500:
+        raise ValueError("limit must be between 1 and 500")
     if len(genre) > 100:
         raise ValueError("genre must be 100 characters or fewer")
     if request_delay < MIN_REQUEST_DELAY:
@@ -264,57 +327,122 @@ def import_albums(
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     with httpx.Client(headers=headers, timeout=30) as http, SessionLocal() as session:
         client = RateLimitedClient(http, request_delay)
+        queries = [query] if query else [
+            f'primarytype:album AND tag:"{tag}"' for tag in POPULAR_GENRE_TAGS
+        ]
+        candidates: dict[str, dict[str, Any]] = {}
+        for search_query in queries:
+            payload = client.search(query=search_query, offset=0, limit=100)
+            results = payload.get("release-groups", [])
+            if not isinstance(results, list):
+                continue
+            for item in results:
+                if not isinstance(item, dict):
+                    continue
+                external_id = item.get("id")
+                if not isinstance(external_id, str):
+                    continue
+                item["_tastera_popularity"] = _community_popularity(item)
+                existing = candidates.get(external_id)
+                if existing is None or item["_tastera_popularity"] > existing["_tastera_popularity"]:
+                    candidates[external_id] = item
+
+        ranked = sorted(
+            candidates.values(),
+            key=lambda item: (
+                -item["_tastera_popularity"],
+                str(item.get("title", "")).casefold(),
+                str(item.get("id", "")),
+            ),
+        )
+        # CAA confirms whether a usable front cover exists; only verified items
+        # can enter the refreshed music catalog. CAA documents this endpoint as
+        # returning 404 when the community has not selected front artwork.
+        artwork_by_id: dict[str, str] = {}
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            checks = pool.map(
+                lambda item: (item["id"], _cover_artwork(http, item["id"])),
+                ranked,
+            )
+            for external_id, artwork in checks:
+                if artwork:
+                    artwork_by_id[external_id] = artwork
+                    if len(artwork_by_id) >= limit:
+                        break
+        selected = [
+            item for item in ranked if item.get("id") in artwork_by_id
+        ][:limit]
+
         with catalog_import_run(session, PROVIDER) as run:
             summary.run_id = run.id
-            for page in range(pages):
-                payload = client.search(query=query, offset=page * 100)
-                results = payload.get("release-groups", [])
-                if not isinstance(results, list) or not results:
-                    break
-                for item in results:
-                    if not isinstance(item, dict):
+            selected_ids: set[str] = set()
+            for item in selected:
+                try:
+                    external_id = str(item["id"])
+                    outcome = _upsert_release_group(
+                        session,
+                        item,
+                        _genre_names(_community_tags(item), genre),
+                        artwork_by_id[external_id],
+                    )
+                    if outcome == "skipped":
                         summary.skipped += 1
                         run.skipped += 1
                         continue
-                    try:
-                        outcome = _upsert_release_group(
-                            session,
-                            item,
-                            _genre_names(item.get("tags"), genre),
-                        )
-                        if outcome == "skipped":
-                            summary.skipped += 1
-                            run.skipped += 1
-                            continue
-                        if outcome == "added":
-                            summary.added += 1
-                            run.added += 1
-                        else:
-                            summary.updated += 1
-                            run.updated += 1
-                        session.commit()
-                    except (KeyError, TypeError, ValueError):
-                        session.rollback()
-                        summary.skipped += 1
-                        run.skipped += 1
-                if len(results) < 100:
-                    break
+                    media_id = f"musicbrainz-rg-{external_id}"[:100]
+                    selected_ids.add(media_id)
+                    if outcome == "added":
+                        summary.added += 1
+                        run.added += 1
+                    else:
+                        summary.updated += 1
+                        run.updated += 1
+                    session.commit()
+                except (KeyError, TypeError, ValueError):
+                    session.rollback()
+                    summary.skipped += 1
+                    run.skipped += 1
+            not_selected_count = max(0, len(candidates) - len(selected))
+            summary.skipped += not_selected_count
+            run.skipped += not_selected_count
+            if prune_unselected and selected_ids:
+                saved_ids = select(SavedMediaRecord.media_item_id)
+                feedback_ids = select(RecommendationFeedbackRecord.media_item_id)
+                unselected = session.scalars(
+                    select(MediaItemRecord).where(
+                        MediaItemRecord.id.like("musicbrainz-rg-%"),
+                        MediaItemRecord.source.in_((SOURCE, SOURCE_WITH_GENRES)),
+                        MediaItemRecord.id.not_in(selected_ids),
+                        MediaItemRecord.id.not_in(saved_ids),
+                        MediaItemRecord.id.not_in(feedback_ids),
+                    )
+                ).all()
+                for item in unselected:
+                    session.delete(item)
+                session.commit()
+        print(
+            f"Found {len(candidates)} unique genre-tagged albums; "
+            f"confirmed front covers for {len(artwork_by_id)}; "
+            f"selected {len(selected)} popular albums with covers."
+        )
     return summary
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--query", default="primarytype:album", help="MusicBrainz core release-group search query.")
-    parser.add_argument("--pages", type=int, default=1, help="Number of 100-item result pages (1–10).")
+    parser.add_argument("--query", help="Optional MusicBrainz release-group query override. By default, ranked genre searches are combined.")
+    parser.add_argument("--limit", type=int, default=500, help="Maximum popular albums with confirmed Cover Art Archive front covers (1–500).")
     parser.add_argument("--genre", default="Unclassified", help="Tastera-owned genre label for this import. MusicBrainz core metadata does not supply genres; use a genre only for a curated query whose results have been checked.")
     parser.add_argument("--request-delay", type=float, default=MIN_REQUEST_DELAY, help="Seconds between API calls; minimum 1.1 to respect the service limit.")
+    parser.add_argument("--prune-unselected", action="store_true", help="Remove older MusicBrainz imports outside the selected covered set, preserving saved or feedback-rated items.")
     args = parser.parse_args()
     try:
         summary = import_albums(
             query=args.query,
-            pages=args.pages,
+            limit=args.limit,
             genre=args.genre,
             request_delay=args.request_delay,
+            prune_unselected=args.prune_unselected,
         )
     except (httpx.HTTPError, ValueError) as error:
         parser.error(str(error))

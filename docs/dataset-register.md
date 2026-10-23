@@ -67,13 +67,14 @@ The user's successful local audit notebook run reproduced these dimensions. The 
 
 | Field | Record |
 |---|---|
-| Dataset | Release-group core metadata plus mapped positive-vote community genre tags |
+| Dataset | Genre-filtered release-group core metadata plus mapped positive-vote community tags |
 | Provider | MetaBrainz Foundation / MusicBrainz |
 | API | https://musicbrainz.org/doc/MusicBrainz_API |
-| Retrieval method | Repeatable API importer in `backend/app/import_musicbrainz.py`; identifying User-Agent; minimum 1.1 seconds between requests |
+| Retrieval method | Repeatable importer combines common-genre searches, deduplicates and ranks by community tag-vote totals, then verifies cover availability against the Cover Art Archive |
 | Role | Album title, artist credit, first release date, and release-group MBID |
+| Selection | Up to 500 albums with stronger community-tag signals and a confirmed Cover Art Archive front image; may return fewer than 500 if matching covered albums are unavailable |
 | License/terms status | Core metadata is CC0; genre tags are supplementary data under CC BY-NC-SA 3.0, requiring attribution, non-commercial use, and share-alike treatment |
-| Images | Front thumbnails are linked from Cover Art Archive and remain externally hosted; rights vary and are not granted by the metadata license |
+| Images | Only release groups with a confirmed front thumbnail are selected; images remain externally hosted and rights vary independently from the metadata license |
 | Attribution | Catalog cards link to the MusicBrainz release-group record; source metadata identifies the supplementary tag license when used |
 | Git policy | No credentials required; no downloaded source files |
 
