@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
+import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
@@ -48,6 +49,18 @@ type HeroSlide = {
 
 const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
 const recommendationBatchSize = 12;
+const moodWords: Record<string, string[]> = {
+  "thought-provoking": ["sci-fi", "science fiction", "drama", "philosophy", "art rock"],
+  hopeful: ["adventure", "family", "comedy", "pop", "coming-of-age"],
+  dreamy: ["fantasy", "electronic", "ambient", "romance", "surreal"],
+  tense: ["thriller", "mystery", "horror", "crime", "dark"],
+  comforting: ["comedy", "romance", "family", "slice of life", "acoustic"],
+  adventurous: ["adventure", "fantasy", "action", "travel", "epic"],
+  melancholic: ["drama", "indie", "folk", "r&b", "tragedy"],
+  playful: ["comedy", "animation", "pop", "quirky", "adventure"],
+  epic: ["sci-fi", "science fiction", "fantasy", "adventure", "orchestral"],
+  intimate: ["romance", "drama", "indie", "acoustic", "memoir"],
+};
 
 function readStoredMix(): CategoryMix {
   try {
@@ -71,6 +84,82 @@ function readStoredStrategy(): RecommendationStrategy {
   } catch {
     return "auto";
   }
+}
+
+function readTastePreferences(): TastePreferences {
+  try {
+    const value = JSON.parse(localStorage.getItem("tastera_taste_setup") ?? "null") as Partial<TastePreferences> | null;
+    return {
+      favoriteIds: Array.isArray(value?.favoriteIds) ? value.favoriteIds.filter((item): item is string => typeof item === "string") : [],
+      favoriteArtists: Array.isArray(value?.favoriteArtists) ? value.favoriteArtists.filter((item): item is string => typeof item === "string") : [],
+      genres: Array.isArray(value?.genres) ? value.genres.filter((item): item is string => typeof item === "string") : [],
+      moods: Array.isArray(value?.moods) ? value.moods.filter((item): item is string => typeof item === "string") : [],
+    };
+  } catch {
+    return { favoriteIds: [], favoriteArtists: [], genres: [], moods: [] };
+  }
+}
+
+function scoreTaste(item: Media, preferences: TastePreferences, catalog: Media[], feedbackItems: { item: Media; feedback: "more" | "less" }[] = []) {
+  const favoriteItems = catalog.filter((candidate) => preferences.favoriteIds.includes(candidate.id));
+  const genre = item.genre.toLowerCase();
+  const creator = item.creator.toLowerCase();
+  let score = preferences.genres.some((choice) => genre === choice.toLowerCase()) ? 10 : 0;
+  if (preferences.favoriteArtists.some((artist) => creator === artist.toLowerCase())) score += 12;
+  for (const favorite of favoriteItems) {
+    if (favorite.id === item.id) { score -= 100; continue; }
+    if (favorite.genre.toLowerCase() === genre) score += 6;
+    if (favorite.category === item.category) score += 2;
+    if (favorite.creator.toLowerCase() === creator) score += 8;
+  }
+  for (const signal of feedbackItems) {
+    if (signal.item.id !== item.id && signal.item.genre.toLowerCase() === genre) score += signal.feedback === "more" ? 7 : -9;
+  }
+  const searchable = `${item.genre} ${item.title} ${item.connection}`.toLowerCase();
+  for (const mood of preferences.moods) {
+    if ((moodWords[mood.toLowerCase()] ?? []).some((word) => searchable.includes(word))) score += 2;
+  }
+  return score;
+}
+
+function tasteExplanation(item: Media, preferences: TastePreferences, catalog: Media[]) {
+  const selected = catalog.filter((candidate) => preferences.favoriteIds.includes(candidate.id));
+  const source = selected.find((candidate) => candidate.genre.toLowerCase() === item.genre.toLowerCase() && candidate.id !== item.id);
+  if (source) return `Because you picked ${source.title}: both share ${item.genre}.`;
+  const sameCreator = selected.find((candidate) => candidate.creator.toLowerCase() === item.creator.toLowerCase() && candidate.id !== item.id);
+  if (sameCreator) return `Because you picked ${sameCreator.title} by ${item.creator}.`;
+  const artist = preferences.favoriteArtists.find((name) => name.toLowerCase() === item.creator.toLowerCase());
+  if (artist) return `You chose ${artist}; this album is by the artist you picked.`;
+  const genre = preferences.genres.find((choice) => choice.toLowerCase() === item.genre.toLowerCase());
+  if (genre) return `You selected ${genre} as a favorite genre.`;
+  const searchable = `${item.genre} ${item.title} ${item.connection}`.toLowerCase();
+  const mood = preferences.moods.find((choice) => (moodWords[choice.toLowerCase()] ?? []).some((word) => searchable.includes(word)));
+  if (mood) return `You chose the ${mood.toLowerCase()} mood; this ${item.genre} pick shares those qualities.`;
+  return `A ${item.genre} discovery from the catalog.`;
+}
+
+function explainRecommendation(
+  recommendation: Recommendation,
+  savedItems: Media[],
+  feedbackItems: { item: Media; feedback: "more" | "less" }[],
+  preferences: TastePreferences,
+  catalog: Media[],
+) {
+  const qualities = recommendation.matched_genres.length ? recommendation.matched_genres : [recommendation.item.genre];
+  const matches = (source: Media) => qualities.some((genre) => genre.toLowerCase() === source.genre.toLowerCase());
+  const reason = recommendation.reason.toLowerCase();
+  const mentionedFeedback = feedbackItems.find((entry) => entry.feedback === "more" && reason.includes(entry.item.title.toLowerCase()));
+  if (mentionedFeedback) return `Because you asked for more like ${mentionedFeedback.item.title}; both share ${qualities.join(", ")}.`;
+  const mentionedSaved = savedItems.find((source) => reason.includes(source.title.toLowerCase()));
+  if (mentionedSaved) return `Because you saved ${mentionedSaved.title}; both share ${qualities.join(", ")}.`;
+  const positiveFeedback = feedbackItems.find((entry) => entry.feedback === "more" && matches(entry.item));
+  if (positiveFeedback) return `Because you asked for more like ${positiveFeedback.item.title}; both share ${qualities.join(", ")}.`;
+  const savedSource = savedItems.find(matches);
+  if (savedSource) return `Because you saved ${savedSource.title}; both share ${qualities.join(", ")}.`;
+  if (preferences.favoriteIds.length || preferences.favoriteArtists.length || preferences.genres.length || preferences.moods.length) {
+    return tasteExplanation(recommendation.item, preferences, catalog);
+  }
+  return recommendation.reason;
 }
 
 function allocateMix(mix: CategoryMix, count: number): CategoryMix {
@@ -109,8 +198,12 @@ async function getMixedRecommendationBatch(
   strategy: RecommendationStrategy,
   excludeIds: string[] = [],
   signal?: AbortSignal,
+  preferences: TastePreferences = { favoriteIds: [], favoriteArtists: [], genres: [], moods: [] },
+  catalog: Media[] = [],
+  savedItems: Media[] = [],
+  feedbackItems: { item: Media; feedback: "more" | "less" }[] = [],
 ): Promise<RecommendationPage> {
-  const pages = await Promise.all(mediaCategories.map((category) =>
+  const rawPages = await Promise.all(mediaCategories.map((category) =>
     getRecommendations(
       token,
       signal,
@@ -121,6 +214,18 @@ async function getMixedRecommendationBatch(
       20,
     ),
   ));
+  const feedbackById = new Map<string, { item: Media; feedback: "more" | "less" }>();
+  [...feedbackItems, ...rawPages.flatMap((page) => page.feedback_items)].forEach((entry) => feedbackById.set(entry.item.id, entry));
+  const feedbackContext = [...feedbackById.values()];
+  const pages = rawPages.map((page) => ({
+    ...page,
+    items: [...page.items]
+      .map((recommendation) => ({
+        ...recommendation,
+        reason: explainRecommendation(recommendation, savedItems, feedbackContext, preferences, catalog),
+      }))
+      .sort((left, right) => scoreTaste(right.item, preferences, catalog, feedbackContext) - scoreTaste(left.item, preferences, catalog, feedbackContext)),
+  }));
   const quotas = allocateMix(mix, recommendationBatchSize);
   const selected = new Map<MediaCategory, Recommendation[]>(
     mediaCategories.map((category, index) => [category, pages[index].items.slice(0, quotas[category])]),
@@ -144,7 +249,6 @@ async function getMixedRecommendationBatch(
     if (!added) break;
   }
   const items = fillOrder.flatMap((category) => selected.get(category) ?? []);
-  const feedbackById = new Map<string, RecommendationPage["feedback_items"][number]>();
   pages.forEach((page) => page.feedback_items.forEach((entry) => feedbackById.set(entry.item.id, entry)));
   const total = pages.reduce((sum, page) => sum + page.total, 0);
   const methods = pages.map((page) => page.method);
@@ -179,6 +283,7 @@ function App() {
   const [activePage, setActivePage] = useState<Page>("Discover");
   const [recommendationMix, setRecommendationMix] = useState<CategoryMix>(readStoredMix);
   const [recommendationStrategy, setRecommendationStrategy] = useState<RecommendationStrategy>(readStoredStrategy);
+  const [tastePreferences, setTastePreferences] = useState<TastePreferences>(readTastePreferences);
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -194,6 +299,8 @@ function App() {
   const [recommendationFeedbackItems, setRecommendationFeedbackItems] = useState<
     { item: Media; feedback: "more" | "less" }[]
   >([]);
+  const recommendationCatalog = useMemo(() => [...new Map([...mediaItems, ...catalog].map((item) => [item.id, item])).values()], [catalog]);
+  const recommendationContext = useRef({ catalog: recommendationCatalog, feedbackItems: recommendationFeedbackItems });
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [recommendationTotal, setRecommendationTotal] = useState(0);
   const [recommendationNextOffset, setRecommendationNextOffset] = useState<number | null>(null);
@@ -210,26 +317,38 @@ function App() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
+  const [isTasteSetupOpen, setIsTasteSetupOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [selectedSearchItem, setSelectedSearchItem] = useState<Media | null>(null);
 
   const heroSlides = useMemo<HeroSlide[]>(() => {
     const itemFor = (mediaCategory: MediaCategory) =>
       catalog.find((item) => item.category === mediaCategory && item.image) ??
       mediaItems.find((item) => item.category === mediaCategory && item.image)!;
-    const movie = itemFor("Movies");
-    const book = itemFor("Books");
-    const music = itemFor("Music");
+    const findTitle = (category: MediaCategory, titles: string[]) =>
+      titles.map((title) => [...catalog, ...mediaItems].find((item) => item.category === category && item.image && item.title.toLowerCase() === title.toLowerCase()))
+        .find((item): item is Media => Boolean(item)) ?? itemFor(category);
+    const interstellar = findTitle("Movies", ["Interstellar"]);
+    const arrival = findTitle("Movies", ["Arrival"]);
+    const dune = findTitle("Movies", ["Dune"]);
+    const bladeRunner = findTitle("Movies", ["Blade Runner 2049"]);
+    const book = findTitle("Books", ["Annihilation", "The Midnight Library", "Dune"]);
+    const music = findTitle("Music", ["Random Access Memories", "Blue Train", "After Hours"]);
+    const otherBook = findTitle("Books", ["The Left Hand of Darkness", "The Midnight Library", "Project Hail Mary"]);
+    const otherAlbum = findTitle("Music", ["After Hours", "Blue Train", "In Rainbows"]);
+    const finalAlbum = findTitle("Music", ["Blue Train", "In Rainbows", "Moon Safari"]);
 
     return [
       {
-        eyebrow: "MOVIES · FIND YOUR NEXT FAVORITE",
-        headline: "Stories that",
-        highlight: "stay with you.",
-        description: "Find films that match your curiosity, mood, and the worlds you already love.",
+        eyebrow: "INTERSTELLAR · A FILM BY CHRISTOPHER NOLAN",
+        headline: "“Do not go gentle",
+        highlight: "into that good night.”",
+        description: "Some journeys across the universe still lead back to the people we love.",
         action: "Browse movies",
         destination: "Discover",
         category: "Movies",
-        artwork: [movie],
-        caption: `${movie.title} · MOVIES`,
+        artwork: [interstellar],
+        caption: "INTERSTELLAR · THE POWER OF HUMAN CONNECTION",
       },
       {
         eyebrow: "BOOKS · OPEN A NEW WORLD",
@@ -260,7 +379,7 @@ function App() {
         description: "Trace the genres and shared interests that link the things you save and enjoy.",
         action: "Explore your Taste Map",
         destination: "Taste Map",
-        artwork: [movie, book, music],
+        artwork: [arrival, otherBook, otherAlbum],
         caption: "MOVIES · BOOKS · MUSIC",
       },
       {
@@ -270,7 +389,7 @@ function App() {
         description: "Choose the balance of movies, books, and music you want in your For You picks.",
         action: "Tune your mix",
         destination: "Settings",
-        artwork: [book, music, movie],
+        artwork: [dune, bladeRunner, finalAlbum],
         caption: "YOUR CATEGORY MIX",
       },
     ];
@@ -351,7 +470,7 @@ function App() {
     const controller = new AbortController();
     const loadRecommendations = window.setTimeout(() => {
       setIsRecommendationsLoading(true);
-      getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], controller.signal)
+      getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], controller.signal, tastePreferences, recommendationContext.current.catalog, savedItems, recommendationContext.current.feedbackItems)
         .then((page) => applyRecommendationPage(page, true))
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return;
@@ -371,7 +490,11 @@ function App() {
       window.clearTimeout(loadRecommendations);
       controller.abort();
     };
-  }, [authToken, isCheckingAccount, savedItems, recommendationMix, recommendationStrategy]);
+  }, [authToken, isCheckingAccount, savedItems, recommendationMix, recommendationStrategy, tastePreferences]);
+
+  useEffect(() => {
+    recommendationContext.current = { catalog: recommendationCatalog, feedbackItems: recommendationFeedbackItems };
+  }, [recommendationCatalog, recommendationFeedbackItems]);
 
   useEffect(() => {
     if (activePage !== "Discover") return;
@@ -435,6 +558,27 @@ function App() {
     });
   }, [activePage, catalog, category, savedItems, search]);
 
+  const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
+  const guestRecommendations = useMemo(() => {
+    if (!tasteSetupComplete || account) return [];
+    const quotas = allocateMix(recommendationMix, recommendationBatchSize);
+    const rankedByCategory = Object.fromEntries(mediaCategories.map((mediaCategory) => [mediaCategory, recommendationCatalog
+      .filter((item) => item.category === mediaCategory && !tastePreferences.favoriteIds.includes(item.id))
+      .map((item, index) => ({ item, score: scoreTaste(item, tastePreferences, recommendationCatalog), index }))
+      .sort((left, right) => right.score - left.score || left.index - right.index)
+    ])) as Record<MediaCategory, { item: Media; score: number; index: number }[]>;
+    const selectedItems = mediaCategories.flatMap((mediaCategory) => rankedByCategory[mediaCategory].slice(0, quotas[mediaCategory]).map(({ item }) => item));
+    const selectedIds = new Set(selectedItems.map((item) => item.id));
+    for (const candidate of mediaCategories.flatMap((mediaCategory) => rankedByCategory[mediaCategory]).sort((left, right) => right.score - left.score)) {
+      if (selectedItems.length >= recommendationBatchSize) break;
+      if (!selectedIds.has(candidate.item.id)) {
+        selectedItems.push(candidate.item);
+        selectedIds.add(candidate.item.id);
+      }
+    }
+    return selectedItems.map((item) => ({ item, reason: tasteExplanation(item, tastePreferences, recommendationCatalog), matched_genres: [item.genre] }));
+  }, [account, recommendationCatalog, recommendationMix, tastePreferences, tasteSetupComplete]);
+
   const profileStats = useMemo(() => {
     const categoryCounts = savedItems.reduce<Record<string, number>>((counts, item) => {
       counts[item.category] = (counts[item.category] ?? 0) + 1;
@@ -475,6 +619,13 @@ function App() {
   function updateRecommendationStrategy(strategy: RecommendationStrategy) {
     localStorage.setItem("tastera_recommendation_strategy", strategy);
     setRecommendationStrategy(strategy);
+    setSeenRecommendationIds([]);
+  }
+
+  function saveTasteSetup(preferences: TastePreferences) {
+    localStorage.setItem("tastera_taste_setup", JSON.stringify(preferences));
+    setTastePreferences(preferences);
+    setIsTasteSetupOpen(false);
     setSeenRecommendationIds([]);
   }
 
@@ -523,7 +674,7 @@ function App() {
       } else {
         await clearRecommendationFeedback(authToken, id);
       }
-      const page = await getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy);
+      const page = await getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], undefined, tastePreferences, recommendationCatalog, savedItems, recommendationFeedbackItems);
       applyRecommendationPage(page, true);
     } catch (error) {
       setFeedbackActionError(
@@ -544,6 +695,11 @@ function App() {
         recommendationMix,
         recommendationStrategy,
         seenRecommendationIds,
+        undefined,
+        tastePreferences,
+        recommendationCatalog,
+        savedItems,
+        recommendationFeedbackItems,
       );
       applyRecommendationPage(page);
     } catch (error) {
@@ -643,8 +799,8 @@ function App() {
 
         <div className="sidebar-bottom">
           <div className="avatar">{(account?.email?.[0] ?? "T").toUpperCase()}</div>
-          <div>
-            <div className="profile-name">{account?.email ?? "Your taste profile"}</div>
+          <div className="sidebar-account-copy">
+            <div className="profile-name" title={account?.email}>{account?.email ?? "Your taste profile"}</div>
             <div className="profile-subtitle">
               {account ? `${saved.length} saved ${saved.length === 1 ? "item" : "items"}` : "Sign in to personalize"}
             </div>
@@ -659,24 +815,32 @@ function App() {
           </div>
 
           <div className="topbar-actions">
-            <form
-              className="search-box"
-              role="search"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (activePage !== "Library") navigate("Discover");
-              }}
-            >
+            <div className="search-wrap" onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                window.setTimeout(() => setIsSearchFocused(false), 100);
+              }
+            }}>
+              <form
+                className="search-box"
+                role="search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setIsSearchFocused(true);
+                  if (activePage !== "Library") navigate("Discover");
+                }}
+              >
               <span aria-hidden="true">⌕</span>
               <input
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
+                  setIsSearchFocused(true);
                   setPageNumber(1);
                   if (event.target.value.trim() && activePage !== "Discover" && activePage !== "Library") {
                     navigate("Discover");
                   }
                 }}
+                onFocus={() => setIsSearchFocused(true)}
                 placeholder="Search titles, creators, or genres..."
                 aria-label="Search media"
               />
@@ -694,12 +858,31 @@ function App() {
                 </button>
               )}
               <button type="submit" className="search-submit" aria-label="Search">⌕</button>
-            </form>
+              </form>
+              {isSearchFocused && search.trim() && (
+                <div className="search-suggestions" role="listbox" aria-label="Search results">
+                  {activePage === "Discover" && isCatalogLoading ? (
+                    <div className="search-suggestions-status">Searching Tastera’s catalog…</div>
+                  ) : visibleMedia.length ? visibleMedia.slice(0, 7).map((item) => (
+                    <button type="button" role="option" aria-selected="false" className="search-suggestion" key={item.id} onClick={() => {
+                      setSelectedSearchItem(item);
+                      setSearch("");
+                      setIsSearchFocused(false);
+                    }}>
+                      <span className="search-suggestion-poster">{item.image ? <img src={item.image} alt="" /> : <span>{item.title.slice(0, 1)}</span>}</span>
+                      <span className="search-suggestion-copy"><strong>{item.title}</strong><small>{item.category} · {item.creator}</small></span>
+                      <span className="search-suggestion-arrow" aria-hidden="true">↗</span>
+                    </button>
+                  )) : <div className="search-suggestions-status">No catalog matches for “{search.trim()}”.</div>}
+                  {visibleMedia.length > 7 && <div className="search-suggestions-foot">Showing 7 of {visibleMedia.length} matches</div>}
+                </div>
+              )}
+            </div>
             {account ? (
-              <button type="button" className="account-button" onClick={signOut}>
-                <span className="account-email">{account.email}</span>
-                <span>Sign out</span>
-              </button>
+              <div className="account-menu">
+                <span className="account-identity"><span className="account-initial">{account.email[0]?.toUpperCase()}</span><span className="account-email">{account.email}</span></span>
+                <button type="button" className="account-signout" onClick={signOut}>Sign out</button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -808,6 +991,15 @@ function App() {
               <h1 id="settings-heading">Discovery <span>settings.</span></h1>
               <p>Adjust how For You balances movies, books, and music. Your choices are saved in this browser.</p>
             </div>
+            <section className="settings-panel taste-preferences-summary" aria-labelledby="taste-preferences-heading">
+              <div className="settings-panel-heading">
+                <div><span className="eyebrow">PERSONAL STARTING POINT</span><h2 id="taste-preferences-heading">Your taste setup</h2></div>
+                <button type="button" className="taste-preferences-button" onClick={() => setIsTasteSetupOpen(true)}>{tasteSetupComplete ? "Edit choices" : "Choose favorites"}</button>
+              </div>
+              {tasteSetupComplete ? (
+                <p>{tastePreferences.favoriteIds.length} favorite titles · {tastePreferences.favoriteArtists.length} artists · {tastePreferences.genres.length} genres · {tastePreferences.moods.length} moods. These starter preferences are stored in this browser and influence For You ranking.</p>
+              ) : <p>Choose favorite films, books, music artists, genres, and moods to personalize For You before your Library has any saves.</p>}
+            </section>
             <section className="settings-panel" aria-labelledby="mix-heading">
               <div className="settings-panel-heading">
                 <div><span className="eyebrow">FOR YOU</span><h2 id="mix-heading">Your category mix</h2></div>
@@ -1157,16 +1349,21 @@ function App() {
               <section className="for-you-section" aria-labelledby="for-you-heading">
                 <div className="section-heading">
                   <div>
-                    <span className="eyebrow">BUILT FROM YOUR LIBRARY</span>
+                    <span className="eyebrow">{account ? "YOUR TASTE, YOUR NEXT PICKS" : "START PERSONALIZING BEFORE YOU SAVE"}</span>
                     <h2 id="for-you-heading">For you.</h2>
                   </div>
-                  {account && (
-                    <div className="for-you-actions">
+                  <div className="for-you-actions">
+                    {account && (
                       <span className="result-count">
                         {recommendations.length > 0
                           ? `${recommendations.length} OF ${recommendationTotal} PICKS`
                           : "PERSONALIZED PICKS"}
                       </span>
+                    )}
+                    <button type="button" className="taste-preferences-button" onClick={() => setIsTasteSetupOpen(true)}>
+                      {tasteSetupComplete ? "Edit my tastes" : "Set up my taste"}
+                    </button>
+                    {account && (
                       <button
                         type="button"
                         className="refresh-button"
@@ -1177,24 +1374,23 @@ function App() {
                         <span aria-hidden="true">↻</span>
                         {isRecommendationsLoading ? "Loading…" : "Refresh picks"}
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
                 {!account ? (
-                  <div className="for-you-empty">
-                    <p>Sign in and save a few favorites to get recommendations shaped by your genres.</p>
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={() => {
-                        setAuthMode("sign-in");
-                        setAuthError(null);
-                        setIsAuthOpen(true);
-                      }}
-                    >
-                      Sign in to personalize <span>↗</span>
-                    </button>
-                  </div>
+                  tasteSetupComplete ? (
+                    <>
+                      <p className="for-you-message">Your first picks are based on the favorites, artists, genres, and moods you chose. Sign in to save items and keep your taste across devices.</p>
+                      <div className="media-grid recommendation-grid">
+                        {guestRecommendations.map((recommendation) => <MediaCard key={recommendation.item.id} item={recommendation.item} isSaved={false} onToggleSaved={toggleSaved} recommendationReason={recommendation.reason} />)}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="for-you-empty taste-onboarding-cta">
+                      <div><strong>Start with what you already love.</strong><p>Pick favorite films, books, artists, genres, and moods to get a first recommendation batch before you save anything.</p></div>
+                      <button type="button" className="primary-button" onClick={() => setIsTasteSetupOpen(true)}>Choose my tastes <span>↗</span></button>
+                    </div>
+                  )
                 ) : isCheckingAccount || isRecommendationsLoading ? (
                   <div className="catalog-loading" role="status">Finding your next favorites…</div>
                 ) : recommendations.length > 0 ? (
@@ -1223,7 +1419,8 @@ function App() {
                     {feedbackActionError && (
                       <p className="feedback-error" role="alert">{feedbackActionError}</p>
                     )}
-                    <p>{recommendationMessage || "Save a few items to your Library to get personalized picks."}</p>
+                    <p>{recommendationMessage || "Save a few items or set up your taste to get personalized picks."}</p>
+                    <button type="button" className="text-button" onClick={() => setIsTasteSetupOpen(true)}>Set up your taste →</button>
                     <button type="button" className="text-button" onClick={() => navigate("Library")}>
                       Go to your Library →
                     </button>
@@ -1338,9 +1535,9 @@ function App() {
 
               {search.trim() && (
                 <p className="search-result-summary" role="status" aria-live="polite">
-                  {isCatalogLoading && activePage === "Discover"
+                  {activePage === "Discover" && isCatalogLoading
                     ? `Searching for “${search.trim()}”…`
-                    : `${activePage === "Library" ? visibleMedia.length : totalItems} ${activePage === "Library" ? "saved matches" : "catalog matches"} for “${search.trim()}”`}
+                    : "Choose a result from the search panel above to preview it."}
                 </p>
               )}
 
@@ -1348,6 +1545,8 @@ function App() {
                 <div className="catalog-loading" role="status">
                   Loading your Library…
                 </div>
+              ) : search.trim() ? (
+                <div className="search-inline-hint">Your matching titles appear in the search panel above. Select one to see its artwork and details.</div>
               ) : isCatalogLoading && activePage === "Discover" ? (
                 <div className="catalog-loading" role="status">
                   Loading your discoveries…
@@ -1397,7 +1596,7 @@ function App() {
                 </div>
               )}
 
-              {!isCatalogLoading && activePage === "Discover" && totalPages > 1 && (
+              {!search.trim() && !isCatalogLoading && activePage === "Discover" && totalPages > 1 && (
                 <nav className="catalog-pagination" aria-label="Catalog pages">
                   <button
                     type="button"
@@ -1443,6 +1642,24 @@ function App() {
           </small>
         </footer>
       </main>
+
+      {isTasteSetupOpen && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} onSave={saveTasteSetup} onCancel={() => setIsTasteSetupOpen(false)} />}
+
+      {selectedSearchItem && (
+        <div className="search-preview-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedSearchItem(null); }}>
+          <section className="search-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="search-preview-title">
+            <button type="button" className="search-preview-close" onClick={() => setSelectedSearchItem(null)} aria-label="Close preview">×</button>
+            <div className="search-preview-poster">{selectedSearchItem.image && <img src={selectedSearchItem.image} alt={`${selectedSearchItem.title} artwork`} />}</div>
+            <div className="search-preview-copy">
+              <span className="eyebrow">{selectedSearchItem.category} · {selectedSearchItem.genre}</span>
+              <h2 id="search-preview-title">{selectedSearchItem.title}</h2>
+              <p className="search-preview-creator">{selectedSearchItem.creator}</p>
+              <p>{selectedSearchItem.connection}</p>
+              <button type="button" className="primary-button" onClick={() => toggleSaved(selectedSearchItem.id)}>{saved.includes(selectedSearchItem.id) ? "Saved to your Library" : "Save to Library"}<span>♡</span></button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {isAuthOpen && (
         <div

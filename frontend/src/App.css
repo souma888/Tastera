@@ -2317,6 +2317,108 @@
   font-size: 10px;
 }
 
+/* Search results, account identity, and accessible selection controls */
+.sidebar-bottom { min-width: 0; }
+.sidebar-account-copy { flex: 1; min-width: 0; overflow: hidden; }
+.sidebar-account-copy .profile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-account-copy .profile-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-wrap { position: relative; width: min(370px, 55%); min-width: 220px; flex: 0 1 370px; }
+.search-wrap .search-box { width: 100%; }
+.search-suggestions {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid #57486e;
+  border-radius: 14px;
+  background: #17141d;
+  box-shadow: 0 18px 50px #0009;
+}
+.search-suggestion { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; padding: 10px 12px; border: 0; border-bottom: 1px solid #ffffff0e; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
+.search-suggestion:hover,.search-suggestion:focus-visible { outline: 0; background: #282131; }
+.search-suggestion-poster { display: grid; flex: 0 0 40px; width: 40px; height: 52px; place-items: center; overflow: hidden; border-radius: 6px; background: #282131; color: var(--lavender); font-weight: 700; }
+.search-suggestion-poster img { width: 100%; height: 100%; object-fit: cover; }
+.search-suggestion-copy { display: grid; min-width: 0; gap: 4px; }
+.search-suggestion-copy strong,.search-suggestion-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-suggestion-copy strong { font-size: 12px; }
+.search-suggestion-copy small { color: var(--text-muted); font-size: 10px; }
+.search-suggestion-arrow { margin-left: auto; color: var(--lavender); }
+.search-suggestions-status,.search-suggestions-foot { padding: 12px 14px; color: var(--text-secondary); font-size: 11px; }
+.search-suggestions-foot { border-top: 1px solid var(--border); color: var(--text-muted); }
+.search-inline-hint { padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: #ffffff04; color: var(--text-secondary); font-size: 12px; }
+.account-menu { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+.account-identity { display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 5px; }
+.account-initial { display: grid; flex: 0 0 26px; width: 26px; height: 26px; place-items: center; border-radius: 50%; background: #332844; color: var(--lavender); font-size: 11px; font-weight: 700; }
+.account-menu .account-email { max-width: 150px; font-size: 10px; }
+.account-signout { flex: 0 0 auto; padding: 8px 10px; border: 0; border-radius: 9px; background: #ffffff08; color: var(--text-secondary); font-size: 10px; cursor: pointer; }
+.account-signout:hover { background: #ffffff12; color: var(--text-primary); }
+.taste-preferences-button { flex: 0 0 auto; padding: 10px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--lavender-hover); font-size: 11px; cursor: pointer; }
+.taste-preferences-button:hover { border-color: #7b659e; background: #261f30; }
+.taste-onboarding-cta { display: flex; align-items: center; justify-content: space-between; gap: 22px; }
+.taste-onboarding-cta > div { max-width: 680px; }
+.taste-onboarding-cta strong { color: var(--text-primary); font-size: 14px; }
+.taste-onboarding-cta p { margin: 6px 0 0; }
+.taste-setup-backdrop,.search-preview-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 20px; background: #08070bd9; backdrop-filter: blur(8px); }
+.taste-setup-dialog { position: relative; width: min(920px, 100%); max-height: min(92vh, 940px); overflow: auto; padding: 30px; border: 1px solid #514263; border-radius: 22px; background: linear-gradient(145deg,#1b1722,#121016 65%); box-shadow: 0 30px 100px #0009; }
+.taste-setup-close,.search-preview-close { position: absolute; top: 14px; right: 14px; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: #0c0a10; color: var(--text-primary); font-size: 21px; cursor: pointer; }
+.taste-setup-dialog h2 { margin: 8px 42px 8px 0; font: 600 28px/1.15 var(--font-heading); }
+.taste-setup-intro { max-width: 720px; margin: 0 0 24px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.taste-choice-group { min-width: 0; margin: 0 0 22px; padding: 0; border: 0; }
+.taste-choice-group legend { width: 100%; margin-bottom: 10px; color: var(--text-primary); font-size: 13px; font-weight: 700; }
+.taste-choice-group legend small { margin-left: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
+.taste-choice-cards { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; }
+.taste-choice-card { display: grid; min-width: 0; gap: 5px; padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: #ffffff04; color: var(--text-primary); text-align: left; cursor: pointer; }
+.taste-choice-card:hover { border-color: #8971b4; }
+.taste-choice-card.selected { border-color: var(--lavender); background: #b49aff18; box-shadow: 0 0 0 1px #b49aff44; }
+.taste-choice-card img { width: 100%; aspect-ratio: 0.77; border-radius: 6px; background: #27212f; object-fit: cover; }
+.taste-choice-card span,.taste-choice-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taste-choice-card span { font-size: 10px; font-weight: 600; }
+.taste-choice-card small { color: var(--text-muted); font-size: 9px; }
+.taste-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.taste-chip { padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; background: #ffffff04; color: var(--text-secondary); font-size: 10px; cursor: pointer; }
+.taste-chip:hover,.taste-chip.selected { border-color: var(--lavender); background: #b49aff18; color: var(--lavender-hover); }
+.taste-setup-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; }
+.taste-setup-actions .primary-button { min-height: 42px; }
+.taste-setup-privacy { display: block; margin-top: 12px; color: var(--text-muted); font-size: 10px; text-align: right; }
+.taste-setup-empty { grid-column: 1 / -1; color: var(--text-muted); font-size: 11px; }
+.settings-panel.taste-preferences-summary { margin-bottom: 16px; }
+.taste-preferences-summary > p { color: var(--text-secondary); font-size: 12px; line-height: 1.65; }
+.search-preview-dialog { position: relative; display: grid; grid-template-columns: minmax(180px, 260px) minmax(0,1fr); gap: 24px; width: min(680px, 100%); padding: 24px; border: 1px solid #514263; border-radius: 20px; background: #17141d; box-shadow: 0 30px 100px #0009; }
+.search-preview-poster { overflow: hidden; border-radius: 12px; background: #25202d; }
+.search-preview-poster img { display: block; width: 100%; height: 100%; max-height: 360px; object-fit: cover; }
+.search-preview-copy { align-self: center; padding-right: 16px; }
+.search-preview-copy h2 { margin: 9px 0 3px; font: 600 28px/1.1 var(--font-heading); }
+.search-preview-copy p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.search-preview-copy .search-preview-creator { margin: 0 0 16px; color: var(--text-muted); }
+.search-preview-copy .primary-button { margin-top: 8px; }
+
+/* Keep every pagination number optically centered inside its round control. */
+.catalog-page-numbers button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.catalog-pagination > button { line-height: 1; }
+
+@media (max-width: 900px) {
+  .account-menu .account-email { max-width: 120px; }
+  .taste-choice-cards { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media (max-width: 650px) {
+  .topbar-actions { gap: 8px; }
+  .search-wrap { min-width: 0; width: auto; flex: 1 1 auto; }
+  .account-menu { gap: 2px; }
+  .account-menu .account-email { display: none; }
+  .account-signout { padding-inline: 8px; }
+  .taste-onboarding-cta { align-items: flex-start; flex-direction: column; }
+  .taste-setup-dialog { padding: 24px 16px; }
+  .taste-choice-cards { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .taste-choice-group legend small { display: block; margin: 3px 0 0; }
+  .search-preview-dialog { grid-template-columns: minmax(90px, 32%) minmax(0,1fr); gap: 14px; padding: 16px; }
+  .search-preview-copy h2 { font-size: 20px; }
+  .search-preview-poster img { max-height: 240px; }
+  .search-preview-copy .primary-button { padding-inline: 10px; font-size: 10px; }
+  .catalog-page-numbers button { width: 34px; height: 34px; }
+}
+
 /* Detailed guide and creator information */
 .guide-detailed-grid { align-items: stretch; }
 .guide-detailed-grid .guide-card { display: flex; flex-direction: column; }
