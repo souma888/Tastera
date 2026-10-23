@@ -1,9 +1,9 @@
-"""Import album release-group metadata from MusicBrainz core data.
+"""Import album release-group metadata, community genres, and cover artwork.
 
-The importer uses only core fields (CC0), never reads supplementary tag or
-genre fields, sends an identifying User-Agent, and enforces MusicBrainz's
-one-request-per-second API limit. Artwork is omitted because Cover Art Archive
-images remain copyrighted by their owners.
+The importer uses the core release-group fields (CC0), plus mapped community
+genre tags (CC BY-NC-SA 3.0). It sends an identifying User-Agent, enforces
+MusicBrainz's one-request-per-second API limit, and links to externally hosted
+Cover Art Archive thumbnails without copying them into Tastera.
 """
 
 from __future__ import annotations
@@ -25,8 +25,51 @@ from app.services.import_tracking import catalog_import_run
 API_URL = "https://musicbrainz.org/ws/2/release-group"
 PROVIDER = "musicbrainz-release-group"
 SOURCE = "MusicBrainz core (CC0)"
+SOURCE_WITH_GENRES = "MusicBrainz CC0 + supplementary genres CC BY-NC-SA 3.0"
 MIN_REQUEST_DELAY = 1.1
 USER_AGENT = "Tastera/0.1 (https://soumadip-tastera.vercel.app/)"
+CAA_FRONT_URL = "https://coverartarchive.org/release-group/{}/front-500"
+
+GENRE_TAGS = {
+    "alternative rock": "Alternative Rock",
+    "alternative pop": "Alternative Pop",
+    "ambient": "Ambient",
+    "blues": "Blues",
+    "classical": "Classical",
+    "country": "Country",
+    "dance": "Dance",
+    "disco": "Disco",
+    "drum and bass": "Drum and Bass",
+    "electronic": "Electronic",
+    "folk": "Folk",
+    "funk": "Funk",
+    "grunge": "Grunge",
+    "hard rock": "Hard Rock",
+    "heavy metal": "Heavy Metal",
+    "hip hop": "Hip Hop",
+    "house": "House",
+    "indie pop": "Indie Pop",
+    "indie rock": "Indie Rock",
+    "jazz": "Jazz",
+    "metal": "Metal",
+    "pop": "Pop",
+    "pop rock": "Pop Rock",
+    "punk": "Punk",
+    "punk rock": "Punk Rock",
+    "rap": "Rap",
+    "reggae": "Reggae",
+    "rhythm and blues": "R&B",
+    "r&b": "R&B",
+    "rock": "Rock",
+    "singer-songwriter": "Singer-Songwriter",
+    "ska": "Ska",
+    "soul": "Soul",
+    "soundtrack": "Soundtrack",
+    "synth-pop": "Synth-Pop",
+    "techno": "Techno",
+    "trance": "Trance",
+    "world": "World",
+}
 
 
 @dataclass
@@ -53,7 +96,13 @@ class RateLimitedClient:
             self.last_request = time.monotonic()
             response = self.client.get(
                 API_URL,
-                params={"query": query, "fmt": "json", "limit": 100, "offset": offset},
+                params={
+                    "query": query,
+                    "fmt": "json",
+                    "limit": 100,
+                    "offset": offset,
+                    "inc": "genres",
+                },
             )
             if response.status_code in (429, 503) or response.status_code >= 500:
                 if attempt == 3:
@@ -96,10 +145,32 @@ def _get_genre(session: Session, name: str) -> Genre:
     return genre
 
 
+def _community_genre_names(tags: Any) -> list[str]:
+    """Pick positive-vote MusicBrainz community tags from a genre allowlist."""
+    ranked: list[tuple[int, str]] = []
+    if isinstance(tags, list):
+        for tag in tags:
+            if not isinstance(tag, dict):
+                continue
+            name = tag.get("name")
+            count = tag.get("count", 0)
+            if not isinstance(name, str) or not isinstance(count, int) or count <= 0:
+                continue
+            canonical = GENRE_TAGS.get(name.strip().casefold())
+            if canonical and canonical not in {value for _, value in ranked}:
+                ranked.append((count, canonical))
+    ranked.sort(key=lambda entry: (-entry[0], entry[1].casefold()))
+    return [name for _, name in ranked[:3]]
+
+
+def _genre_names(tags: Any, fallback: str) -> list[str]:
+    return _community_genre_names(tags) or [fallback.strip() or "Unclassified"]
+
+
 def _upsert_release_group(
     session: Session,
     item: dict[str, Any],
-    genre_name: str,
+    genre_names: list[str],
 ) -> str:
     external_id = item.get("id")
     title = item.get("title")
@@ -118,7 +189,10 @@ def _upsert_release_group(
         )
     )
     media = session.get(MediaItemRecord, identifier.media_item_id) if identifier else None
-    genre = _get_genre(session, genre_name)
+    genre_names = list(dict.fromkeys(name.strip() for name in genre_names if name.strip()))
+    if not genre_names:
+        genre_names = ["Unclassified"]
+    genre_rows = [_get_genre(session, name) for name in genre_names]
     date = item.get("first-release-date")
     secondary_types = item.get("secondary-types", [])
     classifications = (
@@ -126,13 +200,19 @@ def _upsert_release_group(
         if isinstance(secondary_types, list)
         else []
     )
-    details = ["MusicBrainz core metadata; genre not provided"]
+    details = ["MusicBrainz core metadata"]
+    tags = item.get("tags")
+    supplementary_genres = _community_genre_names(tags)
+    if supplementary_genres:
+        details.append("genre tags from MusicBrainz supplementary data (CC BY-NC-SA 3.0)")
     if classifications:
         details.append(f"Release type: {', '.join(classifications)}")
     if isinstance(date, str) and date.strip():
         details.append(f"First release date: {date.strip()}")
     description = ". ".join(details) + "."
-    connection = "Imported from MusicBrainz core metadata; Tastera's editorial connection has not been reviewed."
+    connection = "Imported from MusicBrainz; album artwork is linked from the Cover Art Archive."
+    artwork_url = CAA_FRONT_URL.format(external_id)
+    source = SOURCE_WITH_GENRES if supplementary_genres else SOURCE
 
     if media is None:
         media = MediaItemRecord(
@@ -140,13 +220,13 @@ def _upsert_release_group(
             title=title,
             creator=creator,
             category="Music",
-            primary_genre=genre_name,
+            primary_genre=genre_names[0],
             description=description,
-            artwork_url=None,
+            artwork_url=artwork_url,
             connection=connection,
-            source=SOURCE,
+            source=source,
             identifiers=[MediaIdentifier(provider=PROVIDER, external_id=external_id)],
-            genre_links=[MediaGenre(genre=genre)],
+            genre_links=[MediaGenre(genre=genre) for genre in genre_rows],
         )
         session.add(media)
         return "added"
@@ -154,13 +234,13 @@ def _upsert_release_group(
     media.title = title
     media.creator = creator
     media.category = "Music"
-    media.primary_genre = genre_name
+    media.primary_genre = genre_names[0]
     media.description = description
-    media.artwork_url = None
+    media.artwork_url = artwork_url
     media.connection = connection
-    media.source = SOURCE
+    media.source = source
     media.genre_links.clear()
-    media.genre_links.append(MediaGenre(genre=genre))
+    media.genre_links.extend(MediaGenre(genre=genre) for genre in genre_rows)
     return "updated"
 
 
@@ -197,7 +277,11 @@ def import_albums(
                         run.skipped += 1
                         continue
                     try:
-                        outcome = _upsert_release_group(session, item, genre.strip() or "Album")
+                        outcome = _upsert_release_group(
+                            session,
+                            item,
+                            _genre_names(item.get("tags"), genre),
+                        )
                         if outcome == "skipped":
                             summary.skipped += 1
                             run.skipped += 1

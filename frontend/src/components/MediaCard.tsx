@@ -1,8 +1,26 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { MediaCardProps } from "../types/media";
 
 function getPosterHue(id: string) {
   return [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 360;
+}
+
+function getArtworkCredit(item: MediaCardProps["item"]) {
+  if (item.category === "Books" && item.id.startsWith("openlibrary-work-")) {
+    const workId = item.id.slice("openlibrary-work-".length);
+    return {
+      href: `https://openlibrary.org/works/${encodeURIComponent(workId)}`,
+      label: "Cover: Open Library",
+    };
+  }
+  if (item.category === "Music" && item.id.startsWith("musicbrainz-rg-")) {
+    const releaseGroupId = item.id.slice("musicbrainz-rg-".length);
+    return {
+      href: `https://musicbrainz.org/release-group/${encodeURIComponent(releaseGroupId)}`,
+      label: "Artwork: Cover Art Archive",
+    };
+  }
+  return null;
 }
 
 export default function MediaCard({
@@ -14,6 +32,8 @@ export default function MediaCard({
   feedbackBusy = false,
   onRecommendationFeedback,
 }: MediaCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const artworkCredit = getArtworkCredit(item);
   const genreLabel =
     item.category === "Music" &&
     ["album", "unclassified", "unknown"].includes(item.genre.trim().toLowerCase())
@@ -32,13 +52,14 @@ export default function MediaCard({
           </div>
         </div>
 
-        {item.image && (
+        {item.image && !imageFailed && (
           <img
             src={item.image}
-            alt={`${item.title} cover`}
+            alt={`${item.title} ${item.category === "Music" ? "album artwork" : "cover"}`}
             loading="lazy"
             onError={(event) => {
               event.currentTarget.style.display = "none";
+              setImageFailed(true);
             }}
           />
         )}
@@ -59,6 +80,17 @@ export default function MediaCard({
           {isSaved ? "♥" : "♡"}
         </button>
       </div>
+
+      {item.image && !imageFailed && artworkCredit && (
+        <a
+          className="artwork-credit"
+          href={artworkCredit.href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {artworkCredit.label} ↗
+        </a>
+      )}
 
       <div className="card-meta">{genreLabel.toUpperCase()}</div>
       <h3>{item.title}</h3>

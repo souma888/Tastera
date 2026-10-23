@@ -110,47 +110,60 @@ before public or commercial use.
 
 ## Import books from Open Library
 
-For a repeatable bulk import, download the monthly Works and Authors dumps from
+For a repeatable bulk import, download the monthly Works, Authors, and Ratings dumps from
 the [Open Library data dumps page](https://openlibrary.org/developers/dumps).
-Keep the source files outside Git. The importer streams plain-text or `.gz`
-dump files and builds a temporary local author index; it does not call Open
-Library's API or import cover images. It stores book metadata and Open Library
-Work IDs, uses a local subject-to-genre mapping, and is safe to rerun.
+Keep the source files outside Git. The importer indexes ratings, scans the
+entire Works dump, and selects the highest-rated matching works with at least
+10 reader ratings and a 3.5/5 average. It no longer takes the first rows from
+the lexically ordered dump. It links covers from Open Library's Covers service
+using Work cover IDs and links each displayed cover back to its Open Library
+record. The image stays hosted by Open Library.
 
 ```powershell
 python -m app.import_openlibrary `
-  --works "D:\data\ol_dump_works_2026-10-01.txt.gz" `
-  --authors "D:\data\ol_dump_authors_2026-10-01.txt.gz" `
-  --limit 500
+  --works "..\data\New folder\ol_dump_works_2026-09-30.txt.gz" `
+  --authors "..\data\New folder\ol_dump_authors_2026-09-30.txt.gz" `
+  --ratings "..\data\New folder\ol_dump_ratings_2026-09-30.txt.gz" `
+  --limit 500 `
+  --prune-unselected
 ```
 
-Use the exact monthly filenames you downloaded. `--subjects` can override the
-default comma-separated subject filter; setting it to an empty string imports
-any work with a subject the local mapper recognizes. `--limit` accepts 1–5000
-new or updated records per run. The dump data is openly licensed, but retain
-source attribution and check the [Open Library data guidance](https://openlibrary.org/developers)
-and dump-specific license information before redistribution or commercial use.
+Download the Ratings dump into the same local folder first; the two dumps
+already downloaded are not enough to rank works by actual user ratings.
+`--limit` chooses the highest-rated 1–5000 matching works. `--minimum-ratings`
+and `--minimum-average` can adjust the quality threshold. `--prune-unselected`
+removes older imported Open Library works outside the selected set while
+preserving any item saved or feedback-rated by an account. Keep the dumps out of
+Git and retain Open Library attribution. Open Library asks sites to display
+covers directly from `covers.openlibrary.org`, avoid bulk crawling its Covers
+API, and link back to Open Library; see its [cover guidance](https://openlibrary.org/dev/docs/api/covers)
+and [data guidance](https://openlibrary.org/developers) before redistribution
+or commercial use.
 
 ## Import music metadata from MusicBrainz
 
-The importer fetches core album release-group metadata from MusicBrainz (CC0),
-uses an identifying User-Agent, and spaces requests by at least 1.1 seconds. It
-does not import MusicBrainz supplementary tags/genres or Cover Art Archive
-images. The genre label is Tastera's local classification, not a MusicBrainz
-claim.
+The importer fetches album release-group metadata, requests community genre
+tags, maps only a curated list of positive-vote genres, and links to the
+Cover Art Archive's front thumbnail. MusicBrainz core metadata is CC0, but the
+genre tags are supplementary data under CC BY-NC-SA 3.0. The artwork remains
+hosted by the Cover Art Archive; availability varies and images may be
+copyrighted. The importer uses an identifying User-Agent and spaces
+MusicBrainz requests by at least 1.1 seconds.
 
 ```powershell
 python -m app.import_musicbrainz --query "primarytype:album" --pages 2
 ```
 
 Each page can return up to 100 items. `--pages` accepts 1–10; use a narrower
-MusicBrainz release-group search query to select a category. Imports upsert by
+MusicBrainz release-group search query to select a category. Re-run the same
+query to backfill artwork and genre tags on existing rows. Imports upsert by
 release-group MBID and report added, updated, and skipped counts. See the
 [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API),
 [rate limit](https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting), and
 [data license](https://musicbrainz.org/doc/About/Data_License) guidance. MusicBrainz
-core metadata is CC0; do not treat its supplementary data as CC0. Cover Art
-Archive artwork is omitted because image rights remain with their owners.
+core metadata is CC0; supplementary tags require attribution and non-commercial
+share-alike treatment. Do not assume Cover Art Archive images are freely
+licensed for redistribution or commercial use.
 
 ## Test
 
