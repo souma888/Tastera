@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { Media } from "../types/media";
 import "./TasteMap.css";
 
 type NodeKind = "you" | "movie" | "book" | "music" | "theme";
-
+type Filter = "all" | "movie" | "book" | "music" | "theme";
 type TasteNode = {
   id: string;
   label: string;
@@ -14,143 +15,127 @@ type TasteNode = {
   description: string;
   connection: string;
 };
+type TasteLink = { from: string; to: string; id: string };
+type TasteMapProps = {
+  savedItems: Media[];
+  feedbackItems: { item: Media; feedback: "more" | "less" }[];
+};
 
-const nodes: TasteNode[] = [
-  {
-    id: "you",
-    label: "YOUR TASTE",
-    kind: "you",
-    x: 49,
-    y: 51,
-    size: 100,
-    description: "Your personal universe of interests.",
-    connection: "Explore the connections between your favorite media.",
-  },
-  {
-    id: "interstellar",
-    label: "Interstellar",
-    kind: "movie",
-    x: 22,
-    y: 23,
-    size: 82,
-    description: "A journey through space, time, and human connection.",
-    connection: "Connected through cosmic wonder and the unknown.",
-  },
-  {
-    id: "arrival",
-    label: "Arrival",
-    kind: "movie",
-    x: 18,
-    y: 69,
-    size: 70,
-    description: "A science-fiction story about language and humanity.",
-    connection: "Shares thoughtful science fiction themes with Interstellar.",
-  },
-  {
-    id: "dune",
-    label: "Dune",
-    kind: "book",
-    x: 77,
-    y: 20,
-    size: 78,
-    description: "Frank Herbert's epic of politics, ecology, and destiny.",
-    connection: "Connected through expansive worlds and complex systems.",
-  },
-  {
-    id: "midnight",
-    label: "The Midnight Library",
-    kind: "book",
-    x: 83,
-    y: 65,
-    size: 66,
-    description: "A story about alternate lives and the choices we make.",
-    connection: "Connected through philosophical questions and possibility.",
-  },
-  {
-    id: "ram",
-    label: "Random Access Memories",
-    kind: "music",
-    x: 60,
-    y: 84,
-    size: 74,
-    description: "Daft Punk's electronic album with a cinematic atmosphere.",
-    connection: "Connects through immersive sound and futuristic moods.",
-  },
-  {
-    id: "after-hours",
-    label: "After Hours",
-    kind: "music",
-    x: 37,
-    y: 86,
-    size: 62,
-    description: "The Weeknd's moody, nocturnal album.",
-    connection: "Connected through atmospheric sound and introspection.",
-  },
-  {
-    id: "cosmos",
-    label: "Cosmic wonder",
-    kind: "theme",
-    x: 39,
-    y: 14,
-    size: 58,
-    description: "Stories that explore space, time, and our place in the universe.",
-    connection: "A shared theme linking science fiction and atmospheric music.",
-  },
-  {
-    id: "possibility",
-    label: "Possibility",
-    kind: "theme",
-    x: 68,
-    y: 43,
-    size: 56,
-    description: "Stories about choices, alternate realities, and what could be.",
-    connection: "Connects Dune and The Midnight Library through big ideas.",
-  },
-];
-
-const links: [string, string][] = [
-  ["you", "interstellar"],
-  ["you", "arrival"],
-  ["you", "dune"],
-  ["you", "midnight"],
-  ["you", "ram"],
-  ["you", "after-hours"],
-  ["interstellar", "cosmos"],
-  ["arrival", "interstellar"],
-  ["dune", "possibility"],
-  ["possibility", "midnight"],
-  ["arrival", "after-hours"],
-];
-
-const filters = [
+const filterOptions: { label: string; value: Filter }[] = [
   { label: "All", value: "all" },
   { label: "Movies", value: "movie" },
   { label: "Books", value: "book" },
   { label: "Music", value: "music" },
-  { label: "Themes", value: "theme" },
-] as const;
+  { label: "Shared genres", value: "theme" },
+];
 
-type Filter = (typeof filters)[number]["value"];
+function nodeKind(category: Media["category"]): NodeKind {
+  return category === "Movies" ? "movie" : category === "Books" ? "book" : "music";
+}
 
-export default function TasteMap() {
-  const [selectedId, setSelectedId] = useState("interstellar");
-  const [filter, setFilter] = useState<Filter>("all");
+function makeGraph(
+  savedItems: Media[],
+  feedbackItems: TasteMapProps["feedbackItems"],
+): { nodes: TasteNode[]; links: TasteLink[]; trackedCount: number } {
+  const entries = new Map<string, { item: Media; saved: boolean; feedback?: "more" | "less" }>();
+  savedItems.forEach((item) => entries.set(item.id, { item, saved: true }));
+  feedbackItems.forEach(({ item, feedback }) => {
+    const existing = entries.get(item.id);
+    entries.set(item.id, { item, saved: existing?.saved ?? false, feedback });
+  });
 
-  const selected = nodes.find((node) => node.id === selectedId) ?? nodes[0];
-
-  const visibleNodes = nodes.filter(
-    (node) =>
-      node.kind === "you" || filter === "all" || node.kind === filter,
+  const tracked = [...entries.values()].sort((left, right) =>
+    left.item.title.localeCompare(right.item.title),
   );
+  const shown = tracked.slice(0, 8);
+  const themes = new Map<string, { label: string; items: typeof shown }>();
+  shown.forEach((entry) => {
+    const key = entry.item.genre.trim().toLocaleLowerCase() || "uncategorized";
+    const theme = themes.get(key) ?? { label: entry.item.genre || "Uncategorized", items: [] };
+    theme.items.push(entry);
+    themes.set(key, theme);
+  });
+  const rankedThemes = [...themes.entries()]
+    .sort((left, right) => right[1].items.length - left[1].items.length || left[1].label.localeCompare(right[1].label))
+    .slice(0, 6);
 
+  const nodes: TasteNode[] = [{
+    id: "you",
+    label: "YOUR TASTE",
+    kind: "you",
+    x: 50,
+    y: 51,
+    size: 96,
+    description: `${savedItems.length} saved items and ${feedbackItems.length} recommendation signals shape this map.`,
+    connection: "Connections are built from genres attached to the items you saved or rated.",
+  }];
+  const links: TasteLink[] = [];
+  const themeIdByGenre = new Map<string, string>();
+
+  rankedThemes.forEach(([key, theme], index) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / rankedThemes.length;
+    const id = `theme-${encodeURIComponent(key)}`;
+    themeIdByGenre.set(key, id);
+    nodes.push({
+      id,
+      label: theme.label,
+      kind: "theme",
+      x: 50 + Math.cos(angle) * 26,
+      y: 51 + Math.sin(angle) * 26,
+      size: 64,
+      description: `This genre appears on ${theme.items.length} item${theme.items.length === 1 ? "" : "s"} in your taste signals.`,
+      connection: "Each line joins this genre to an item in your Library or recommendation feedback.",
+    });
+    links.push({ from: "you", to: id, id: `you-${id}` });
+  });
+
+  shown.forEach((entry, index) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / Math.max(shown.length, 1) + 0.18;
+    const kind = nodeKind(entry.item.category);
+    const themeId = themeIdByGenre.get(entry.item.genre.trim().toLocaleLowerCase());
+    const signal = entry.saved
+      ? "Saved in your Library"
+      : entry.feedback === "more"
+        ? "You asked for more like this"
+        : "You marked this not for you";
+    nodes.push({
+      id: entry.item.id,
+      label: entry.item.title,
+      kind,
+      x: 50 + Math.cos(angle) * 43,
+      y: 51 + Math.sin(angle) * 43,
+      size: 78,
+      description: `${entry.item.category} · ${entry.item.creator} · ${entry.item.genre}`,
+      connection: `${signal}. Its catalog genre connects it to ${entry.item.genre || "Uncategorized"}.`,
+    });
+    if (themeId) links.push({ from: themeId, to: entry.item.id, id: `${themeId}-${entry.item.id}` });
+  });
+
+  return { nodes, links, trackedCount: tracked.length };
+}
+
+export default function TasteMap({ savedItems, feedbackItems }: TasteMapProps) {
+  const [selectedId, setSelectedId] = useState("you");
+  const [filter, setFilter] = useState<Filter>("all");
+  const graph = useMemo(() => makeGraph(savedItems, feedbackItems), [savedItems, feedbackItems]);
+  const selected = graph.nodes.find((node) => node.id === selectedId) ?? graph.nodes[0];
+  const categoryNodeIds = new Set(graph.nodes.filter((node) => node.kind === filter).map((node) => node.id));
+  const relatedThemeIds = new Set(graph.links.flatMap((link) => {
+    if (categoryNodeIds.has(link.from)) return [link.to];
+    if (categoryNodeIds.has(link.to)) return [link.from];
+    return [];
+  }));
+  const visibleNodes = graph.nodes.filter((node) =>
+    node.kind === "you" || filter === "all" || node.kind === filter ||
+    (filter !== "theme" && node.kind === "theme" && relatedThemeIds.has(node.id)),
+  );
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
-
   const kindLabel: Record<NodeKind, string> = {
     you: "YOUR PROFILE",
     movie: "MOVIE",
     book: "BOOK",
     music: "MUSIC",
-    theme: "SHARED THEME",
+    theme: "SHARED GENRE",
   };
 
   return (
@@ -158,92 +143,56 @@ export default function TasteMap() {
       <header className="taste-heading">
         <div>
           <span className="eyebrow">YOUR PERSONAL UNIVERSE</span>
-          <h1>
-            Your taste is <span>connected.</span>
-          </h1>
-          <p>
-            Explore the stories, sounds, and ideas that bring your interests
-            together.
-          </p>
+          <h1>Your taste is <span>connected.</span></h1>
+          <p>Explore the genres that connect items you have saved and recommendation feedback you have given.</p>
         </div>
         <div className="taste-stat">
-          <strong>{nodes.length - 1}</strong>
-          <span>DISCOVERIES</span>
+          <strong>{graph.trackedCount}</strong>
+          <span>SAVED + RATED</span>
         </div>
       </header>
 
       <div className="taste-filters" aria-label="Filter taste map">
-        {filters.map((item) => (
+        {filterOptions.map((item) => (
           <button
             key={item.value}
             type="button"
             className={filter === item.value ? "selected" : ""}
             aria-pressed={filter === item.value}
             onClick={() => setFilter(item.value)}
-          >
-            {item.label}
-          </button>
+          >{item.label}</button>
         ))}
       </div>
 
       <div className="taste-layout">
         <div className="taste-canvas">
-          <div className="constellation-label">
-            <span className="constellation-dot" />
-            YOUR INTEREST CONSTELLATION
-          </div>
-
-          <svg
-            className="taste-connections"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            {links.map(([fromId, toId]) => {
-              const from = nodes.find((node) => node.id === fromId)!;
-              const to = nodes.find((node) => node.id === toId)!;
-              const isVisible =
-                visibleIds.has(fromId) && visibleIds.has(toId);
-              const isSelected =
-                selectedId === fromId || selectedId === toId;
-
-              if (!isVisible) return null;
-
-              const midX = (from.x + to.x) / 2;
-              const midY = (from.y + to.y) / 2;
-              const bend = from.y < to.y ? -4 : 4;
-
+          <div className="constellation-label"><span className="constellation-dot" />YOUR SAVED TASTE GRAPH</div>
+          <svg className="taste-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {graph.links.map((link) => {
+              if (!visibleIds.has(link.from) || !visibleIds.has(link.to)) return null;
+              const from = graph.nodes.find((node) => node.id === link.from);
+              const to = graph.nodes.find((node) => node.id === link.to);
+              if (!from || !to) return null;
+              const isSelected = selectedId === link.from || selectedId === link.to;
               return (
                 <path
-                  key={`${fromId}-${toId}`}
-                  d={`M ${from.x} ${from.y} Q ${midX + bend} ${midY - bend} ${to.x} ${to.y}`}
+                  key={link.id}
+                  d={`M ${from.x} ${from.y} Q ${(from.x + to.x) / 2 + 2} ${(from.y + to.y) / 2 - 2} ${to.x} ${to.y}`}
                   className={isSelected ? "taste-link active" : "taste-link"}
                 />
               );
             })}
           </svg>
-
-          {nodes.map((node) => {
+          {graph.nodes.map((node) => {
             const isVisible = visibleIds.has(node.id);
-            const isSelected = selectedId === node.id;
-
             return (
               <button
                 key={node.id}
                 type="button"
-                className={[
-                  "taste-node",
-                  `node-${node.kind}`,
-                  isSelected ? "is-selected" : "",
-                  !isVisible ? "is-filtered-out" : "",
-                ].join(" ")}
-                style={{
-                  left: `${node.x}%`,
-                  top: `${node.y}%`,
-                  "--node-size": `${node.size}px`,
-                } as CSSProperties}
+                className={["taste-node", `node-${node.kind}`, selectedId === node.id ? "is-selected" : "", !isVisible ? "is-filtered-out" : ""].join(" ")}
+                style={{ left: `${node.x}%`, top: `${node.y}%`, "--node-size": `${node.size}px` } as CSSProperties}
                 onClick={() => setSelectedId(node.id)}
-                aria-pressed={isSelected}
+                aria-pressed={selectedId === node.id}
                 aria-label={`Explore ${node.label}`}
                 title={node.label}
               >
@@ -252,48 +201,33 @@ export default function TasteMap() {
               </button>
             );
           })}
-
           <div className="constellation-legend">
             <span><i className="legend-movie" /> Movies</span>
             <span><i className="legend-book" /> Books</span>
             <span><i className="legend-music" /> Music</span>
-            <span><i className="legend-theme" /> Themes</span>
+            <span><i className="legend-theme" /> Genres</span>
           </div>
         </div>
 
         <aside className="taste-detail">
-          <span className="eyebrow">SELECTED DISCOVERY</span>
+          <span className="eyebrow">SELECTED CONNECTION</span>
           <div className={`detail-symbol detail-${selected.kind}`}>
-            {selected.kind === "movie"
-              ? "▶"
-              : selected.kind === "book"
-                ? "▤"
-                : selected.kind === "music"
-                  ? "♫"
-                  : selected.kind === "theme"
-                    ? "✳"
-                    : "✦"}
+            {selected.kind === "movie" ? "▶" : selected.kind === "book" ? "▤" : selected.kind === "music" ? "♫" : selected.kind === "theme" ? "✳" : "✦"}
           </div>
-
           <span className="detail-kind">{kindLabel[selected.kind]}</span>
           <h2>{selected.label}</h2>
           <p>{selected.description}</p>
-
-          <div className="connection-note">
-            <span>WHY IT CONNECTS</span>
-            <p>{selected.connection}</p>
-          </div>
-
-          <div className="detail-footer">
-            <span className="connection-pulse" />
-            Sample relationship data
-          </div>
+          <div className="connection-note"><span>WHY IT CONNECTS</span><p>{selected.connection}</p></div>
+          <div className="detail-footer"><span className="connection-pulse" />Built from your saved and rated items</div>
         </aside>
       </div>
 
       <p className="taste-disclaimer">
-        A prototype of your taste graph. Connections are illustrative until
-        TASTERA's recommendation engine supplies real relationships.
+        {graph.trackedCount > 8
+          ? `Showing 8 of ${graph.trackedCount} saved or rated items to keep the graph readable.`
+          : graph.trackedCount
+            ? "Each connection represents a shared catalog genre from your own saved items and recommendation feedback."
+            : "Save discoveries or give recommendation feedback to build your personal Taste Map."}
       </p>
     </section>
   );

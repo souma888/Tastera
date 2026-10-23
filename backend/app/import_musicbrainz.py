@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+import math
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -270,6 +271,7 @@ def _upsert_release_group(
     description = ". ".join(details) + "."
     connection = "Imported from MusicBrainz; album artwork is linked from the Cover Art Archive."
     source = SOURCE_WITH_GENRES if community_tags_used else SOURCE
+    popularity_score = math.log1p(_community_popularity(item))
 
     if media is None:
         media = MediaItemRecord(
@@ -282,6 +284,7 @@ def _upsert_release_group(
             artwork_url=artwork_url,
             connection=connection,
             source=source,
+            popularity_score=popularity_score,
             identifiers=[MediaIdentifier(provider=PROVIDER, external_id=external_id)],
             genre_links=[MediaGenre(genre=genre) for genre in genre_rows],
         )
@@ -296,6 +299,7 @@ def _upsert_release_group(
     media.artwork_url = artwork_url
     media.connection = connection
     media.source = source
+    media.popularity_score = popularity_score
     media.genre_links.clear()
     media.genre_links.extend(MediaGenre(genre=genre) for genre in genre_rows)
     return "updated"

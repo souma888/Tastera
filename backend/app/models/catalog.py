@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -22,6 +22,9 @@ class MediaItemRecord(Base):
     artwork_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     connection: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(100))
+    popularity_score: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

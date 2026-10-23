@@ -13,6 +13,7 @@ import argparse
 import gzip
 import heapq
 import json
+import math
 import sqlite3
 import tempfile
 from contextlib import closing
@@ -319,6 +320,7 @@ def _upsert_book(
             artwork_url=artwork_url,
             connection="Imported from Open Library; Tastera's editorial connection has not been reviewed.",
             source=SOURCE,
+            popularity_score=math.log1p(popularity[0]) if popularity else 0.0,
             identifiers=[MediaIdentifier(provider=PROVIDER, external_id=external_id)],
             genre_links=[MediaGenre(genre=genre)],
         )
@@ -333,6 +335,7 @@ def _upsert_book(
     media.artwork_url = artwork_url
     media.connection = "Imported from Open Library; Tastera's editorial connection has not been reviewed."
     media.source = SOURCE
+    media.popularity_score = math.log1p(popularity[0]) if popularity else 0.0
     media.genre_links.clear()
     media.genre_links.append(MediaGenre(genre=genre))
     return "updated"

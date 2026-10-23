@@ -1,4 +1,4 @@
-import type { Media, RecommendationPage } from "../types/media";
+import type { Media, MediaCategory, RecommendationPage } from "../types/media";
 
 export interface Account {
   id: string;
@@ -76,8 +76,12 @@ export function getRecommendations(
   signal?: AbortSignal,
   offset = 0,
   excludeIds: string[] = [],
+  category?: MediaCategory,
+  strategy: "auto" | "genre" | "item_item" = "auto",
+  limit = 20,
 ) {
-  const query = new URLSearchParams({ limit: "12", offset: String(offset) });
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset), strategy });
+  if (category) query.set("category", category);
   excludeIds.forEach((id) => query.append("exclude_ids", id));
   return request<RecommendationPage>(`/me/recommendations?${query.toString()}`, {
     ...authorized(token),

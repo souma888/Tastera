@@ -1988,6 +1988,251 @@
   cursor: not-allowed;
 }
 
+.discovery-heading-actions,
+.pagination-quick-controls,
+.catalog-page-numbers {
+  display: flex;
+  align-items: center;
+}
+
+.discovery-heading-actions {
+  gap: 16px;
+}
+
+.pagination-quick-controls {
+  gap: 6px;
+}
+
+.pagination-quick-controls button,
+.catalog-page-numbers button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.pagination-quick-controls button:disabled,
+.catalog-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.catalog-pagination {
+  gap: 9px;
+}
+
+.catalog-pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.catalog-page-numbers {
+  gap: 6px;
+}
+
+.catalog-page-numbers button.current {
+  border-color: var(--lavender);
+  background: var(--lavender);
+  color: #17121f;
+  font-weight: 700;
+}
+
+.catalog-page-total {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.profile-insight,
+.settings-panel {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 18px);
+  background: radial-gradient(ellipse at 0 0, #b49aff0c, transparent 60%), var(--surface);
+}
+
+.profile-insight h2,
+.settings-panel h2 {
+  margin: 8px 0;
+  font: 600 22px/1.25 var(--font-heading);
+}
+
+.profile-insight > p,
+.settings-panel > p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.profile-insight-tags,
+.settings-feedback-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.profile-insight-tags span,
+.settings-feedback-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.profile-insight-tags b,
+.settings-feedback-counts b {
+  color: var(--lavender);
+}
+
+.settings-page {
+  display: grid;
+  gap: 18px;
+  max-width: 1050px;
+  padding: 38px 0 56px;
+}
+
+.settings-hero h1 {
+  margin: 10px 0;
+  font: 600 clamp(30px, 4vw, 46px)/1.1 var(--font-heading);
+  letter-spacing: -1.8px;
+}
+
+.settings-hero h1 span {
+  color: var(--lavender);
+}
+
+.settings-hero p,
+.settings-footnote {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.settings-panel-heading,
+.settings-strategy-row,
+.settings-range > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-mix-summary {
+  color: var(--lavender);
+  font-size: 11px;
+  text-align: right;
+}
+
+.settings-mix-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.settings-range {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff04;
+}
+
+.settings-range > span {
+  font-size: 12px;
+}
+
+.settings-range b {
+  color: var(--lavender);
+}
+
+.settings-range input {
+  width: 100%;
+  accent-color: var(--lavender);
+}
+
+.settings-strategy-row {
+  justify-content: flex-start;
+  margin: 20px 0 10px;
+  font-size: 12px;
+}
+
+.settings-strategy-row select {
+  max-width: min(100%, 380px);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #17141d;
+  color: var(--text-primary);
+}
+
+.settings-footnote {
+  display: block;
+  max-width: 800px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.settings-evaluation h2 {
+  margin-top: 12px;
+}
+
+@media (max-width: 700px) {
+  .settings-mix-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .settings-mix-summary {
+    text-align: left;
+  }
+
+  .catalog-pagination {
+    gap: 5px;
+  }
+
+  .catalog-pagination > button {
+    padding-inline: 9px;
+    font-size: 0;
+  }
+
+  .catalog-pagination > button span {
+    font-size: 15px;
+  }
+
+  .catalog-page-numbers {
+    gap: 3px;
+  }
+
+  .catalog-page-numbers button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .catalog-page-total {
+    display: none;
+  }
+}
+
 .tmdb-attribution {
   flex-basis: 100%;
   color: var(--text-muted);

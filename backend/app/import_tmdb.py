@@ -7,6 +7,7 @@ matched by their TMDb movie ID instead of inserting duplicates.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import time
 from dataclasses import dataclass
@@ -124,6 +125,8 @@ def _upsert_movie(
 
     poster_path = movie.get("poster_path")
     artwork = f"{TMDB_IMAGE}{poster_path}" if poster_path else "https://placehold.co/500x750/17121e/eee?text=No+Poster"
+    raw_popularity = movie.get("popularity", 0)
+    popularity_score = math.log1p(raw_popularity) if isinstance(raw_popularity, (int, float)) and raw_popularity > 0 else 0.0
 
     if record is None:
         record = MediaItemRecord(
@@ -136,6 +139,7 @@ def _upsert_movie(
             artwork_url=artwork,
             connection="Imported from TMDb; editorial connections have not been reviewed.",
             source="TMDb",
+            popularity_score=popularity_score,
             identifiers=[MediaIdentifier(provider=PROVIDER, external_id=external_id)],
             genre_links=[MediaGenre(genre=genre) for genre in genres],
         )
@@ -149,6 +153,7 @@ def _upsert_movie(
     record.description = movie.get("overview") or None
     record.artwork_url = artwork
     record.source = "TMDb"
+    record.popularity_score = popularity_score
     record.genre_links.clear()
     record.genre_links.extend(MediaGenre(genre=genre) for genre in genres)
     return "updated"

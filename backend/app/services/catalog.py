@@ -52,7 +52,12 @@ def list_media(
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     start = (page - 1) * limit
     records = session.scalars(
-        statement.order_by(MediaItemRecord.title, MediaItemRecord.id)
+        statement.order_by(
+            MediaItemRecord.popularity_score.desc(),
+            MediaItemRecord.created_at.asc(),
+            MediaItemRecord.title,
+            MediaItemRecord.id,
+        )
         .offset(start)
         .limit(limit)
     ).all()

@@ -57,8 +57,12 @@ GET /api/v1/media/interstellar
 ```
 
 `category` accepts `Movies`, `Books`, or `Music`. `q` searches title, creator,
-and genre without regard to case. Responses include deterministic pagination
-fields (`items`, `page`, `limit`, `total`, and `total_pages`).
+and genre without regard to case. Unfiltered results are ordered by a normalized
+source popularity signal: TMDb popularity for movies, reader-rating counts for
+books, and positive community-tag counts for music. These signals help surface
+better-known items but are not a single cross-media chart. Responses include
+deterministic pagination fields (`items`, `page`, `limit`, `total`, and
+`total_pages`).
 
 The local Vite origins on ports 5173 and 5174 may request the catalog by
 default. For a deployed frontend, set `TASTERA_CORS_ORIGINS` to a comma-separated
@@ -68,7 +72,9 @@ The migrations create catalog tables plus `accounts`, `saved_media`, and
 `recommendation_feedback`. Seed records use stable TASTERA IDs;
 `python -m app.seed_catalog` is idempotent and only inserts missing records.
 Apply pending schema changes with `python -m alembic upgrade head` before
-running a catalog importer against that database.
+running a catalog importer against that database. The popularity score
+migration adds the catalog sort field; rerun each catalog importer to refresh
+scores on records that were imported before the field existed.
 
 ## Accounts and saved items
 

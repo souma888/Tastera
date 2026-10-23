@@ -15,7 +15,7 @@ import {
 } from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
-import type { Media, MediaFilter, Recommendation, RecommendationPage } from "./types/media";
+import type { Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
@@ -25,12 +25,129 @@ const navigationItems = [
   ["Taste Map", "◎"],
   ["Library", "▤"],
   ["Your Profile", "◉"],
+  ["Settings", "⚙"],
   ["Guide", "?"],
   ["About", "✦"],
   ["Contact", "✉"],
 ] as const;
 
 type Page = (typeof navigationItems)[number][0];
+type RecommendationStrategy = "auto" | "genre" | "item_item";
+type CategoryMix = Record<MediaCategory, number>;
+
+const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
+const recommendationBatchSize = 12;
+
+function readStoredMix(): CategoryMix {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("tastera_recommendation_mix") ?? "null") as Partial<CategoryMix> | null;
+    if (
+      parsed && mediaCategories.every((category) => typeof parsed[category] === "number") &&
+      mediaCategories.reduce((total, category) => total + (parsed[category] ?? 0), 0) === 100
+    ) {
+      return parsed as CategoryMix;
+    }
+  } catch {
+    // Ignore malformed or unavailable local preferences and use the defaults.
+  }
+  return { Movies: 60, Books: 20, Music: 20 };
+}
+
+function readStoredStrategy(): RecommendationStrategy {
+  try {
+    const value = localStorage.getItem("tastera_recommendation_strategy");
+    return value === "genre" || value === "item_item" ? value : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+function allocateMix(mix: CategoryMix, count: number): CategoryMix {
+  const exact = Object.fromEntries(mediaCategories.map((category) => [category, (mix[category] * count) / 100])) as CategoryMix;
+  const result = Object.fromEntries(mediaCategories.map((category) => [category, Math.floor(exact[category])])) as CategoryMix;
+  let remaining = count - mediaCategories.reduce((sum, category) => sum + result[category], 0);
+  const order = [...mediaCategories].sort((left, right) =>
+    (exact[right] - result[right]) - (exact[left] - result[left]) ||
+    ["Movies", "Music", "Books"].indexOf(left) - ["Movies", "Music", "Books"].indexOf(right),
+  );
+  for (let index = 0; index < order.length && remaining > 0; index += 1, remaining -= 1) {
+    result[order[index]] += 1;
+  }
+  return result;
+}
+
+function adjustMix(mix: CategoryMix, changed: MediaCategory, value: number): CategoryMix {
+  const nextValue = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+  const others = mediaCategories.filter((category) => category !== changed);
+  const otherTotal = 100 - nextValue;
+  const previousTotal = others.reduce((sum, category) => sum + mix[category], 0);
+  const firstShare = previousTotal
+    ? Math.round((otherTotal * mix[others[0]]) / previousTotal / 5) * 5
+    : Math.round(otherTotal / 10) * 5;
+  return {
+    ...mix,
+    [changed]: nextValue,
+    [others[0]]: Math.max(0, Math.min(otherTotal, firstShare)),
+    [others[1]]: otherTotal - Math.max(0, Math.min(otherTotal, firstShare)),
+  };
+}
+
+async function getMixedRecommendationBatch(
+  token: string,
+  mix: CategoryMix,
+  strategy: RecommendationStrategy,
+  excludeIds: string[] = [],
+  signal?: AbortSignal,
+): Promise<RecommendationPage> {
+  const pages = await Promise.all(mediaCategories.map((category) =>
+    getRecommendations(
+      token,
+      signal,
+      0,
+      excludeIds,
+      category,
+      category === "Movies" ? strategy : "genre",
+      20,
+    ),
+  ));
+  const quotas = allocateMix(mix, recommendationBatchSize);
+  const selected = new Map<MediaCategory, Recommendation[]>(
+    mediaCategories.map((category, index) => [category, pages[index].items.slice(0, quotas[category])]),
+  );
+  let selectedCount = [...selected.values()].reduce((total, items) => total + items.length, 0);
+  const fillOrder = [...mediaCategories].sort((left, right) => mix[right] - mix[left]);
+  while (selectedCount < recommendationBatchSize) {
+    let added = false;
+    for (const category of fillOrder) {
+      if (selectedCount >= recommendationBatchSize) break;
+      const pageIndex = mediaCategories.indexOf(category);
+      const current = selected.get(category) ?? [];
+      const next = pages[pageIndex].items[current.length];
+      if (next) {
+        current.push(next);
+        selected.set(category, current);
+        selectedCount += 1;
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  const items = fillOrder.flatMap((category) => selected.get(category) ?? []);
+  const feedbackById = new Map<string, RecommendationPage["feedback_items"][number]>();
+  pages.forEach((page) => page.feedback_items.forEach((entry) => feedbackById.set(entry.item.id, entry)));
+  const total = pages.reduce((sum, page) => sum + page.total, 0);
+  const methods = pages.map((page) => page.method);
+  const percentLabel = mediaCategories.map((category) => `${mix[category]}% ${category}`).join(" · ");
+  return {
+    items,
+    feedback_items: [...feedbackById.values()],
+    saved_count: Math.max(...pages.map((page) => page.saved_count)),
+    method: methods.includes("item_item") ? "item_item" : "genre",
+    total,
+    next_offset: total > items.length ? 0 : null,
+    message: `Balanced to your mix (${percentLabel}); recommendations use your saved items and feedback.`,
+  };
+}
 
 function formatSavedDate(value?: string) {
   if (!value) return "Recently saved";
@@ -49,6 +166,8 @@ function App() {
   const [savedItems, setSavedItems] = useState<Media[]>([]);
   const saved = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
   const [activePage, setActivePage] = useState<Page>("Discover");
+  const [recommendationMix, setRecommendationMix] = useState<CategoryMix>(readStoredMix);
+  const [recommendationStrategy, setRecommendationStrategy] = useState<RecommendationStrategy>(readStoredStrategy);
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -125,31 +244,29 @@ function App() {
     if (!authToken || isCheckingAccount) return;
 
     const controller = new AbortController();
-    Promise.resolve()
-      .then(() => {
-        if (controller.signal.aborted) return null;
-        setIsRecommendationsLoading(true);
-        return getRecommendations(authToken, controller.signal);
-      })
-      .then((page) => {
-        if (!page) return;
-        applyRecommendationPage(page, true);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setRecommendations([]);
-        setRecommendationFeedbackItems([]);
-        setRecommendationTotal(0);
-        setRecommendationNextOffset(null);
-        setSeenRecommendationIds([]);
-        setRecommendationMessage("Recommendations could not be loaded right now.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsRecommendationsLoading(false);
-      });
+    const loadRecommendations = window.setTimeout(() => {
+      setIsRecommendationsLoading(true);
+      getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], controller.signal)
+        .then((page) => applyRecommendationPage(page, true))
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          setRecommendations([]);
+          setRecommendationFeedbackItems([]);
+          setRecommendationTotal(0);
+          setRecommendationNextOffset(null);
+          setSeenRecommendationIds([]);
+          setRecommendationMessage("Recommendations could not be loaded right now.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsRecommendationsLoading(false);
+        });
+    }, 250);
 
-    return () => controller.abort();
-  }, [authToken, isCheckingAccount, savedItems]);
+    return () => {
+      window.clearTimeout(loadRecommendations);
+      controller.abort();
+    };
+  }, [authToken, isCheckingAccount, savedItems, recommendationMix, recommendationStrategy]);
 
   useEffect(() => {
     if (activePage !== "Discover") return;
@@ -225,6 +342,8 @@ function App() {
 
     return {
       categoryCounts,
+      topCategory: Object.entries(categoryCounts)
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0] ?? null,
       topGenres: Object.entries(genreCounts)
         .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
         .slice(0, 5),
@@ -232,6 +351,27 @@ function App() {
       lessFeedback: recommendationFeedbackItems.filter((entry) => entry.feedback === "less").length,
     };
   }, [recommendationFeedbackItems, savedItems]);
+
+  const visiblePageNumbers = useMemo(() => {
+    const size = Math.min(5, totalPages);
+    const start = Math.max(1, Math.min(pageNumber - 2, totalPages - size + 1));
+    return Array.from({ length: size }, (_, index) => start + index);
+  }, [pageNumber, totalPages]);
+
+  function updateRecommendationMix(category: MediaCategory, value: number) {
+    setRecommendationMix((current) => {
+      const next = adjustMix(current, category, value);
+      localStorage.setItem("tastera_recommendation_mix", JSON.stringify(next));
+      return next;
+    });
+    setSeenRecommendationIds([]);
+  }
+
+  function updateRecommendationStrategy(strategy: RecommendationStrategy) {
+    localStorage.setItem("tastera_recommendation_strategy", strategy);
+    setRecommendationStrategy(strategy);
+    setSeenRecommendationIds([]);
+  }
 
   async function toggleSaved(id: string) {
     if (!authToken) {
@@ -278,7 +418,7 @@ function App() {
       } else {
         await clearRecommendationFeedback(authToken, id);
       }
-      const page = await getRecommendations(authToken);
+      const page = await getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy);
       applyRecommendationPage(page, true);
     } catch (error) {
       setFeedbackActionError(
@@ -294,10 +434,10 @@ function App() {
     setIsRecommendationsLoading(true);
     setFeedbackActionError(null);
     try {
-      const page = await getRecommendations(
+      const page = await getMixedRecommendationBatch(
         authToken,
-        undefined,
-        0,
+        recommendationMix,
+        recommendationStrategy,
         seenRecommendationIds,
       );
       applyRecommendationPage(page);
@@ -353,7 +493,7 @@ function App() {
   function navigate(page: Page) {
     setActivePage(page);
 
-    if (page === "Taste Map" || page === "Your Profile" || page === "Guide" || page === "About" || page === "Contact") {
+    if (page === "Taste Map" || page === "Your Profile" || page === "Settings" || page === "Guide" || page === "About" || page === "Contact") {
       setSearch("");
       setCategory("All");
     }
@@ -510,8 +650,62 @@ function App() {
             </div>
             <p className="contact-response-note">For the quickest response, include “Tastera” in your message subject.</p>
           </section>
+        ) : activePage === "Settings" ? (
+          <section className="settings-page" aria-labelledby="settings-heading">
+            <div className="settings-hero">
+              <span className="eyebrow">MAKE TASTERA YOURS</span>
+              <h1 id="settings-heading">Discovery <span>settings.</span></h1>
+              <p>Adjust how For You balances movies, books, and music. Your choices are saved in this browser.</p>
+            </div>
+            <section className="settings-panel" aria-labelledby="mix-heading">
+              <div className="settings-panel-heading">
+                <div><span className="eyebrow">FOR YOU</span><h2 id="mix-heading">Your category mix</h2></div>
+                <span className="settings-mix-summary">{mediaCategories.map((item) => `${recommendationMix[item]}% ${item}`).join(" · ")}</span>
+              </div>
+              <p>Each batch aims for 12 picks. At 60 / 20 / 20, that is about 7 movies, 2 books, and 3 albums; unavailable categories are filled by the others.</p>
+              <div className="settings-mix-controls">
+                {mediaCategories.map((item) => (
+                  <label className="settings-range" key={item}>
+                    <span><strong>{item}</strong><b>{recommendationMix[item]}%</b></span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={recommendationMix[item]}
+                      onChange={(event) => updateRecommendationMix(item, Number(event.target.value))}
+                      aria-label={`${item} share of recommendations`}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="settings-strategy-row">
+                <label htmlFor="recommendation-strategy">Movie ranking method</label>
+                <select
+                  id="recommendation-strategy"
+                  value={recommendationStrategy}
+                  onChange={(event) => updateRecommendationStrategy(event.target.value as RecommendationStrategy)}
+                >
+                  <option value="auto">Automatic (co-save, with genre fallback)</option>
+                  <option value="genre">Genre baseline</option>
+                  <option value="item_item">Co-save similarity</option>
+                </select>
+              </div>
+              <small className="settings-footnote">Book and music picks currently use genre matching. Settings only affect this browser and can be changed any time.</small>
+            </section>
+            <section className="settings-panel settings-evaluation" aria-labelledby="evaluation-heading">
+              <span className="eyebrow">HELP US EVALUATE</span>
+              <h2 id="evaluation-heading">Your feedback improves the comparison</h2>
+              <p>On For You, use “More like this” and “Not for me.” The evaluation compares the genre baseline with movie co-save recommendations for relevance (Hit Rate, Recall, NDCG), variety, and catalog coverage.</p>
+              <div className="settings-feedback-counts">
+                <span><b>{profileStats.moreFeedback}</b> more like this</span>
+                <span><b>{profileStats.lessFeedback}</b> not for me</span>
+              </div>
+              <small className="settings-footnote">The current evaluation uses a time-ordered holdout of saves and positive feedback; it reports “insufficient data” until at least five eligible accounts have enough history. It does not claim a measured winner before that threshold.</small>
+            </section>
+          </section>
         ) : activePage === "Taste Map" ? (
-          <TasteMap />
+          <TasteMap savedItems={savedItems} feedbackItems={recommendationFeedbackItems} />
         ) : activePage === "Your Profile" ? (
           <section className="profile-page" aria-labelledby="profile-heading">
             <div className="profile-header">
@@ -571,6 +765,28 @@ function App() {
                     <small>to tune future picks</small>
                   </article>
                 </div>
+
+                <section className="profile-insight" aria-labelledby="profile-insight-heading">
+                  <span className="eyebrow">TASTE SNAPSHOT</span>
+                  <h2 id="profile-insight-heading">
+                    {profileStats.topGenres.length
+                      ? `You save ${profileStats.topGenres[0][0]} most often.`
+                      : "Your taste profile is taking shape."}
+                  </h2>
+                  <p>
+                    {savedItems.length
+                      ? `Your largest shelf is ${profileStats.topCategory?.[0] ?? "still growing"} (${profileStats.topCategory?.[1] ?? 0} saved). `
+                      : "Save a few favorites and your strongest genres and categories will appear here. "}
+                    {profileStats.moreFeedback + profileStats.lessFeedback
+                      ? `You have ${profileStats.moreFeedback} positive and ${profileStats.lessFeedback} negative recommendation signals, which help tune your next picks.`
+                      : "Use More like this or Not for me to add recommendation signals."}
+                  </p>
+                  <div className="profile-insight-tags">
+                    {profileStats.topGenres.slice(0, 3).map(([genre, count]) => (
+                      <span key={genre}>{genre}<b>{count}</b></span>
+                    ))}
+                  </div>
+                </section>
 
                 <section className="profile-panel profile-signals-panel" aria-labelledby="profile-signals-heading">
                   <div className="profile-panel-heading">
@@ -886,15 +1102,33 @@ function App() {
                   </h2>
                 </div>
 
-                <span className="result-count">
-                  {(activePage === "Library"
-                    ? visibleMedia.length
-                    : catalogError
+                <div className="discovery-heading-actions">
+                  {activePage === "Discover" && totalPages > 1 && (
+                    <div className="pagination-quick-controls" aria-label="Quick catalog page controls">
+                      <button
+                        type="button"
+                        aria-label="Previous catalog page"
+                        disabled={pageNumber <= 1 || isCatalogLoading}
+                        onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
+                      >←</button>
+                      <button
+                        type="button"
+                        aria-label="Next catalog page"
+                        disabled={pageNumber >= totalPages || isCatalogLoading}
+                        onClick={() => setPageNumber((page) => Math.min(totalPages, page + 1))}
+                      >→</button>
+                    </div>
+                  )}
+                  <span className="result-count">
+                    {(activePage === "Library"
                       ? visibleMedia.length
-                      : totalItems)
-                    .toString()
-                    .padStart(2, "0")} ITEMS
-                </span>
+                      : catalogError
+                        ? visibleMedia.length
+                        : totalItems)
+                      .toString()
+                      .padStart(2, "0")} ITEMS
+                  </span>
+                </div>
               </div>
 
               <div className="category-tabs" aria-label="Filter by category">
@@ -970,15 +1204,27 @@ function App() {
                     disabled={pageNumber <= 1}
                     onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
                   >
-                    Previous
+                    <span aria-hidden="true">←</span> Previous
                   </button>
-                  <span>Page {pageNumber} of {totalPages}</span>
+                  <div className="catalog-page-numbers" aria-label="Page number">
+                    {visiblePageNumbers.map((page) => (
+                      <button
+                        type="button"
+                        key={page}
+                        className={page === pageNumber ? "current" : ""}
+                        aria-current={page === pageNumber ? "page" : undefined}
+                        aria-label={`Page ${page}`}
+                        onClick={() => setPageNumber(page)}
+                      >{page}</button>
+                    ))}
+                  </div>
+                  <span className="catalog-page-total">of {totalPages}</span>
                   <button
                     type="button"
                     disabled={pageNumber >= totalPages}
                     onClick={() => setPageNumber((page) => Math.min(totalPages, page + 1))}
                   >
-                    Next
+                    Next <span aria-hidden="true">→</span>
                   </button>
                 </nav>
               )}
