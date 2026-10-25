@@ -1,6 +1,6 @@
 # TASTERA Architecture
 
-**Reviewed:** 2026-10-23. This document describes the deployed product and separates catalog exploration from personalized recommendations.
+**Reviewed:** 2026-10-25. This document describes the deployed product and separates catalog exploration from personalized recommendations.
 
 ## Runtime system
 
@@ -34,7 +34,7 @@ MusicBrainz albums ──┘
 MovieLens data (local only) ──> research notebooks and evaluation notes
 ```
 
-The frontend is deployed at [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app); the API is at [tastera.onrender.com](https://tastera.onrender.com). Hosting credentials and environment variables are configured in provider dashboards and are never stored in these docs.
+The canonical frontend is [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app); the API is [tastera.onrender.com](https://tastera.onrender.com). In production the browser calls the same-origin `/api/v1` route and Vercel rewrites it to Render (`frontend/vercel.json`). Local development can set `VITE_API_BASE_URL` to the local API. Hosting credentials and environment variables are configured in provider dashboards and are never stored in these docs.
 
 ## Catalog and pathway flow
 
@@ -49,6 +49,7 @@ The app has no persisted relationship graph or separate creator/theme endpoint. 
 
 - Passwords use Argon2 and signed bearer tokens expire after 12 hours. The browser holds the token in session storage.
 - Saved items and feedback are scoped to the authenticated account.
+- The frontend caches the signed-in account and that account's Library snapshot in `sessionStorage`. Temporary network/server failures preserve the cache and offer manual refresh; a confirmed `401` clears the session and asks the user to sign in. The cache is a recovery aid, not the source of truth. Account mutations are not automatically retried.
 - For You uses saved genres, onboarding preferences, explicit `more`/`less` feedback, category mix, and popularity. Movie item-item co-save similarity is used when available. This is a transparent baseline, not a trained and validated multi-category model.
 - Profile counts and summarizes account saves and recommendation feedback. Onboarding choices, recommendation mix/strategy, and collections are browser-local.
 
