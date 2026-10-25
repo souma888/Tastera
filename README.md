@@ -48,12 +48,13 @@ python -m app.seed_catalog
 uvicorn app.main:app --reload
 ```
 
-The local default is SQLite. Set `TASTERA_DATABASE_URL` before migrations and startup to use PostgreSQL. Set a private `TASTERA_AUTH_SECRET` for account features and `TASTERA_CORS_ORIGINS` for allowed browser origins as needed. Never commit secrets. The frontend caches the signed-in account and that account's Library snapshot in `sessionStorage` for recovery from temporary API failures; the server remains authoritative, and a confirmed expired session requires sign-in again. Account sessions and a per-account Library snapshot are cached in the current browser session to support recovery from temporary API outages; the server remains the source of truth, and a confirmed expired session requires sign-in again. API routes and import workflows are in the [backend guide](docs/backend.md).
+The local default is SQLite. Set `TASTERA_DATABASE_URL` before migrations and startup to use PostgreSQL. Set a private `TASTERA_AUTH_SECRET` for account features and `TASTERA_CORS_ORIGINS` for allowed browser origins as needed. Never commit secrets. The frontend caches the signed-in account and that account's Library snapshot in `sessionStorage` for recovery from temporary API failures; the server remains authoritative, and a confirmed expired session requires sign-in again. API routes and import workflows are in the [backend guide](docs/backend.md).
 
 ## Project documentation
 
 - [Project status and remaining work](docs/PROJECT_STATUS.md)
 - [Implementation roadmap](docs/roadmap.md)
+- [Future scope and complete ideas register](docs/FUTURE_SCOPE.md) — the broad list of discussed features, research directions, and possible improvements, including ideas that may never be implemented.
 - [End-to-end workflow](docs/PROJECT_WORKFLOW.md)
 - [Architecture](docs/architecture.md)
 - [Frontend guide](docs/frontend.md)
