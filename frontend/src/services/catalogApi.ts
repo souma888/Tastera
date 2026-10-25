@@ -1,5 +1,4 @@
 import type { MediaCategory, MediaPage } from "../types/media";
-import { apiBaseUrl } from "./apiBaseUrl";
 
 export interface CatalogQuery {
   category?: MediaCategory;
@@ -7,6 +6,11 @@ export interface CatalogQuery {
   page?: number;
   limit?: number;
 }
+
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(
+  /\/$/,
+  "",
+);
 
 export async function getCatalog(
   query: CatalogQuery,

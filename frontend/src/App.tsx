@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
@@ -9,7 +9,6 @@ import ThemedSelect from "./components/ThemedSelect";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
 import {
-  AccountApiError,
   getCurrentAccount,
   exportAccountData,
   getLibraryActivity,
@@ -354,31 +353,6 @@ function statusLabelsForActivity(category: MediaCategory, value: string | null) 
   return labels[category][value ?? ""] ?? "Updated";
 }
 
-function readCachedAccount(): Account | null {
-  try {
-    const account = JSON.parse(sessionStorage.getItem("tastera_cached_account") ?? "null") as Partial<Account> | null;
-    return account && typeof account.id === "string" && typeof account.email === "string"
-      ? { id: account.id, email: account.email }
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function readCachedLibrary(accountId: string | undefined): SavedMedia[] {
-  if (!accountId) return [];
-  try {
-    const items = JSON.parse(sessionStorage.getItem(`tastera_cached_library_${accountId}`) ?? "[]") as unknown;
-    return Array.isArray(items) ? items as SavedMedia[] : [];
-  } catch {
-    return [];
-  }
-}
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
 function App() {
   const [category, setCategory] = useState<MediaFilter>("All");
   const [search, setSearch] = useState("");
@@ -390,10 +364,7 @@ function App() {
     return [50, 100, 150].includes(stored) ? stored : 50;
   });
   const [unavailableMusicArtwork, setUnavailableMusicArtwork] = useState<string[]>([]);
-  const [account, setAccount] = useState<Account | null>(() => sessionStorage.getItem("tastera_access_token") ? readCachedAccount() : null);
-  const [savedItems, setSavedItems] = useState<SavedMedia[]>(() => sessionStorage.getItem("tastera_access_token") ? readCachedLibrary(readCachedAccount()?.id) : []);
-  const [libraryLoadError, setLibraryLoadError] = useState<string | null>(null);
-  const [isLibraryRefreshing, setIsLibraryRefreshing] = useState(false);
+  const [savedItems, setSavedItems] = useState<SavedMedia[]>([]);
   const [libraryActivity, setLibraryActivity] = useState<LibraryActivity[]>([]);
   const [libraryUpdateBusyIds, setLibraryUpdateBusyIds] = useState<string[]>([]);
   const [libraryUpdateErrors, setLibraryUpdateErrors] = useState<Record<string, string>>({});
@@ -413,6 +384,7 @@ function App() {
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(() =>
     sessionStorage.getItem("tastera_access_token"),
   );
@@ -449,36 +421,6 @@ function App() {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [activeDiscoveryPrompt, setActiveDiscoveryPrompt] = useState<(typeof discoveryPrompts)[number] | null>(null);
   const [genreFilter, setGenreFilter] = useState("All genres");
-
-  useEffect(() => {
-    if (!account) return;
-    try {
-      sessionStorage.setItem("tastera_cached_account", JSON.stringify(account));
-      sessionStorage.setItem(`tastera_cached_library_${account.id}`, JSON.stringify(savedItems));
-    } catch {
-      // The server remains the source of truth if browser storage is unavailable.
-    }
-  }, [account, savedItems]);
-
-  const clearCachedAccountData = useCallback(() => {
-    const cachedAccount = readCachedAccount();
-    if (cachedAccount) sessionStorage.removeItem(`tastera_cached_library_${cachedAccount.id}`);
-    sessionStorage.removeItem("tastera_cached_account");
-  }, []);
-
-  const requireSignIn = useCallback((message: string) => {
-    sessionStorage.removeItem("tastera_access_token");
-    setAuthToken(null);
-    setAccount(null);
-    setSavedItems([]);
-    setLibraryActivity([]);
-    setRecommendations([]);
-    setRecommendationFeedbackItems([]);
-    setIsCheckingAccount(false);
-    setAuthMode("sign-in");
-    setAuthError(message);
-    setIsAuthOpen(true);
-  }, []);
 
   const heroSlides = useMemo<HeroSlide[]>(() => {
     const itemFor = (mediaCategory: MediaCategory) =>
@@ -606,33 +548,35 @@ function App() {
       .then((currentAccount) => {
         if (cancelled) return;
         setAccount(currentAccount);
-        setLibraryLoadError(null);
         setIsCheckingAccount(false);
         return getSavedMedia(authToken)
           .then((items) => {
             if (!cancelled) {
               setSavedItems(items);
               setSavedActionError(null);
-              setLibraryLoadError(null);
             }
           })
           .catch((error: unknown) => {
             if (!cancelled) {
-              if (error instanceof AccountApiError && error.status === 401) {
-                requireSignIn("Your session expired. Sign in again to see and update your saved items.");
-              } else {
-                setLibraryLoadError(`Your saved items could not be refreshed. They are still on your account. ${getApiErrorMessage(error, "Try again in a moment.")}`);
-              }
+              setSavedItems([]);
+              setSavedActionError(
+                error instanceof Error
+                  ? `You are signed in, but your Library could not load: ${error.message}`
+                  : "You are signed in, but your Library could not load.",
+              );
             }
           });
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        if (error instanceof AccountApiError && error.status === 401) {
-          requireSignIn("Your session expired. Sign in again to see and update your saved items.");
-        } else {
-          setLibraryLoadError(`Tastera could not confirm your account right now. Your saved items are still on your account. ${getApiErrorMessage(error, "Retry when the service is available.")}`);
-        }
+        sessionStorage.removeItem("tastera_access_token");
+        setAccount(null);
+        setSavedItems([]);
+        setLibraryActivity([]);
+        setRecommendations([]);
+        setRecommendationFeedbackItems([]);
+        setIsCheckingAccount(false);
+        setAuthToken(null);
       })
       .finally(() => {
         if (!cancelled) setIsCheckingAccount(false);
@@ -641,7 +585,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [authToken, requireSignIn]);
+  }, [authToken]);
 
   useEffect(() => {
     if (!authToken || isCheckingAccount) {
@@ -860,30 +804,6 @@ function App() {
     setSeenRecommendationIds([]);
   }
 
-  async function refreshLibrary() {
-    if (!authToken) {
-      requireSignIn("Sign in to load your saved items.");
-      return;
-    }
-    setIsLibraryRefreshing(true);
-    setLibraryLoadError(null);
-    try {
-      const currentAccount = await getCurrentAccount(authToken);
-      setAccount(currentAccount);
-      const items = await getSavedMedia(authToken);
-      setSavedItems(items);
-      setLibraryLoadError(null);
-    } catch (error) {
-      if (error instanceof AccountApiError && error.status === 401) {
-        requireSignIn("Your session expired. Sign in again to see and update your saved items.");
-      } else {
-        setLibraryLoadError(`Your saved items could not be refreshed. They are still on your account. ${getApiErrorMessage(error, "Try again in a moment.")}`);
-      }
-    } finally {
-      setIsLibraryRefreshing(false);
-    }
-  }
-
   async function toggleSaved(id: string) {
     if (!authToken) {
       setAuthMode("sign-in");
@@ -908,13 +828,10 @@ function App() {
         );
       }
       setLibraryActivity(await getLibraryActivity(authToken));
-      setLibraryLoadError(null);
     } catch (error) {
-      if (error instanceof AccountApiError && error.status === 401) {
-        requireSignIn("Your session expired. Sign in again to save or remove items.");
-      } else {
-        setSavedActionError(getApiErrorMessage(error, "Could not update your Library."));
-      }
+      setSavedActionError(
+        error instanceof Error ? error.message : "Could not update your Library.",
+      );
     } finally {
       setSavingIds((current) => current.filter((savingId) => savingId !== id));
     }
@@ -998,20 +915,14 @@ function App() {
         authMode === "sign-up"
           ? await registerAccount(authEmail, authPassword)
           : await signIn(authEmail, authPassword);
-      const previousAccount = readCachedAccount();
-      if (previousAccount && previousAccount.id !== result.account.id) {
-        sessionStorage.removeItem(`tastera_cached_library_${previousAccount.id}`);
-        setSavedItems([]);
-      } else if (previousAccount?.id === result.account.id) setSavedItems(readCachedLibrary(previousAccount.id));
-      else setSavedItems([]);
       sessionStorage.setItem("tastera_access_token", result.access_token);
       setIsCheckingAccount(true);
       setAccount(result.account);
+      setSavedItems([]);
       setAuthToken(result.access_token);
       setAuthPassword("");
       setIsAuthOpen(false);
       setSavedActionError(null);
-      setLibraryLoadError(null);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Could not sign in.");
     } finally {
@@ -1021,13 +932,11 @@ function App() {
 
   function signOut() {
     sessionStorage.removeItem("tastera_access_token");
-    clearCachedAccountData();
     setAuthToken(null);
     setAccount(null);
     setSavedItems([]);
     setLibraryActivity([]);
     setSavedActionError(null);
-    setLibraryLoadError(null);
     setRecommendations([]);
     setRecommendationFeedbackItems([]);
     setRecommendationMessage("");
@@ -1872,12 +1781,6 @@ function App() {
                   {savedActionError}
                 </div>
               )}
-              {libraryLoadError && (
-                <div className="account-feedback account-feedback-error library-load-feedback" role="alert">
-                  <span>{libraryLoadError}</span>
-                  {authToken && <button type="button" className="text-button" disabled={isLibraryRefreshing} onClick={() => void refreshLibrary()}>{isLibraryRefreshing ? "Refreshing…" : "Refresh Library ↻"}</button>}
-                </div>
-              )}
               <div className="section-heading">
                 <div>
                   <span className="eyebrow">
@@ -2020,12 +1923,6 @@ function App() {
                 <div className="catalog-loading" role="status">
                   Loading your discoveries…
                 </div>
-              ) : activePage === "Library" && libraryLoadError && savedItems.length === 0 ? (
-                <div className="empty-state">
-                  <h3>Your Library is temporarily unavailable.</h3>
-                  <p>Your saved items are still on your account. Reconnect to reload them.</p>
-                  {authToken && <button type="button" className="primary-button library-signin-button" disabled={isLibraryRefreshing} onClick={() => void refreshLibrary()}>{isLibraryRefreshing ? "Refreshing…" : "Retry loading Library"}</button>}
-                </div>
               ) : visibleMedia.length > 0 ? (
                 <div className="media-grid">
                   {visibleMedia.map((item) => (
@@ -2062,7 +1959,7 @@ function App() {
                           : "Sign in to save discoveries to your personal Library."
                         : "Try another search or select a different category."}
                   </p>
-                  {activePage === "Library" && !account && !authToken && !search.trim() && (
+                  {activePage === "Library" && !account && !search.trim() && (
                     <button
                       type="button"
                       className="primary-button library-signin-button"

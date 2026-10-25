@@ -1,5 +1,4 @@
 import type { LibraryActivity, MediaCategory, RecommendationPage, SavedMedia, SavedMediaUpdate } from "../types/media";
-import { apiBaseUrl } from "./apiBaseUrl";
 
 export interface Account {
   id: string;
@@ -13,50 +12,25 @@ export interface AuthResponse {
   account: Account;
 }
 
-export class AccountApiError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "AccountApiError";
-    this.status = status;
-  }
-}
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(
+  /\/$/,
+  "",
+);
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const method = (options.method ?? "GET").toUpperCase();
-  const retryable = ["GET", "PUT", "PATCH", "DELETE"].includes(method) || path === "/auth/login";
-  let response: Response | undefined;
-  for (let attempt = 0; attempt < (retryable ? 2 : 1); attempt += 1) {
-    try {
-      response = await fetch(`${apiBaseUrl}${path}`, {
-        ...options,
-        headers: {
-          ...(options.body ? { "Content-Type": "application/json" } : {}),
-          ...options.headers,
-        },
-      });
-      if (attempt === 0 && retryable && [500, 502, 503, 504].includes(response.status)) {
-        await new Promise((resolve) => window.setTimeout(resolve, 350));
-        continue;
-      }
-      break;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-      if (!retryable || attempt > 0) {
-        throw new Error("Tastera could not reach the account service. Your saved items have not been removed; check your connection and retry.", { cause: error });
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 350));
-    }
-  }
-
-  if (!response) throw new Error("Tastera could not reach the account service. Your saved items have not been removed; check your connection and retry.");
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+    },
+  });
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
       | { detail?: string }
       | null;
-    throw new AccountApiError(body?.detail ?? `Request failed (${response.status}).`, response.status);
+    throw new Error(body?.detail ?? `Request failed (${response.status}).`);
   }
 
   if (response.status === 204) return undefined as T;
