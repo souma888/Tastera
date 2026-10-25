@@ -26,8 +26,11 @@ AccountDep = Annotated[AccountRecord, Depends(get_current_account)]
 
 
 def _library_item(record: SavedMediaRecord, media: MediaItemRecord) -> SavedMedia:
-    return SavedMedia(
-        **to_schema(media).model_dump(),
+    # MediaItem already defines updated_at. Merge fields first so the saved
+    # library record's timestamp overrides the catalog timestamp without
+    # passing duplicate keyword arguments to Pydantic.
+    data = to_schema(media).model_dump()
+    data.update(
         saved_at=record.saved_at,
         status=record.status,
         rating=record.rating,
@@ -35,6 +38,7 @@ def _library_item(record: SavedMediaRecord, media: MediaItemRecord) -> SavedMedi
         progress_percent=record.progress_percent,
         updated_at=record.updated_at,
     )
+    return SavedMedia(**data)
 
 
 def _add_activity(
