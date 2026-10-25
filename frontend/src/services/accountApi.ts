@@ -12,25 +12,41 @@ export interface AuthResponse {
   account: Account;
 }
 
+export class AccountApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AccountApiError";
+    this.status = status;
+  }
+}
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(
   /\/$/,
   "",
 );
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    throw new Error("Tastera could not reach the account service. Your saved items have not been removed; check your connection and retry.", { cause: error });
+  }
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
       | { detail?: string }
       | null;
-    throw new Error(body?.detail ?? `Request failed (${response.status}).`);
+    throw new AccountApiError(body?.detail ?? `Request failed (${response.status}).`, response.status);
   }
 
   if (response.status === 204) return undefined as T;

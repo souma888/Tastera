@@ -1684,6 +1684,9 @@
   color: #ffc4d4;
 }
 
+.library-load-feedback { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.library-load-feedback .text-button { flex:none; margin:0; white-space:nowrap; }
+
 .library-signin-button {
   margin-top: 20px;
 }
