@@ -8,7 +8,7 @@
 - Backend API: [tastera.onrender.com](https://tastera.onrender.com)
 - Interactive API documentation: [tastera.onrender.com/docs](https://tastera.onrender.com/docs)
 
-The frontend is deployed on Vercel; the FastAPI backend runs on Render and uses Neon PostgreSQL. GitHub `main` is the deployment source. The API may take a short time to wake after inactivity.
+The canonical frontend URL is [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app); the FastAPI backend runs on Render and uses Neon PostgreSQL. GitHub `main` is the deployment source. In production, frontend requests use the same-origin `/api/v1` path and `frontend/vercel.json` rewrites them to Render; local development can set `VITE_API_BASE_URL` to a local API. The API may take a short time to wake after inactivity. Obsolete Vercel preview/alias URLs are intentionally not listed here.
 
 ## What the app does
 
@@ -48,7 +48,7 @@ python -m app.seed_catalog
 uvicorn app.main:app --reload
 ```
 
-The local default is SQLite. Set `TASTERA_DATABASE_URL` before migrations and startup to use PostgreSQL. Set a private `TASTERA_AUTH_SECRET` for account features and `TASTERA_CORS_ORIGINS` for browser origins as needed. Never commit secrets. API routes and import workflows are in the [backend guide](docs/backend.md).
+The local default is SQLite. Set `TASTERA_DATABASE_URL` before migrations and startup to use PostgreSQL. Set a private `TASTERA_AUTH_SECRET` for account features and `TASTERA_CORS_ORIGINS` for allowed browser origins as needed. Never commit secrets. Account sessions and a per-account Library snapshot are cached in the current browser session to support recovery from temporary API outages; the server remains the source of truth, and a confirmed expired session requires sign-in again. API routes and import workflows are in the [backend guide](docs/backend.md).
 
 ## Project documentation
 
