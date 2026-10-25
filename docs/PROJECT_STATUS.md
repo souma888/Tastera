@@ -29,7 +29,7 @@
 ### Backend, data, and research
 
 - FastAPI, SQLAlchemy, Alembic, Neon PostgreSQL in production, and SQLite for local setup.
-- Account authentication with Argon2 password hashing and signed bearer sessions; per-account saved media and recommendation feedback.
+- Account authentication with Argon2 password hashing and signed bearer sessions; per-account saved media and recommendation feedback. Frontend recovery preserves the current session and cached Library during temporary API failures, provides a manual refresh path, and treats confirmed `401` responses as expired sessions.
 - Manual importers for popular TMDb movies, rating-ranked Open Library works, and popularity-proxy MusicBrainz albums with confirmed Cover Art Archive covers.
 - MovieLens audit/recommender notebooks and app-feedback offline evaluation tooling.
 
@@ -47,7 +47,7 @@
 2. Continue improving catalog breadth, popular-item coverage, genres, creator normalization, duplicate handling, and artwork reliability across Books and Music.
 3. Add consistent structured theme, setting, influence, and cross-media relationship metadata with source provenance if those pathways are to go beyond current creator/genre/editorial evidence.
 4. Build and separately evaluate book and music recommenders when sufficient interaction data exists; only then assess personalized cross-media ranking.
-5. Add backend and browser end-to-end coverage for accounts, isolation, saves, feedback, pagination, creator/theme lookups, and connection explanations.
+5. Expand backend and browser end-to-end coverage for accounts, isolation, saves, feedback, pagination, creator/theme lookups, and connection explanations. A saved-response timestamp regression test exists; full frontend/browser-flow coverage remains open.
 6. Address account security gaps: email verification, password recovery, session revocation, and login rate limiting.
 7. Add production monitoring, database backup/restore guidance, migration checks, import-run observability, and release/rollback procedures.
 8. Re-run MovieLens notebooks when making fresh reproducibility claims; the current experiments do not establish cross-media quality.
