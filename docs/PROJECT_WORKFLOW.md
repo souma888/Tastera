@@ -1,6 +1,6 @@
 # TASTERA Project Workflow
 
-**Reviewed:** 2026-10-23. This workflow describes the live product and the next measurable improvements.
+**Reviewed:** 2026-10-25. This workflow describes the live product and the next measurable improvements.
 
 ## Current state
 
@@ -11,7 +11,7 @@ Vercel React frontend → Render FastAPI → Neon PostgreSQL
                            └─ genre/co-save recommendation baseline
 ```
 
-The frontend provides Discover, Profile, Library, Settings, Taste Map, Collections, Guide, About, and Contact views. Cross-media pathways and creator pages reuse catalog metadata and API text search. Taste Map connections come from account activity and shared genre tags. The pathways explain their evidence; they do not predict personal preference. Books and Music imports are repeatable commands, but catalog completeness and image reliability remain ongoing work.
+The frontend provides Discover, Profile, Library, Settings, Taste Map, Collections, Community preview, Guide, About, and Contact views. Production API calls stay on the frontend origin at `/api/v1` and are proxied by Vercel to Render. Account sessions cache a per-account Library snapshot in `sessionStorage`; temporary failures preserve it and expose manual refresh, while a confirmed `401` triggers sign-in. Cross-media pathways and creator pages reuse catalog metadata and API text search. Taste Map connections come from account activity and shared genre tags. The pathways explain their evidence; they do not predict personal preference. Books and Music imports are repeatable commands, but catalog completeness and image reliability remain ongoing work.
 
 ## Work order
 
