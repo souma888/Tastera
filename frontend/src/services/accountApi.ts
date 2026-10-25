@@ -1,4 +1,5 @@
 import type { LibraryActivity, MediaCategory, RecommendationPage, SavedMedia, SavedMediaUpdate } from "../types/media";
+import { apiBaseUrl } from "./apiBaseUrl";
 
 export interface Account {
   id: string;
@@ -11,11 +12,6 @@ export interface AuthResponse {
   expires_in: number;
   account: Account;
 }
-
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(
-  /\/$/,
-  "",
-);
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
