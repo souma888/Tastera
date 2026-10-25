@@ -544,11 +544,28 @@ function App() {
     if (!authToken) return;
 
     let cancelled = false;
-    Promise.all([getCurrentAccount(authToken), getSavedMedia(authToken)])
-      .then(([currentAccount, items]) => {
+    getCurrentAccount(authToken)
+      .then((currentAccount) => {
         if (cancelled) return;
         setAccount(currentAccount);
-        setSavedItems(items);
+        setIsCheckingAccount(false);
+        return getSavedMedia(authToken)
+          .then((items) => {
+            if (!cancelled) {
+              setSavedItems(items);
+              setSavedActionError(null);
+            }
+          })
+          .catch((error: unknown) => {
+            if (!cancelled) {
+              setSavedItems([]);
+              setSavedActionError(
+                error instanceof Error
+                  ? `You are signed in, but your Library could not load: ${error.message}`
+                  : "You are signed in, but your Library could not load.",
+              );
+            }
+          });
       })
       .catch(() => {
         if (cancelled) return;

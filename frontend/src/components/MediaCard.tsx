@@ -30,6 +30,12 @@ function getArtworkCredit(item: MediaCardProps["item"]) {
   return null;
 }
 
+function formatMetadataDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+}
+
 export default function MediaCard({
   item,
   isSaved,
@@ -56,6 +62,7 @@ export default function MediaCard({
     ["album", "unclassified", "unknown"].includes(item.genre.trim().toLowerCase())
       ? "Genre not provided"
       : item.genre;
+  const metadataDate = item.updated_at ? formatMetadataDate(item.updated_at) : null;
 
   return (
     <article className="media-card">
@@ -121,7 +128,7 @@ export default function MediaCard({
       <p className="creator">
         {onOpenCreator ? <button type="button" className="creator-link" onClick={() => onOpenCreator(item.creator)}>{item.creator} · View creator</button> : item.creator}
       </p>
-      {item.source && item.updated_at && <p className="media-data-freshness">{item.source} · Metadata updated {new Date(item.updated_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</p>}
+      {item.source && item.updated_at && <p className="media-data-freshness"><span>{item.source}</span><span>{metadataDate ? `Updated ${metadataDate}` : "Metadata date unavailable"}</span></p>}
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>
         {recommendationReason ?? item.connection}

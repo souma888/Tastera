@@ -630,9 +630,11 @@
 }
 
 .card-meta {
-  margin-top: 11px;
+  min-height: 1.4em;
+  margin: 11px 0 7px;
   color: var(--lavender);
   font-size: 9px;
+  line-height: 1.4;
 }
 
 .artwork-credit {
@@ -651,12 +653,14 @@
 }
 
 .media-card h3 {
-  margin: 6px 0 3px;
+  min-height: 2.7em;
+  margin: 0 0 4px;
   overflow-wrap: anywhere;
   font: 500 14px/1.35 var(--font-heading);
 }
 
 .creator {
+  min-height: 1.5em;
   margin: 0;
   color: var(--text-secondary);
   font-size: 10px;
@@ -674,7 +678,7 @@
   text-decoration: none;
   cursor: pointer;
 }
-.creator-link { color: inherit; font: inherit; }
+.creator-link { display:inline; margin:0; padding:0 !important; border:0 !important; border-radius:0 !important; outline:none; color:inherit; background:transparent !important; box-shadow:none !important; font:inherit; line-height:inherit; }
 .creator-link:hover { color: var(--lavender); text-decoration: underline; }
 .media-explore-link { margin-top: 8px; color: var(--lavender); font: 600 10px/1.5 var(--font-body); }
 .media-explore-link span { margin-left: 4px; }
@@ -2869,7 +2873,8 @@
 @media(max-width:900px) { .community-shared-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.community-shelf-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:620px) { .community-profile-grid,.community-shelf-grid,.community-shared-grid { grid-template-columns:1fr; }.community-section-heading { align-items:start; flex-direction:column; }.community-hero { padding:26px 21px; } }
 @media(max-width:760px) { .community-sample-user-columns { grid-template-columns:1fr; }.community-sample-user-view { padding:16px; }.community-saved-items { grid-template-columns:1fr; } }
-.media-data-freshness { margin: -7px 0 9px; color: var(--text-muted); font-size: 9px; line-height: 1.5; }
+.media-data-freshness { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 7px; margin:5px 0 10px; color:var(--text-muted); font-size:9px; line-height:1.45; }
+.media-data-freshness span + span { color:#81788f; }
 .recommendation-tuning-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0; }
 .recommendation-tuning-control { display:grid; gap:8px; padding:14px; border:1px solid var(--border); border-radius:11px; background:#ffffff03; }
 .recommendation-tuning-control > span { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
