@@ -1,6 +1,7 @@
 """Schemas for canonical media catalog records."""
 
 from enum import Enum
+from datetime import datetime
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -27,6 +28,8 @@ class MediaItem(BaseModel):
         description="Editorial explanation for this development catalog item."
     )
     source: str = Field(description="Catalog provenance label.")
+    updated_at: datetime | None = Field(default=None, description="When this catalog record was last updated.")
+    popularity_score: float = Field(default=0, description="Provider-specific ordering signal; not comparable across media types.")
 
 
 class MediaPage(BaseModel):

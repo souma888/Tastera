@@ -63,6 +63,14 @@ export function getCurrentAccount(token: string) {
   return request<Account>("/auth/me", authorized(token));
 }
 
+export function exportAccountData(token: string) {
+  return request<Record<string, unknown>>("/auth/me/export", authorized(token));
+}
+
+export function deleteAccount(token: string) {
+  return request<void>("/auth/me", authorized(token, "DELETE"));
+}
+
 export async function getSavedMedia(token: string) {
   const response = await request<{ items: SavedMedia[] }>(
     "/me/saved",

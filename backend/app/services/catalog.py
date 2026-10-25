@@ -22,6 +22,8 @@ def to_schema(record: MediaItemRecord) -> MediaItem:
         description=record.description,
         connection=record.connection,
         source=record.source,
+        updated_at=record.updated_at,
+        popularity_score=record.popularity_score,
     )
 
 

@@ -11,6 +11,7 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
+- `GET /api/v1/auth/me/export` and `DELETE /api/v1/auth/me`: export or permanently delete server-stored personal data.
 - `GET /api/v1/me/saved`: list that account's Library entries and personal metadata.
 - `PUT` / `DELETE /api/v1/me/saved/{media_id}`: add or remove a Library entry.
 - `PATCH /api/v1/me/saved/{media_id}`: update status, personal rating, private note, or progress.

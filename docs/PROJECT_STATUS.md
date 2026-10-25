@@ -22,6 +22,8 @@
 - Onboarding accepts favorite catalog items, artists/creators, genres, and moods.
 - Taste Map is built from the user's saved items and recommendation feedback. It links those signals to shared genres, deduplicates edges, supports pan/zoom and node selection, and shows related catalog items.
 - Collections support themed shelves and shareable snapshots. Collections live in the browser; changes are not synchronized to an earlier shared snapshot.
+- Community preview offers fictional sample explorers/activity, shared-genre suggestions, and starter lists. Follows and copies are browser-local previews, not a real friend network or public publishing system.
+- Account data can be exported as JSON or deleted; export includes browser-local taste/collection settings when initiated from Settings. Catalog cards show source and last metadata update when available.
 - Guide, About, and Contact sections describe the current interface and project.
 
 ### Backend, data, and research

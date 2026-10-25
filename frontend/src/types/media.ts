@@ -12,6 +12,8 @@ export interface Media {
   connection: string;
   description?: string | null;
   source?: string;
+  updated_at?: string | null;
+  popularity_score?: number;
   saved_at?: string;
 }
 

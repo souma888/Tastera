@@ -38,6 +38,8 @@ Routes use the `/api/v1` prefix. Private endpoints require `Authorization: Beare
 | `POST /auth/register` | Register and issue a signed token |
 | `POST /auth/login` | Sign in and issue a signed token |
 | `GET /auth/me` | Return the signed-in account |
+| `GET /auth/me/export` | Export account, Library, activity, and feedback data |
+| `DELETE /auth/me` | Delete the signed-in account and server-stored personal data |
 | `GET /me/saved` | Read saved media for the account |
 | `PUT /me/saved/{media_id}` | Save an item |
 | `PATCH /me/saved/{media_id}` | Update status, 1–5 rating, private note, or progress percentage |

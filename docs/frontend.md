@@ -6,11 +6,12 @@ The client uses React, TypeScript, and Vite. Production frontend: [soumadip-tast
 
 ## Current behavior
 
-- **Discover:** catalog search across titles, creators, and genres; category and genre filters; popularity ordering; 50/100/150 item pages; paginated results and six local demo records when the API is unavailable.
+- **Discover:** catalog search across titles, creators, and genres; category and genre filters; popularity ordering; 50/100/150 item pages; paginated results, source/metadata freshness labels, and six local demo records when the API is unavailable.
 - **Connection Explorer:** cards and recommendations open a detail view with cross-media pathways, exact creator pages, and genre exploration. Relationships state whether the basis is a matching creator credit, catalog genre, shared word in eligible editorial notes, or the user's own activity.
 - **Taste Map:** uses the signed-in user's saved items and recommendation feedback, builds deduplicated genre links, and provides selection, pan/zoom, related catalog records, and an exact-tag genre lookup.
 - **Account and Library:** sign-up/sign-in through the API; saved media, status, 1–5 personal rating, private note, and optional book/album progress persist per account. Library changes appear in an account-scoped recent activity timeline. Ratings contribute to that account's genre and movie co-save ranking; note text is not analyzed. The bearer token is in `sessionStorage`.
-- **For You and Settings:** guest taste onboarding; personalized mixed batches; refresh; editable category proportions and movie strategy; and saved/feedback explanations.
+- **For You and Settings:** guest taste onboarding; personalized mixed batches; refresh; editable category proportions, popularity/novelty/familiarity weights, movie strategy, and saved/feedback explanations. Settings includes account export and deletion controls.
+- **Community preview:** fictional sample explorers, sample activity, shared-genre suggestions, and curated community-list previews. Follow/copy actions are browser-local; no real users' activity is exposed or synced.
 - **Profile:** category and genre summaries, recent saves, and feedback counts.
 - **Collections:** themed shelves and shareable snapshot links. Collection state is local to the browser; shared edits do not sync back to the original.
 - **Guide, About, Contact:** in-app product walkthrough, feature/limitation summary, and developer contact links.

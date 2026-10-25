@@ -4,16 +4,19 @@ import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
 import { TASTE_MOODS } from "./data/tasteOptions";
 import CollectionsPage from "./components/CollectionsPage";
+import CommunityPage from "./components/CommunityPage";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
+  exportAccountData,
   getLibraryActivity,
   getRecommendations,
   getSavedMedia,
   clearRecommendationFeedback,
   registerAccount,
   removeSavedMedia,
+  deleteAccount,
   saveMedia,
   updateSavedMedia,
   setRecommendationFeedback,
@@ -31,6 +34,7 @@ const navigationItems = [
   ["Taste Map", "◎"],
   ["Library", "▤"],
   ["Collections", "▧"],
+  ["Community", "♧"],
   ["Your Profile", "◉"],
   ["Settings", "⚙"],
   ["Guide", "?"],
@@ -40,7 +44,10 @@ const navigationItems = [
 
 type Page = (typeof navigationItems)[number][0];
 type RecommendationStrategy = "auto" | "genre" | "item_item";
+type SocialPrivacy = "private" | "friends" | "community";
 type CategoryMix = Record<MediaCategory, number>;
+type RecommendationTuning = { popularity: number; novelty: number; familiarity: number };
+const defaultRecommendationTuning: RecommendationTuning = { popularity: 20, novelty: 15, familiarity: 65 };
 type HeroSlide = {
   eyebrow: string;
   headline: string;
@@ -113,6 +120,21 @@ function readStoredStrategy(): RecommendationStrategy {
   } catch {
     return "auto";
   }
+}
+
+function readRecommendationTuning(): RecommendationTuning {
+  try {
+    const value = JSON.parse(localStorage.getItem("tastera_recommendation_tuning") ?? "null") as Partial<RecommendationTuning> | null;
+    if (value && [value.popularity, value.novelty, value.familiarity].every((part) => typeof part === "number" && part >= 0 && part <= 100)) return value as RecommendationTuning;
+  } catch { /* Use the balanced defaults. */ }
+  return defaultRecommendationTuning;
+}
+
+function readSocialPrivacy(): SocialPrivacy {
+  try {
+    const value = localStorage.getItem("tastera_social_privacy");
+    return value === "friends" || value === "community" ? value : "private";
+  } catch { return "private"; }
 }
 
 function readTastePreferences(): TastePreferences {
@@ -232,6 +254,7 @@ async function getMixedRecommendationBatch(
   catalog: Media[] = [],
   savedItems: Media[] = [],
   feedbackItems: { item: Media; feedback: "more" | "less" }[] = [],
+  tuning: RecommendationTuning = defaultRecommendationTuning,
 ): Promise<RecommendationPage> {
   const rawPages = await Promise.all(mediaCategories.map((category) =>
     getRecommendations(
@@ -247,15 +270,33 @@ async function getMixedRecommendationBatch(
   const feedbackById = new Map<string, { item: Media; feedback: "more" | "less" }>();
   [...feedbackItems, ...rawPages.flatMap((page) => page.feedback_items)].forEach((entry) => feedbackById.set(entry.item.id, entry));
   const feedbackContext = [...feedbackById.values()];
-  const pages = rawPages.map((page) => ({
-    ...page,
-    items: [...page.items]
-      .map((recommendation) => ({
-        ...recommendation,
-        reason: explainRecommendation(recommendation, savedItems, feedbackContext, preferences, catalog),
-      }))
-      .sort((left, right) => scoreTaste(right.item, preferences, catalog, feedbackContext) - scoreTaste(left.item, preferences, catalog, feedbackContext)),
-  }));
+  const pages = rawPages.map((page) => {
+    const withScores = [...page.items].map((recommendation) => ({
+      recommendation: { ...recommendation, reason: explainRecommendation(recommendation, savedItems, feedbackContext, preferences, catalog) },
+      affinity: scoreTaste(recommendation.item, preferences, catalog, feedbackContext),
+      popularity: recommendation.item.popularity_score ?? 0,
+    }));
+    const range = (value: number, values: number[]) => {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      return max === min ? 0.5 : (value - min) / (max - min);
+    };
+    const affinities = withScores.map((entry) => entry.affinity);
+    const popularities = withScores.map((entry) => entry.popularity);
+    const totalWeight = Math.max(1, tuning.popularity + tuning.novelty + tuning.familiarity);
+    return {
+      ...page,
+      items: withScores
+        .map(({ recommendation, affinity, popularity }) => {
+          const familiar = range(affinity, affinities);
+          const popular = range(popularity, popularities);
+          const score = (popular * tuning.popularity + (1 - familiar) * tuning.novelty + familiar * tuning.familiarity) / totalWeight;
+          return { recommendation, score };
+        })
+        .sort((left, right) => right.score - left.score)
+        .map(({ recommendation }) => recommendation),
+    };
+  });
   const quotas = allocateMix(mix, recommendationBatchSize);
   const selected = new Map<MediaCategory, Recommendation[]>(
     mediaCategories.map((category, index) => [category, pages[index].items.slice(0, quotas[category])]),
@@ -332,6 +373,9 @@ function App() {
   );
   const [recommendationMix, setRecommendationMix] = useState<CategoryMix>(readStoredMix);
   const [recommendationStrategy, setRecommendationStrategy] = useState<RecommendationStrategy>(readStoredStrategy);
+  const [recommendationTuning, setRecommendationTuning] = useState<RecommendationTuning>(readRecommendationTuning);
+  const [socialPrivacy, setSocialPrivacy] = useState<SocialPrivacy>(readSocialPrivacy);
+  const [accountDataNotice, setAccountDataNotice] = useState("");
   const [tastePreferences, setTastePreferences] = useState<TastePreferences>(readTastePreferences);
   const [tasteGenreSearch, setTasteGenreSearch] = useState("");
   const [tasteCreatorSearch, setTasteCreatorSearch] = useState("");
@@ -543,7 +587,7 @@ function App() {
     const controller = new AbortController();
     const loadRecommendations = window.setTimeout(() => {
       setIsRecommendationsLoading(true);
-      getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], controller.signal, tastePreferences, recommendationContext.current.catalog, savedItems, recommendationContext.current.feedbackItems)
+      getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], controller.signal, tastePreferences, recommendationContext.current.catalog, savedItems, recommendationContext.current.feedbackItems, recommendationTuning)
         .then((page) => applyRecommendationPage(page, true))
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return;
@@ -563,7 +607,7 @@ function App() {
       window.clearTimeout(loadRecommendations);
       controller.abort();
     };
-  }, [authToken, isCheckingAccount, savedItems, recommendationMix, recommendationStrategy, tastePreferences]);
+  }, [authToken, isCheckingAccount, savedItems, recommendationMix, recommendationStrategy, recommendationTuning, tastePreferences]);
 
   useEffect(() => {
     recommendationContext.current = { catalog: recommendationCatalog, feedbackItems: recommendationFeedbackItems };
@@ -707,6 +751,15 @@ function App() {
     setSeenRecommendationIds([]);
   }
 
+  function updateRecommendationTuning(key: keyof RecommendationTuning, value: number) {
+    setRecommendationTuning((current) => {
+      const next = { ...current, [key]: value };
+      localStorage.setItem("tastera_recommendation_tuning", JSON.stringify(next));
+      return next;
+    });
+    setSeenRecommendationIds([]);
+  }
+
   function saveTasteSetup(preferences: TastePreferences) {
     localStorage.setItem("tastera_taste_setup", JSON.stringify(preferences));
     setTastePreferences(preferences);
@@ -797,7 +850,7 @@ function App() {
       } else {
         await clearRecommendationFeedback(authToken, id);
       }
-      const page = await getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], undefined, tastePreferences, recommendationCatalog, savedItems, recommendationFeedbackItems);
+      const page = await getMixedRecommendationBatch(authToken, recommendationMix, recommendationStrategy, [], undefined, tastePreferences, recommendationCatalog, savedItems, recommendationFeedbackItems, recommendationTuning);
       applyRecommendationPage(page, true);
     } catch (error) {
       setFeedbackActionError(
@@ -823,6 +876,7 @@ function App() {
         recommendationCatalog,
         savedItems,
         recommendationFeedbackItems,
+        recommendationTuning,
       );
       applyRecommendationPage(page);
     } catch (error) {
@@ -873,6 +927,37 @@ function App() {
     setSeenRecommendationIds([]);
     setIsRecommendationsLoading(false);
     if (activePage === "Library") setActivePage("Discover");
+  }
+
+  async function downloadAccountData() {
+    if (!authToken) return;
+    setAccountDataNotice("");
+    try {
+      const data = await exportAccountData(authToken);
+      const browserData: Record<string, unknown> = {};
+      ["tastera_taste_setup", "tastera_recommendation_mix", "tastera_recommendation_strategy", "tastera_recommendation_tuning", "tastera_collections_v1", "tastera_social_privacy", "tastera_demo_following_v1", "tastera_followed_community_shelves_v1"].forEach((key) => {
+        const value = localStorage.getItem(key);
+        if (value !== null) { try { browserData[key] = JSON.parse(value); } catch { browserData[key] = value; } }
+      });
+      const blob = new Blob([JSON.stringify({ ...data, browser_data: browserData }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "tastera-account-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      setAccountDataNotice("Your server-stored account data has been downloaded.");
+    } catch (error) { setAccountDataNotice(error instanceof Error ? error.message : "Could not export your account data."); }
+  }
+
+  async function permanentlyDeleteAccount() {
+    if (!authToken || !window.confirm("Permanently delete your Tastera account, Library, ratings, notes, progress, and feedback? This cannot be undone.")) return;
+    try {
+      await deleteAccount(authToken);
+      signOut();
+      ["tastera_taste_setup", "tastera_recommendation_mix", "tastera_recommendation_strategy", "tastera_recommendation_tuning", "tastera_collections_v1", "tastera_social_privacy", "tastera_demo_following_v1", "tastera_followed_community_shelves_v1"].forEach((key) => localStorage.removeItem(key));
+      setAccountDataNotice("Your Tastera account and server-stored data were deleted.");
+    } catch (error) { setAccountDataNotice(error instanceof Error ? error.message : "Could not delete your account."); }
   }
 
   function navigate(page: Page) {
@@ -1027,6 +1112,8 @@ function App() {
 
         {activePage === "Collections" ? (
           <CollectionsPage catalog={catalog} />
+        ) : activePage === "Community" ? (
+          <CommunityPage catalog={recommendationCatalog} savedItems={savedItems} />
         ) : activePage === "Guide" ? (
           <section className="info-page guide-page" aria-labelledby="guide-heading">
             <div className="info-hero">
@@ -1191,6 +1278,15 @@ function App() {
                   </label>
                 ))}
               </div>
+              <div className="recommendation-tuning-grid" aria-label="Recommendation style controls">
+                {([ ["popularity", "Popularity", "Favor catalog picks that more people know."], ["novelty", "Novelty", "Make room for less familiar genres and creators."], ["familiarity", "Familiarity", "Stay closer to themes already in your taste profile." ] ] as const).map(([key, label, description]) => (
+                  <label className="recommendation-tuning-control" key={key}>
+                    <span><strong>{label}</strong><b>{recommendationTuning[key]}%</b></span>
+                    <input type="range" min="0" max="100" step="5" value={recommendationTuning[key]} onChange={(event) => updateRecommendationTuning(key, Number(event.target.value))} aria-label={`${label} recommendation preference`} />
+                    <small>{description}</small>
+                  </label>
+                ))}
+              </div>
               <div className="settings-strategy-row">
                 <label htmlFor="recommendation-strategy">Movie ranking method</label>
                 <select
@@ -1214,6 +1310,20 @@ function App() {
                 <span><b>{profileStats.lessFeedback}</b> not for me</span>
               </div>
               <small className="settings-footnote">The current evaluation uses a time-ordered holdout of saves and positive feedback; it reports “insufficient data” until at least five eligible accounts have enough history. It does not claim a measured winner before that threshold.</small>
+            </section>
+            <section className="settings-panel social-privacy-panel" aria-labelledby="privacy-heading">
+              <div className="settings-panel-heading"><div><span className="eyebrow">SOCIAL DISCOVERY</span><h2 id="privacy-heading">Your sharing preference</h2></div><span className="privacy-lock-mark">◈</span></div>
+              <p>Choose how you would want your taste profile shared when real friend discovery launches. For now, the Community page uses fictional sample profiles only; no one else can see your Library.</p>
+              <div className="settings-strategy-row"><label htmlFor="social-privacy">Profile visibility preference</label><select id="social-privacy" value={socialPrivacy} onChange={(event) => { const value = event.target.value as SocialPrivacy; setSocialPrivacy(value); localStorage.setItem("tastera_social_privacy", value); }}><option value="private">Private · only me</option><option value="friends">Friends · people I approve</option><option value="community">Community · public taste profile</option></select></div>
+              <small className="settings-footnote">This preference is stored in this browser and does not publish data yet. Your account and Library remain private.</small>
+            </section>
+            <section className="settings-panel account-data-panel" aria-labelledby="account-data-heading">
+              <div className="settings-panel-heading"><div><span className="eyebrow">YOUR DATA</span><h2 id="account-data-heading">Export or delete your account</h2></div></div>
+              <p>Download a JSON copy of your account, Library, personal notes, progress, ratings, activity, and recommendation feedback. Or permanently remove server-stored account data.</p>
+              <div className="account-data-actions"><button type="button" className="secondary-button" disabled={!account} onClick={() => void downloadAccountData()}>Download my data</button><button type="button" className="account-delete-button" disabled={!account} onClick={() => void permanentlyDeleteAccount()}>Delete account and data</button></div>
+              {!account && <small className="settings-footnote">Sign in to export or delete an account.</small>}
+              {accountDataNotice && <p className="account-data-notice" role="status">{accountDataNotice}</p>}
+              <small className="settings-footnote">Collections and taste setup are stored in this browser; this export includes server-stored account data only.</small>
             </section>
           </section>
         ) : activePage === "Taste Map" ? (

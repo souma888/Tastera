@@ -1,0 +1,68 @@
+import { useMemo, useState } from "react";
+import type { Media, MediaCategory } from "../types/media";
+
+type CommunityShelf = { name: string; description: string; genres: string[]; category: MediaCategory | "All" };
+const shelves: CommunityShelf[] = [
+  { name: "After the credits", description: "Films that linger, with books and music for the walk home.", genres: ["science fiction", "drama", "sci-fi"], category: "All" },
+  { name: "Rainy day reads", description: "Quietly absorbing books for an unhurried afternoon.", genres: ["fiction", "fantasy", "science fiction", "romance"], category: "Books" },
+  { name: "Late-night listening", description: "Albums for the softer hours after midnight.", genres: ["jazz", "electronic", "indie", "ambient", "r&b"], category: "Music" },
+];
+const profiles = [
+  { id: "sample-ira", name: "Ira Sen", initials: "IS", label: "SAMPLE EXPLORER", bio: "Follows stories about memory, distant worlds, and the people who find their way home.", genres: ["Science Fiction", "Drama", "Jazz"], activity: ["saved a thoughtful sci-fi story", "added an album for a quiet evening"] },
+  { id: "sample-dev", name: "Dev Kapoor", initials: "DK", label: "SAMPLE EXPLORER", bio: "Collects strange mysteries, patient character studies, and music with room to breathe.", genres: ["Mystery", "Indie", "Literary Fiction"], activity: ["made a weekend watchlist", "found a new favorite author"] },
+];
+const FOLLOW_KEY = "tastera_demo_following_v1";
+const FOLLOWED_SHELVES_KEY = "tastera_followed_community_shelves_v1";
+
+function loadFollowing(): string[] {
+  try { const value = JSON.parse(localStorage.getItem(FOLLOW_KEY) ?? "[]"); return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []; }
+  catch { return []; }
+}
+
+function loadFollowedShelves(): string[] {
+  try { const value = JSON.parse(localStorage.getItem(FOLLOWED_SHELVES_KEY) ?? "[]"); return Array.isArray(value) ? value.filter((name): name is string => typeof name === "string") : []; }
+  catch { return []; }
+}
+
+export default function CommunityPage({ catalog, savedItems }: { catalog: Media[]; savedItems: Media[] }) {
+  const [following, setFollowing] = useState<string[]>(loadFollowing);
+  const [followedShelves, setFollowedShelves] = useState<string[]>(loadFollowedShelves);
+  const [notice, setNotice] = useState("");
+  const profileInterests = useMemo(() => [...new Set(savedItems.map((item) => item.genre.toLowerCase()).filter(Boolean))], [savedItems]);
+  const saveCommunityShelf = (shelf: CommunityShelf) => {
+    const matchingItems = catalog.filter((item) => (shelf.category === "All" || item.category === shelf.category) && shelf.genres.some((genre) => item.genre.toLowerCase().includes(genre)));
+    const shelfItems = matchingItems.slice(0, 12);
+    try {
+      const key = "tastera_collections_v1";
+      const existing = JSON.parse(localStorage.getItem(key) ?? "[]");
+      const copy = { id: crypto.randomUUID(), name: shelf.name, description: shelf.description, items: shelfItems };
+      localStorage.setItem(key, JSON.stringify([copy, ...(Array.isArray(existing) ? existing : [])]));
+      window.dispatchEvent(new CustomEvent("tastera:collections-updated"));
+      setNotice(`Saved “${shelf.name}” to Collections with ${shelfItems.length} catalog picks.`);
+    } catch { setNotice("Could not save this community shelf in this browser."); }
+  };
+  const toggleFollow = (id: string) => {
+    const next = following.includes(id) ? following.filter((value) => value !== id) : [...following, id];
+    setFollowing(next);
+    localStorage.setItem(FOLLOW_KEY, JSON.stringify(next));
+  };
+  const toggleFollowShelf = (name: string) => {
+    const next = followedShelves.includes(name) ? followedShelves.filter((value) => value !== name) : [...followedShelves, name];
+    setFollowedShelves(next);
+    localStorage.setItem(FOLLOWED_SHELVES_KEY, JSON.stringify(next));
+  };
+  const sharedGenres = profileInterests.filter((genre) => profiles.some((profile) => profile.genres.some((interest) => interest.toLowerCase() === genre)));
+  const sharedItems = catalog.filter((item) => sharedGenres.some((genre) => item.genre.toLowerCase() === genre) && !savedItems.some((saved) => saved.id === item.id)).slice(0, 8);
+
+  return <section className="community-page">
+    {notice && <p className="community-notice" role="status">{notice}<button type="button" aria-label="Dismiss message" onClick={() => setNotice("")}>×</button></p>}
+    <header className="community-hero"><span className="eyebrow">SOCIAL DISCOVERY · PREVIEW</span><h1>Find a little <span>common ground.</span></h1><p>Compare taste, browse sample activity, and collect shelves from fellow explorers. Sample profiles are fictional previews; your personal Library stays private.</p><div className="community-preview-badge"><span aria-hidden="true">✦</span> SAMPLE COMMUNITY · NO REAL USER ACTIVITY SHARED</div></header>
+    <section className="community-section"><div className="community-section-heading"><div><span className="eyebrow">SHARED TASTE</span><h2>A thread you might both follow</h2></div><span>{savedItems.length ? `${sharedGenres.length} shared themes` : "Save items to compare"}</span></div>
+      {sharedItems.length ? <div className="community-shared-grid">{sharedItems.map((item) => <article key={item.id}><img src={item.image ?? ""} alt={`${item.title} cover`} loading="lazy"/><div><span>{item.category} · {item.genre}</span><strong>{item.title}</strong><small>{item.creator}</small></div></article>)}</div> : <p className="community-empty">Save a few items to your Library and Tastera will surface shared genres with the sample explorers here.</p>}
+    </section>
+    <section className="community-section"><div className="community-section-heading"><div><span className="eyebrow">PEOPLE TO EXPLORE WITH</span><h2>Meet the sample explorers</h2></div><span>2 preview profiles</span></div><div className="community-profile-grid">{profiles.map((profile) => { const matches = profile.genres.filter((genre) => profileInterests.includes(genre.toLowerCase())); return <article className="community-profile-card" key={profile.id}><div className="community-profile-top"><span className="community-avatar">{profile.initials}</span><span className="community-sample-tag">{profile.label}</span></div><h3>{profile.name}</h3><p>{profile.bio}</p><div className="community-genre-tags">{profile.genres.map((genre) => <span key={genre}>{genre}</span>)}</div><div className="community-match-note">{matches.length ? `You both explore ${matches.join(", ")}.` : "Save items to reveal shared taste."}</div><button type="button" className={following.includes(profile.id) ? "community-follow is-following" : "community-follow"} onClick={() => toggleFollow(profile.id)}>{following.includes(profile.id) ? "Following sample" : "Follow sample"}</button></article>; })}</div></section>
+    <section className="community-section"><div className="community-section-heading"><div><span className="eyebrow">FRIEND ACTIVITY · SAMPLE</span><h2>What fellow explorers are saving</h2></div><span>Fictional preview activity</span></div><div className="community-activity-grid">{profiles.map((profile, index) => { const item = catalog[index * 2] ?? catalog[index]; return <article key={profile.id}><span className="community-avatar">{profile.initials}</span><div><strong>{profile.name}</strong><p>{profile.activity[0]}{item ? ` · ${item.title}` : ""}</p><small>Sample activity · no real account data</small></div></article>; })}</div></section>
+    <section className="community-section"><div className="community-section-heading"><div><span className="eyebrow">COMMUNITY LISTS</span><h2>Curated shelves to start with</h2></div><span>Follow or save a copy</span></div><div className="community-shelf-grid">{shelves.map((shelf) => { const items = catalog.filter((item) => (shelf.category === "All" || item.category === shelf.category) && shelf.genres.some((genre) => item.genre.toLowerCase().includes(genre))).slice(0, 4); return <article className="community-shelf-card" key={shelf.name}><div className="community-shelf-art">{items.slice(0, 3).map((item) => <img key={item.id} src={item.image ?? ""} alt="" loading="lazy"/>)}{!items.length && <span>✦</span>}</div><span className="eyebrow">SAMPLE COMMUNITY LIST</span><h3>{shelf.name}</h3><p>{shelf.description}</p><small>{items.length} picks from the live catalog</small><div className="community-shelf-actions"><button type="button" className="community-list-follow" onClick={() => toggleFollowShelf(shelf.name)}>{followedShelves.includes(shelf.name) ? "Following list ✓" : "Follow list"}</button><button type="button" onClick={() => saveCommunityShelf(shelf)}>Save a copy to Collections ↗</button></div></article>; })}</div></section>
+    <section className="community-privacy-note"><span aria-hidden="true">◈</span><div><strong>Privacy stays in your hands.</strong><p>Real Library activity is private by default. These demo profiles and activity examples are sample content and do not expose your saves to anyone.</p></div></section>
+  </section>;
+}

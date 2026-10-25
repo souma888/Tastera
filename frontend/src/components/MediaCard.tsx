@@ -121,6 +121,7 @@ export default function MediaCard({
       <p className="creator">
         {onOpenCreator ? <button type="button" className="creator-link" onClick={() => onOpenCreator(item.creator)}>{item.creator} · View creator</button> : item.creator}
       </p>
+      {item.source && item.updated_at && <p className="media-data-freshness">{item.source} · Metadata updated {new Date(item.updated_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</p>}
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>
         {recommendationReason ?? item.connection}
