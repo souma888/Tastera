@@ -21,6 +21,7 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
   `more` / `less` recommendation signal for the signed-in account.
 - `tests/test_health.py`: tests the health endpoint.
+- `tests/test_saved_response.py`: verifies saved Library responses use the saved-record `updated_at` timestamp rather than duplicating the catalog field.
 
 The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
 through `TASTERA_DATABASE_URL`. It includes repeatable TMDb, Open Library, and
@@ -28,7 +29,7 @@ MusicBrainz importers. Catalog page size is capped at 150; unartworked Music
 records are excluded from catalog browse results. Recommendation feedback is a
 transparent baseline signal, not a trained cross-media model. Personal ratings
 affect the account's genre and movie similarity ranking; notes are private
-context and are not analyzed. See
+context and are not analyzed. Saved Library response serialization merges catalog fields before applying saved-record metadata, so the saved record's `updated_at` takes precedence. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
 ## Requirements
