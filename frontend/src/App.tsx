@@ -5,6 +5,7 @@ import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
 import { TASTE_MOODS } from "./data/tasteOptions";
 import CollectionsPage from "./components/CollectionsPage";
 import CommunityPage from "./components/CommunityPage";
+import ThemedSelect from "./components/ThemedSelect";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
 import {
@@ -1289,15 +1290,17 @@ function App() {
               </div>
               <div className="settings-strategy-row">
                 <label htmlFor="recommendation-strategy">Movie ranking method</label>
-                <select
+                <ThemedSelect
                   id="recommendation-strategy"
+                  ariaLabel="Movie ranking method"
                   value={recommendationStrategy}
-                  onChange={(event) => updateRecommendationStrategy(event.target.value as RecommendationStrategy)}
-                >
-                  <option value="auto">Automatic (co-save, with genre fallback)</option>
-                  <option value="genre">Genre baseline</option>
-                  <option value="item_item">Co-save similarity</option>
-                </select>
+                  options={[
+                    { value: "auto", label: "Automatic · co-save with genre fallback" },
+                    { value: "genre", label: "Genre baseline" },
+                    { value: "item_item", label: "Co-save similarity" },
+                  ]}
+                  onChange={(value) => updateRecommendationStrategy(value as RecommendationStrategy)}
+                />
               </div>
               <small className="settings-footnote">Book and music picks currently use genre matching. Settings only affect this browser and can be changed any time.</small>
             </section>
@@ -1314,7 +1317,7 @@ function App() {
             <section className="settings-panel social-privacy-panel" aria-labelledby="privacy-heading">
               <div className="settings-panel-heading"><div><span className="eyebrow">SOCIAL DISCOVERY</span><h2 id="privacy-heading">Your sharing preference</h2></div><span className="privacy-lock-mark">◈</span></div>
               <p>Choose how you would want your taste profile shared when real friend discovery launches. For now, the Community page uses fictional sample profiles only; no one else can see your Library.</p>
-              <div className="settings-strategy-row"><label htmlFor="social-privacy">Profile visibility preference</label><select id="social-privacy" value={socialPrivacy} onChange={(event) => { const value = event.target.value as SocialPrivacy; setSocialPrivacy(value); localStorage.setItem("tastera_social_privacy", value); }}><option value="private">Private · only me</option><option value="friends">Friends · people I approve</option><option value="community">Community · public taste profile</option></select></div>
+              <div className="settings-strategy-row"><label htmlFor="social-privacy">Profile visibility preference</label><ThemedSelect id="social-privacy" ariaLabel="Profile visibility preference" value={socialPrivacy} options={[{ value: "private", label: "Private · only me" }, { value: "friends", label: "Friends · people I approve" }, { value: "community", label: "Community · public taste profile" }]} onChange={(raw) => { const value = raw as SocialPrivacy; setSocialPrivacy(value); localStorage.setItem("tastera_social_privacy", value); }} /></div>
               <small className="settings-footnote">This preference is stored in this browser and does not publish data yet. Your account and Library remain private.</small>
             </section>
             <section className="settings-panel account-data-panel" aria-labelledby="account-data-heading">
@@ -1849,19 +1852,14 @@ function App() {
               {activePage === "Discover" && (
                 <div className="catalog-filter-row">
                   <label htmlFor="catalog-page-size">Items per page</label>
-                  <select id="catalog-page-size" value={pageSize} onChange={(event) => {
-                    const next = Number(event.target.value);
+                  <ThemedSelect ariaLabel="Items per page" id="catalog-page-size" value={String(pageSize)} options={[50, 100, 150].map((count) => ({ value: String(count), label: `${count} items` }))} onChange={(raw) => {
+                    const next = Number(raw);
                     setPageSize(next);
                     localStorage.setItem("tastera_catalog_page_size", String(next));
                     setPageNumber(1);
-                  }}>
-                    {[50, 100, 150].map((count) => <option key={count} value={count}>{count}</option>)}
-                  </select>
+                  }} />
                   <label htmlFor="catalog-genre-filter">Genre</label>
-                  <select id="catalog-genre-filter" value={genreFilter} onChange={(event) => { setGenreFilter(event.target.value); setPageNumber(1); }}>
-                    <option>All genres</option>
-                    {availableGenres.map((genre) => <option key={genre}>{genre}</option>)}
-                  </select>
+                  <ThemedSelect ariaLabel="Genre filter" id="catalog-genre-filter" value={genreFilter} options={[{ value: "All genres", label: "All genres" }, ...availableGenres.map((genre) => ({ value: genre, label: genre }))]} onChange={(value) => { setGenreFilter(value); setPageNumber(1); }} />
                   <span>Catalog is ordered by popularity. More filters appear as reliable metadata becomes available.</span>
                 </div>
               )}

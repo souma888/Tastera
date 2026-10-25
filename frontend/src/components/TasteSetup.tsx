@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Media, MediaCategory } from "../types/media";
 import { getCatalog } from "../services/catalogApi";
 import { TASTE_MOODS } from "../data/tasteOptions";
+import ThemedSelect from "./ThemedSelect";
 
 export type TastePreferences = {
   favoriteIds: string[];
@@ -104,7 +105,7 @@ export default function TasteSetup({ catalog, initial, required = false, onSave,
         <section className="taste-search-panel" aria-label="Search the catalog to add favorites">
           <div><strong>Looking for a specific title?</strong><span>Search the catalog and add it to your favorites.</span></div>
           <div className="taste-search-controls">
-            <select aria-label="Search category" value={searchCategory} onChange={(event) => setSearchCategory(event.target.value as MediaCategory)}>{categories.map((category) => <option key={category}>{category}</option>)}</select>
+            <ThemedSelect ariaLabel="Search category" value={searchCategory} options={categories.map((category) => ({ value: category, label: category }))} onChange={(value) => setSearchCategory(value as MediaCategory)} />
             <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={`Search ${searchCategory.toLowerCase()} by title or creator`} aria-label={`Search ${searchCategory.toLowerCase()} by title or creator`} />
           </div>
           <p className="taste-search-status" role="status">{searchLoading ? "Searching the catalog…" : searchQuery.trim().length < 2 ? "Type at least two characters to search the live catalog." : searchMessage}</p>

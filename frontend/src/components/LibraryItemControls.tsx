@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { SavedMedia, SavedMediaUpdate } from "../types/media";
+import ThemedSelect from "./ThemedSelect";
 
 const statusLabels: Record<SavedMedia["category"], Record<SavedMedia["status"], string>> = {
   Movies: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
@@ -36,15 +37,13 @@ export default function LibraryItemControls({
     <section className="library-item-controls" aria-label={`Library details for ${item.title}`}>
       <label className="library-status-field">
         <span>YOUR STATUS</span>
-        <select
+        <ThemedSelect
+          ariaLabel={`Status for ${item.title}`}
           value={item.status}
+          options={Object.entries(statusLabels[item.category]).map(([value, label]) => ({ value, label }))}
           disabled={busy}
-          onChange={(event) => onUpdate({ status: event.target.value as SavedMedia["status"] })}
-        >
-          {Object.entries(statusLabels[item.category]).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
+          onChange={(value) => onUpdate({ status: value as SavedMedia["status"] })}
+        />
       </label>
 
       <div className="library-rating" role="group" aria-label={`Your rating for ${item.title}`}>
