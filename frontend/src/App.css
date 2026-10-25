@@ -2894,3 +2894,7 @@
 .community-activity-grid p { margin:4px 0; color:var(--text-secondary); font-size:11px; }
 .community-activity-grid small { color:var(--text-muted); font-size:9px; }
 @media(max-width:760px) { .recommendation-tuning-grid,.community-activity-grid { grid-template-columns:1fr; } }
+
+
+.library-load-feedback { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.library-load-feedback .text-button { flex:none; margin:0; white-space:nowrap; }
