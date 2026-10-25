@@ -1,15 +1,17 @@
 # Frontend Guide
 
+**Reviewed:** 2026-10-25.
+
 ## Stack and deployment
 
-The client uses React, TypeScript, and Vite. Production frontend: [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app). The API is hosted separately at [tastera.onrender.com](https://tastera.onrender.com); Vercel does not host the FastAPI service.
+The client uses React, TypeScript, and Vite. Canonical production frontend: [soumadip-tastera.vercel.app](https://soumadip-tastera.vercel.app). The API is hosted separately at [tastera.onrender.com](https://tastera.onrender.com); Vercel does not host the FastAPI service. Production browser calls use `/api/v1` on the frontend origin, and `frontend/vercel.json` rewrites that path to Render. The production API client deliberately ignores an absolute `VITE_API_BASE_URL` override so it cannot bypass this proxy.
 
 ## Current behavior
 
 - **Discover:** catalog search across titles, creators, and genres; category and genre filters; popularity ordering; 50/100/150 item pages; paginated results, source/metadata freshness labels, and six local demo records when the API is unavailable.
 - **Connection Explorer:** cards and recommendations open a detail view with cross-media pathways, exact creator pages, and genre exploration. Relationships state whether the basis is a matching creator credit, catalog genre, shared word in eligible editorial notes, or the user's own activity.
 - **Taste Map:** uses the signed-in user's saved items and recommendation feedback, builds deduplicated genre links, and provides selection, pan/zoom, related catalog records, and an exact-tag genre lookup.
-- **Account and Library:** sign-up/sign-in through the API; saved media, status, 1–5 personal rating, private note, and optional book/album progress persist per account. Library changes appear in an account-scoped recent activity timeline. Ratings contribute to that account's genre and movie co-save ranking; note text is not analyzed. The bearer token is in `sessionStorage`.
+- **Account and Library:** sign-up/sign-in through the API; saved media, status, 1–5 personal rating, private note, and optional book/album progress persist per account. Library changes appear in an account-scoped recent activity timeline. Ratings contribute to that account's genre and movie co-save ranking; note text is not analyzed. The bearer token and a per-account Library snapshot are cached in `sessionStorage` for the current tab session. Temporary network/server failures preserve the session and cached Library and show a manual refresh option; a confirmed `401` clears the session and requests sign-in. The server remains the source of truth; account mutations are not automatically retried.
 - **For You and Settings:** guest taste onboarding; personalized mixed batches; refresh; editable category proportions, popularity/novelty/familiarity weights, movie strategy, and saved/feedback explanations. Settings includes account export and deletion controls.
 - **Community preview:** fictional sample explorers, sample activity, shared-genre suggestions, and curated community-list previews. Follow/copy actions are browser-local; no real users' activity is exposed or synced.
 - **Profile:** category and genre summaries, recent saves, and feedback counts.
@@ -41,7 +43,7 @@ npm run build
 npm run lint
 ```
 
-These checks validate frontend compilation and lint rules. They do not verify production API connectivity or the complete browser flow.
+These checks validate frontend compilation and lint rules. They do not verify production API connectivity or the complete browser flow. After account/API changes, manually verify sign-in, saving and removing an item, Library refresh after a temporary failure, and re-authentication after an expired session.
 
 ## Main source areas
 
