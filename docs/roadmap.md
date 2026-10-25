@@ -1,6 +1,6 @@
 # TASTERA Implementation Roadmap
 
-**Reviewed:** 2026-10-23. Completed capabilities are distinguished from remaining product and operational work.
+**Reviewed:** 2026-10-25. Completed capabilities are distinguished from remaining product and operational work.
 
 ## Current product baseline
 
@@ -25,7 +25,8 @@ Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon 
 
 ## Reliability, security, and research
 
-- Add API and browser-flow tests for accounts, user isolation, saves, feedback, pagination, creator/theme search, and pathways.
+- Preserve the current Library recovery behavior: temporary account/API outages must not clear a valid session or the cached per-account Library; confirmed `401` responses should request sign-in. Production requests must continue using the Vercel same-origin `/api/v1` rewrite.
+- Expand API and browser-flow tests for accounts, user isolation, saves, feedback, pagination, creator/theme search, and pathways. A regression test covers saved-response `updated_at` precedence; broader browser coverage is still open.
 - Address email verification, password recovery, session revocation, and authentication rate limiting.
 - Add service/database monitoring, backups and restore guidance, migration checks, import-run observability, and release/rollback procedures.
 - Re-run MovieLens notebooks before asserting fresh reproducibility. MovieLens can support movie-only offline research; it cannot establish book/music or cross-media quality.
