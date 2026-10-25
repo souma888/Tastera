@@ -6,6 +6,16 @@ export interface Account {
   email: string;
 }
 
+export class AccountApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AccountApiError";
+    this.status = status;
+  }
+}
+
 export interface AuthResponse {
   access_token: string;
   token_type: "bearer";
@@ -26,7 +36,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const body = (await response.json().catch(() => null)) as
       | { detail?: string }
       | null;
-    throw new Error(body?.detail ?? `Request failed (${response.status}).`);
+    throw new AccountApiError(body?.detail ?? `Request failed (${response.status}).`, response.status);
   }
 
   if (response.status === 204) return undefined as T;
