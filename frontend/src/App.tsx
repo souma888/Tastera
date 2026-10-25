@@ -8,18 +8,20 @@ import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
 import {
   getCurrentAccount,
+  getLibraryActivity,
   getRecommendations,
   getSavedMedia,
   clearRecommendationFeedback,
   registerAccount,
   removeSavedMedia,
   saveMedia,
+  updateSavedMedia,
   setRecommendationFeedback,
   signIn,
 } from "./services/accountApi";
 import { getCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
-import type { Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage } from "./types/media";
+import type { LibraryActivity, Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage, SavedMedia, SavedMediaUpdate } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
@@ -300,6 +302,15 @@ function formatSavedDate(value?: string) {
     : `Saved ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
+function statusLabelsForActivity(category: MediaCategory, value: string | null) {
+  const labels: Record<MediaCategory, Record<string, string>> = {
+    Movies: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
+    Books: { planned: "Want to read", in_progress: "Reading", finished: "Finished" },
+    Music: { planned: "Want to listen", in_progress: "Listening", finished: "Finished" },
+  };
+  return labels[category][value ?? ""] ?? "Updated";
+}
+
 function App() {
   const [category, setCategory] = useState<MediaFilter>("All");
   const [search, setSearch] = useState("");
@@ -311,7 +322,10 @@ function App() {
     return [50, 100, 150].includes(stored) ? stored : 50;
   });
   const [unavailableMusicArtwork, setUnavailableMusicArtwork] = useState<string[]>([]);
-  const [savedItems, setSavedItems] = useState<Media[]>([]);
+  const [savedItems, setSavedItems] = useState<SavedMedia[]>([]);
+  const [libraryActivity, setLibraryActivity] = useState<LibraryActivity[]>([]);
+  const [libraryUpdateBusyIds, setLibraryUpdateBusyIds] = useState<string[]>([]);
+  const [libraryUpdateErrors, setLibraryUpdateErrors] = useState<Record<string, string>>({});
   const saved = useMemo(() => savedItems.map((item) => item.id), [savedItems]);
   const [activePage, setActivePage] = useState<Page>(() =>
     new URLSearchParams(window.location.search).get("page") === "Collections" || new URLSearchParams(window.location.search).has("sharedShelf") ? "Collections" : "Discover",
@@ -413,8 +427,8 @@ function App() {
         destination: "Discover",
         category: "Music",
         artwork: [music],
-        landscapeImage: "/images/hero-music-shore.png",
-        landscapeAlt: "Headphones and a cassette player rest on a moonlit shore as lights trace across the water.",
+        landscapeImage: "/images/hero-music-studio.png",
+        landscapeAlt: "A vintage microphone and analog mixing desk in a softly lit recording studio.",
       },
       {
         eyebrow: "TASTE MAP · FOLLOW THE THREADS",
@@ -424,6 +438,8 @@ function App() {
         action: "Explore your Taste Map",
         destination: "Taste Map",
         artwork: [arrival, otherBook, otherAlbum],
+        landscapeImage: "/images/hero-taste-map.png",
+        landscapeAlt: "An observatory looks over a blue-hour valley dotted with warm lights.",
       },
       {
         eyebrow: "YOUR SETTINGS · MAKE IT YOURS",
@@ -433,6 +449,8 @@ function App() {
         action: "Tune your mix",
         destination: "Settings",
         artwork: [dune, bladeRunner, finalAlbum],
+        landscapeImage: "/images/hero-personalization.png",
+        landscapeAlt: "A cozy reading and listening nook lit by a warm desk lamp.",
       },
     ];
   }, [catalog]);
@@ -492,6 +510,7 @@ function App() {
         sessionStorage.removeItem("tastera_access_token");
         setAccount(null);
         setSavedItems([]);
+        setLibraryActivity([]);
         setRecommendations([]);
         setRecommendationFeedbackItems([]);
         setIsCheckingAccount(false);
@@ -505,6 +524,18 @@ function App() {
       cancelled = true;
     };
   }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken || isCheckingAccount) {
+      setLibraryActivity([]);
+      return;
+    }
+    let cancelled = false;
+    getLibraryActivity(authToken)
+      .then((items) => { if (!cancelled) setLibraryActivity(items); })
+      .catch(() => { if (!cancelled) setLibraryActivity([]); });
+    return () => { cancelled = true; };
+  }, [authToken, isCheckingAccount]);
 
   useEffect(() => {
     if (!authToken || isCheckingAccount) return;
@@ -722,15 +753,34 @@ function App() {
         setSavedItems((current) =>
           current.some((savedItem) => savedItem.id === id)
             ? current
-            : [{ ...item, saved_at: new Date().toISOString() }, ...current],
+            : [item, ...current],
         );
       }
+      setLibraryActivity(await getLibraryActivity(authToken));
     } catch (error) {
       setSavedActionError(
         error instanceof Error ? error.message : "Could not update your Library.",
       );
     } finally {
       setSavingIds((current) => current.filter((savingId) => savingId !== id));
+    }
+  }
+
+  async function updateLibraryItem(id: string, update: SavedMediaUpdate) {
+    if (!authToken || libraryUpdateBusyIds.includes(id)) return;
+    setLibraryUpdateBusyIds((current) => [...current, id]);
+    setLibraryUpdateErrors((current) => ({ ...current, [id]: "" }));
+    try {
+      const updated = await updateSavedMedia(authToken, id, update);
+      setSavedItems((current) => current.map((item) => item.id === id ? updated : item));
+      setLibraryActivity(await getLibraryActivity(authToken));
+    } catch (error) {
+      setLibraryUpdateErrors((current) => ({
+        ...current,
+        [id]: error instanceof Error ? error.message : "Could not update this Library item.",
+      }));
+    } finally {
+      setLibraryUpdateBusyIds((current) => current.filter((itemId) => itemId !== id));
     }
   }
 
@@ -813,6 +863,7 @@ function App() {
     setAuthToken(null);
     setAccount(null);
     setSavedItems([]);
+    setLibraryActivity([]);
     setSavedActionError(null);
     setRecommendations([]);
     setRecommendationFeedbackItems([]);
@@ -998,7 +1049,7 @@ function App() {
                   <img src={getHeroArtworkUrl(guideArtwork.book.image)} alt={`${guideArtwork.book.title} cover`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.book.genre} · {guideArtwork.book.category}</small><strong>{guideArtwork.book.title}</strong><span>{guideArtwork.book.creator}</span></div>
                 </div>
-                <div className="guide-card-copy"><span className="guide-step">02 / SEARCH & SAVE</span><h2>Keep the things that click</h2><p>Open a card to see its creator, genre, artwork, and “Why it connects” note. Tap the heart to save it to your Library. Sign in first to keep saves across devices.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Books")}>Find a book →</button></div>
+                <div className="guide-card-copy"><span className="guide-step">02 / SEARCH & SAVE</span><h2>Keep the things that click</h2><p>Open a card to see its creator, genre, artwork, and “Why it connects” note. Save it to your account-backed Library, then choose a status, give it a 1–5 star rating, and add a private note. For books and albums, mark it as in progress and save a percentage as you go.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Discover", "Books")}>Find a book →</button></div>
               </article>
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-music">
@@ -1006,7 +1057,7 @@ function App() {
                   <img src={getHeroArtworkUrl(guideArtwork.music.image)} alt={`${guideArtwork.music.title} album artwork`} onError={(event) => event.currentTarget.remove()} />
                   <div className="guide-real-caption"><small>{guideArtwork.music.genre} · {guideArtwork.music.category}</small><strong>{guideArtwork.music.title}</strong><span>{guideArtwork.music.creator}</span></div>
                 </div>
-                <div className="guide-card-copy"><span className="guide-step">03 / LIBRARY</span><h2>Build your own shelf</h2><p>Your Library brings saved films, books, and albums together. From your Profile, see category balance, recurring genres, recent saves, and the feedback you have given.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Library")}>Open your Library →</button></div>
+                <div className="guide-card-copy"><span className="guide-step">03 / LIBRARY</span><h2>Build your own shelf</h2><p>Your Library brings saved films, books, and albums together. Track what you want to watch, read, or listen to; mark items finished; add private ratings and notes; and see recent changes in your activity history. Ratings influence future recommendation ranking.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Library")}>Open your Library →</button></div>
               </article>
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-map">
@@ -1045,7 +1096,7 @@ function App() {
             </div>
             <div className="about-story-grid">
               <article className="about-story-card about-story-primary"><span className="eyebrow">THE IDEA</span><h2>Discovery should feel connected.</h2><p>Most catalogs stop at their own category. Tastera starts with movies, books, and music together, then gives people ways to move between them through genres, creators, shared themes, and their own taste signals.</p><p>The aim is not to tell you what you should like. It is to make the next interesting thing easier to find—and to make the path between discoveries visible.</p></article>
-              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Complete the first-run taste setup by choosing at least one favorite, artist, genre, or mood before continuing.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, organize browser-based collections, and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
+              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Complete the first-run taste setup by choosing at least one favorite, artist, genre, or mood before continuing.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, track planned, in-progress, and finished items, rate them, and keep private notes.</li><li>Track book and album progress with a percentage and review recent Library activity. Your ratings contribute to your personal recommendation ranking.</li><li>Organize browser-based collections and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
               <article className="about-story-card"><span className="eyebrow">CONNECTIONS, HONESTLY</span><h2>Every path shows its evidence.</h2><p>Creator pages group records with the same creator credit. Pathways can use an exact shared catalog genre, the same creator, or a shared word from Tastera editorial notes. Saved and feedback activity is called out separately, so it is not mistaken for catalog similarity.</p><p>Setting and influence credits are not consistently present in the catalog yet, so Tastera does not claim those links when the underlying data is missing. These pathways are explainable discovery links, not a trained cross-media ranking model.</p></article>
               <article className="about-story-card"><span className="eyebrow">BUILT IN PUBLIC</span><h2>An evolving independent project.</h2><p>Tastera is being developed by Soumadip Karan. The code, issues, and project progress are available in the public repository. Catalog information and artwork come from third-party sources; provider attribution and image rights remain with their respective owners.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View the GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Meet the developer on GitHub ↗</a></div></article>
             </div>
@@ -1705,6 +1756,30 @@ function App() {
                 </div>
               )}
 
+              {activePage === "Library" && account && (
+                <section className="library-activity-panel" aria-labelledby="library-activity-heading">
+                  <div className="library-activity-heading">
+                    <div><span className="eyebrow">YOUR RECENT ACTIVITY</span><h3 id="library-activity-heading">A little history</h3></div>
+                    <span>{libraryActivity.length} recent updates</span>
+                  </div>
+                  {libraryActivity.length ? (
+                    <ol className="library-activity-list">
+                      {libraryActivity.slice(0, 8).map((event) => {
+                        const descriptions: Record<string, string> = {
+                          saved: "Added to your Library",
+                          removed: "Removed from your Library",
+                          status: `Status · ${statusLabelsForActivity(event.category, event.value)}`,
+                          rating: event.value === "cleared" ? "Rating cleared" : `Rated ${event.value}/5`,
+                          note: event.value === "cleared" ? "Private note cleared" : "Private note saved",
+                          progress: event.value === "cleared" ? "Progress cleared" : `Progress · ${event.value}%`,
+                        };
+                        return <li key={event.id}><span className="library-activity-marker" aria-hidden="true">✦</span><div><strong>{event.title}</strong><p>{descriptions[event.event_type] ?? "Library updated"}</p></div><time dateTime={event.created_at}>{new Date(event.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time></li>;
+                      })}
+                    </ol>
+                  ) : <p className="library-activity-empty">Save an item or add a rating to start your private activity history.</p>}
+                </section>
+              )}
+
               {search.trim() && (
                 <p className="search-result-summary" role="status" aria-live="polite">
                   {activePage === "Discover" && isCatalogLoading
@@ -1734,6 +1809,10 @@ function App() {
                       onExplore={setSelectedSearchItem}
                       onOpenCreator={setSelectedCreator}
                       onArtworkUnavailable={(id) => setUnavailableMusicArtwork((current) => current.includes(id) ? current : [...current, id])}
+                      libraryItem={activePage === "Library" ? savedItems.find((savedItem) => savedItem.id === item.id) : undefined}
+                      onUpdateLibraryItem={activePage === "Library" ? updateLibraryItem : undefined}
+                      libraryUpdateBusy={libraryUpdateBusyIds.includes(item.id)}
+                      libraryUpdateError={libraryUpdateErrors[item.id] || null}
                     />
                   ))}
                 </div>

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -34,6 +34,9 @@ class SavedMediaRecord(Base):
     __tablename__ = "saved_media"
     __table_args__ = (
         UniqueConstraint("account_id", "media_item_id", name="uq_saved_media_account_item"),
+        CheckConstraint("status in ('planned', 'in_progress', 'finished')", name="ck_saved_media_status"),
+        CheckConstraint("rating is null or rating between 1 and 5", name="ck_saved_media_rating"),
+        CheckConstraint("progress_percent is null or progress_percent between 0 and 100", name="ck_saved_media_progress"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -46,9 +49,35 @@ class SavedMediaRecord(Base):
     saved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="planned")
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    progress_percent: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     account: Mapped[AccountRecord] = relationship(back_populates="saved_media")
     media_item: Mapped["MediaItemRecord"] = relationship()
+
+
+class LibraryActivityRecord(Base):
+    """A private timeline event for one account's Library."""
+
+    __tablename__ = "library_activity"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    media_item_id: Mapped[str] = mapped_column(
+        ForeignKey("media_items.id", ondelete="CASCADE"), index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    value: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class RecommendationFeedbackRecord(Base):

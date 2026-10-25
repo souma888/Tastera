@@ -1,5 +1,6 @@
 export type MediaCategory = "Movies" | "Books" | "Music";
 export type MediaFilter = "All" | MediaCategory;
+export type LibraryStatus = "planned" | "in_progress" | "finished";
 
 export interface Media {
   id: string;
@@ -20,6 +21,32 @@ export interface MediaPage {
   limit: number;
   total: number;
   total_pages: number;
+}
+
+export interface SavedMedia extends Media {
+  saved_at: string;
+  status: LibraryStatus;
+  rating: number | null;
+  note: string | null;
+  progress_percent: number | null;
+  updated_at: string;
+}
+
+export interface SavedMediaUpdate {
+  status?: LibraryStatus;
+  rating?: number | null;
+  note?: string | null;
+  progress_percent?: number | null;
+}
+
+export interface LibraryActivity {
+  id: number;
+  media_id: string;
+  title: string;
+  category: MediaCategory;
+  event_type: string;
+  value: string | null;
+  created_at: string;
 }
 
 export interface Recommendation {
@@ -50,4 +77,8 @@ export interface MediaCardProps {
   onArtworkUnavailable?: (id: string) => void;
   onExplore?: (item: Media) => void;
   onOpenCreator?: (creator: string) => void;
+  libraryItem?: SavedMedia;
+  onUpdateLibraryItem?: (id: string, update: SavedMediaUpdate) => void;
+  libraryUpdateBusy?: boolean;
+  libraryUpdateError?: string | null;
 }

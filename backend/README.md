@@ -11,7 +11,10 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
-- `GET`, `PUT`, and `DELETE /api/v1/me/saved`: read and update that account's saved media.
+- `GET /api/v1/me/saved`: list that account's Library entries and personal metadata.
+- `PUT` / `DELETE /api/v1/me/saved/{media_id}`: add or remove a Library entry.
+- `PATCH /api/v1/me/saved/{media_id}`: update status, personal rating, private note, or progress.
+- `GET /api/v1/me/saved/activity`: list recent account-scoped Library history.
 - `GET /api/v1/me/recommendations`: ranks unsaved items by saved genres and explicit feedback.
 - Catalog search and creator/theme exploration reuse `GET /api/v1/media`; there is no separate cross-media relationship endpoint. The frontend compares normalized creator credits and genre tags and labels editorial and user-activity signals separately.
 - `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
@@ -22,8 +25,9 @@ The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
 through `TASTERA_DATABASE_URL`. It includes repeatable TMDb, Open Library, and
 MusicBrainz importers. Catalog page size is capped at 150; unartworked Music
 records are excluded from catalog browse results. Recommendation feedback is a
-transparent baseline signal, not a trained cross-media model. Ratings and
-password recovery are not implemented yet. See
+transparent baseline signal, not a trained cross-media model. Personal ratings
+affect the account's genre and movie similarity ranking; notes are private
+context and are not analyzed. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
 ## Requirements
@@ -48,6 +52,9 @@ uvicorn app.main:app --reload
 The default database is `backend/tastera.db` and is ignored by Git. To use
 PostgreSQL, set `TASTERA_DATABASE_URL` before running Alembic, the seed command,
 and the API, for example `postgresql+psycopg://user:password@host:5432/tastera`.
+After deploying a backend release with a new migration, run `python -m alembic upgrade head`
+from `backend` with `PYTHONPATH` set to that directory and `TASTERA_DATABASE_URL`
+pointing to the hosted database. The Render start command does not run migrations.
 
 Open `http://127.0.0.1:8000/health` for the health check and `http://127.0.0.1:8000/docs` for interactive API documentation.
 

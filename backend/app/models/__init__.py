@@ -3,6 +3,7 @@
 from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
 from app.models.account import (
     AccountRecord,
+    LibraryActivityRecord,
     RecommendationFeedbackRecord,
     SavedMediaRecord,
 )
@@ -10,6 +11,7 @@ from app.models.account import (
 __all__ = [
     "AccountRecord",
     "Genre",
+    "LibraryActivityRecord",
     "MediaGenre",
     "MediaIdentifier",
     "MediaItemRecord",

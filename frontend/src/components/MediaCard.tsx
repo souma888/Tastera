@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import type { MediaCardProps } from "../types/media";
+import LibraryItemControls from "./LibraryItemControls";
 
 const alternateAlbumArtwork: Record<string, string> = {
   "mezzanine": "https://coverartarchive.org/release/1698a8a8-903a-39af-8df3-a1c5b8c1d20f/front-500",
@@ -40,6 +41,10 @@ export default function MediaCard({
   onArtworkUnavailable,
   onExplore,
   onOpenCreator,
+  libraryItem,
+  onUpdateLibraryItem,
+  libraryUpdateBusy = false,
+  libraryUpdateError,
 }: MediaCardProps) {
   const [artworkAttempt, setArtworkAttempt] = useState(0);
   const alternateArtwork = item.category === "Music" ? alternateAlbumArtwork[item.title.trim().toLowerCase()] : undefined;
@@ -156,6 +161,15 @@ export default function MediaCard({
             {recommendationFeedback === "less" ? "✓ Not for me" : "Not for me"}
           </button>
         </div>
+      )}
+      {libraryItem && onUpdateLibraryItem && (
+        <LibraryItemControls
+          key={`${libraryItem.id}-${libraryItem.status}-${libraryItem.rating ?? "none"}-${libraryItem.progress_percent ?? "none"}`}
+          item={libraryItem}
+          onUpdate={(update) => onUpdateLibraryItem(libraryItem.id, update)}
+          busy={libraryUpdateBusy}
+          error={libraryUpdateError}
+        />
       )}
     </article>
   );

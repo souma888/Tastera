@@ -82,6 +82,7 @@ def _recommend_by_item_similarity(
     offset: int,
     exclude_ids: set[str],
     saved_ids: set[str],
+    saved_ratings: dict[str, int | None],
     feedback_by_id: dict[str, str],
     feedback_records: list[MediaItemRecord],
 ) -> RecommendationPage:
@@ -158,8 +159,10 @@ def _recommend_by_item_similarity(
         for media_id in media_ids:
             item_accounts[media_id].add(other_account_id)
 
+    rating_weights = {1: -1.0, 2: -0.5, 3: 0.65, 4: 1.35, 5: 2.0}
     seed_weights = {
-        record.id: (2.0 if feedback_by_id.get(record.id) == "more" else 1.0)
+        record.id: rating_weights.get(saved_ratings.get(record.id), 1.0)
+        * (1.5 if feedback_by_id.get(record.id) == "more" else 1.0)
         for record in seed_records
     }
     score_by_id: dict[str, float] = {}
@@ -173,7 +176,7 @@ def _recommend_by_item_similarity(
         best_seed = ""
         best_contribution = 0.0
         for seed_id, weight in seed_weights.items():
-            if seed_id == candidate.id:
+            if seed_id == candidate.id or weight <= 0:
                 continue
             seed_users = item_accounts.get(seed_id, set())
             shared = len(candidate_accounts & seed_users)
@@ -253,13 +256,11 @@ def recommend_for_account(
 ) -> RecommendationPage:
     """Rank unsaved catalog items by overlap with the account's saved genres."""
 
-    saved_ids = set(
-        session.scalars(
-            select(SavedMediaRecord.media_item_id).where(
-                SavedMediaRecord.account_id == account_id
-            )
-        ).all()
-    )
+    saved_rows = session.scalars(
+        select(SavedMediaRecord).where(SavedMediaRecord.account_id == account_id)
+    ).all()
+    saved_ids = {row.media_item_id for row in saved_rows}
+    saved_ratings = {row.media_item_id: row.rating for row in saved_rows}
     excluded_recommendation_ids = exclude_ids or set()
     if not saved_ids:
         if strategy == "item_item":
@@ -296,6 +297,7 @@ def recommend_for_account(
             offset=offset,
             exclude_ids=excluded_recommendation_ids,
             saved_ids=saved_ids,
+            saved_ratings=saved_ratings,
             feedback_by_id=feedback_by_id,
             feedback_records=feedback_records,
         )
@@ -303,12 +305,20 @@ def recommend_for_account(
             return item_item_page
 
     saved_records = _load_records(session, saved_ids)
-    genre_weights: dict[str, int] = {}
+    genre_weights: dict[str, float] = {}
     saved_genres: dict[str, list[MediaItemRecord]] = {}
     for record in saved_records:
+        rating_weight = {
+            1: -2.0,
+            2: -1.0,
+            3: 0.5,
+            4: 2.0,
+            5: 3.0,
+        }.get(saved_ratings.get(record.id), 1.0)
         for key in _genres(record):
-            genre_weights[key] = genre_weights.get(key, 0) + 1
-            saved_genres.setdefault(key, []).append(record)
+            genre_weights[key] = genre_weights.get(key, 0) + rating_weight
+            if rating_weight > 0:
+                saved_genres.setdefault(key, []).append(record)
 
     feedback_by_genre: dict[str, list[MediaItemRecord]] = {}
     for record in feedback_records:

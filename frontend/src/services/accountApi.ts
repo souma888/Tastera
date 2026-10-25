@@ -1,4 +1,4 @@
-import type { Media, MediaCategory, RecommendationPage } from "../types/media";
+import type { LibraryActivity, MediaCategory, RecommendationPage, SavedMedia, SavedMediaUpdate } from "../types/media";
 
 export interface Account {
   id: string;
@@ -64,8 +64,16 @@ export function getCurrentAccount(token: string) {
 }
 
 export async function getSavedMedia(token: string) {
-  const response = await request<{ items: Media[] }>(
+  const response = await request<{ items: SavedMedia[] }>(
     "/me/saved",
+    authorized(token),
+  );
+  return response.items;
+}
+
+export async function getLibraryActivity(token: string, limit = 20) {
+  const response = await request<{ items: LibraryActivity[] }>(
+    `/me/saved/activity?limit=${limit}`,
     authorized(token),
   );
   return response.items;
@@ -111,8 +119,15 @@ export function clearRecommendationFeedback(token: string, mediaId: string) {
 }
 
 export function saveMedia(token: string, mediaId: string) {
-  return request<Media>(`/me/saved/${encodeURIComponent(mediaId)}`, {
+  return request<SavedMedia>(`/me/saved/${encodeURIComponent(mediaId)}`, {
     ...authorized(token, "PUT"),
+  });
+}
+
+export function updateSavedMedia(token: string, mediaId: string, update: SavedMediaUpdate) {
+  return request<SavedMedia>(`/me/saved/${encodeURIComponent(mediaId)}`, {
+    ...authorized(token, "PATCH"),
+    body: JSON.stringify(update),
   });
 }
 

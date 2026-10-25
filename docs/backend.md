@@ -4,7 +4,7 @@
 
 The FastAPI service is deployed at [tastera.onrender.com](https://tastera.onrender.com); interactive API documentation is available at [/docs](https://tastera.onrender.com/docs). It provides catalog, account, saved-media, and recommendation endpoints. Production uses Neon PostgreSQL; local development uses SQLite by default.
 
-Recommendations use saved genres and persisted per-account `more`/`less` signals to adjust genre weights. This is a transparent baseline, not a trained or evaluated model. TMDb movie import is manual; scheduled ingestion and ratings are not implemented.
+Recommendations use saved genres, per-item personal ratings, and persisted per-account `more`/`less` signals to adjust genre weights; movie co-save similarity uses positively rated saves as stronger seeds. This is a transparent baseline, not a trained or evaluated model. TMDb movie import is manual; scheduled ingestion is not implemented. Library notes are private and are not analyzed.
 
 ## Local setup
 
@@ -40,12 +40,16 @@ Routes use the `/api/v1` prefix. Private endpoints require `Authorization: Beare
 | `GET /auth/me` | Return the signed-in account |
 | `GET /me/saved` | Read saved media for the account |
 | `PUT /me/saved/{media_id}` | Save an item |
+| `PATCH /me/saved/{media_id}` | Update status, 1–5 rating, private note, or progress percentage |
 | `DELETE /me/saved/{media_id}` | Unsave an item |
+| `GET /me/saved/activity?limit=` | List recent Library history, up to 50 events |
 | `GET /me/recommendations?category=&limit=` | Get genre-weighted recommendations |
 | `PUT /me/recommendations/feedback/{media_id}` | Store `more` or `less` feedback |
 | `DELETE /me/recommendations/feedback/{media_id}` | Clear feedback for an item |
 
 The generated `/docs` page is the source of truth for request/response schemas and status codes. Catalog pagination returns `items`, `page`, `limit`, `total`, and `total_pages`; `limit` accepts 1–150. Text search covers title, creator, and primary genre. The Connection Explorer reuses this endpoint with genre/creator search; there is no separate relationship graph or creator API. Recommendation `limit` is capped at 20.
+
+Apply schema changes with `python -m alembic upgrade head`. The Render service does not run migrations on startup, so run this command against the hosted database after deploying a release that adds a migration.
 
 ## Import movies from TMDb
 

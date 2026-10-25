@@ -1,6 +1,6 @@
 # TASTERA Project Status
 
-**Last reviewed:** 2026-10-23
+**Last reviewed:** 2026-10-25
 **Status:** Live cross-media discovery product; catalog pathways and personal activity views are implemented.
 **Scope:** Movies, books, and music discovery with visible catalog and user-activity connections.
 
@@ -16,9 +16,9 @@
 
 ### Personal discovery
 
-- Accounts, account-scoped saved Library, and persistent recommendation feedback.
+- Accounts, account-scoped Library statuses, personal ratings, private notes, optional book/album progress, recent activity history, and persistent recommendation feedback.
 - Profile summaries show saved counts, media mix, recurring genres, recent saves, and feedback.
-- For You uses saved items, onboarding preferences, category mix, feedback, popularity, and movie co-save similarity where available. Users can refresh the batch and adjust the mix and movie strategy.
+- For You uses saved items, ratings, onboarding preferences, category mix, feedback, popularity, and movie co-save similarity where available. Users can refresh the batch and adjust the mix and movie strategy.
 - Onboarding accepts favorite catalog items, artists/creators, genres, and moods.
 - Taste Map is built from the user's saved items and recommendation feedback. It links those signals to shared genres, deduplicates edges, supports pan/zoom and node selection, and shows related catalog items.
 - Collections support themed shelves and shareable snapshots. Collections live in the browser; changes are not synchronized to an earlier shared snapshot.
