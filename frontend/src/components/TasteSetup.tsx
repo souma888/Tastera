@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Media, MediaCategory } from "../types/media";
 import { getCatalog } from "../services/catalogApi";
+import { TASTE_MOODS } from "../data/tasteOptions";
 
 export type TastePreferences = {
   favoriteIds: string[];
@@ -13,18 +14,18 @@ export type TastePreferences = {
 type TasteSetupProps = {
   catalog: Media[];
   initial: TastePreferences;
+  required?: boolean;
   onSave: (preferences: TastePreferences) => void;
   onCancel: () => void;
 };
 
-const moods = ["Thought-provoking", "Hopeful", "Dreamy", "Tense", "Comforting", "Adventurous", "Melancholic", "Playful", "Epic", "Intimate"];
 const categories: MediaCategory[] = ["Movies", "Books", "Music"];
 const favoriteLimits: Record<MediaCategory, number> = { Movies: 5, Books: 3, Music: 3 };
 const genreLimit = 5;
 const artistLimit = 3;
 const moodLimit = 1;
 
-export default function TasteSetup({ catalog, initial, onSave, onCancel }: TasteSetupProps) {
+export default function TasteSetup({ catalog, initial, required = false, onSave, onCancel }: TasteSetupProps) {
   const [favoriteIds, setFavoriteIds] = useState(initial.favoriteIds);
   const [favoriteItems, setFavoriteItems] = useState(initial.favoriteItems ?? []);
   const [favoriteArtists, setFavoriteArtists] = useState(initial.favoriteArtists);
@@ -43,6 +44,7 @@ export default function TasteSetup({ catalog, initial, onSave, onCancel }: Taste
   ])) as Record<MediaCategory, Media[]>, [allItems]);
   const artists = useMemo(() => [...new Set(catalog.filter((item) => item.category === "Music").map((item) => item.creator))].slice(0, 16), [catalog]);
   const genreOptions = useMemo(() => [...new Set(catalog.map((item) => item.genre).filter((genre) => genre && genre.toLowerCase() !== "genre not provided"))].slice(0, 18), [catalog]);
+  const hasTasteChoices = favoriteIds.length + favoriteArtists.length + genres.length + selectedMoods.length > 0;
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -91,12 +93,13 @@ export default function TasteSetup({ catalog, initial, onSave, onCancel }: Taste
   }
 
   return (
-    <div className="taste-setup-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
+    <div className="taste-setup-backdrop" onMouseDown={(event) => { if (!required && event.target === event.currentTarget) onCancel(); }}>
       <section className="taste-setup-dialog" role="dialog" aria-modal="true" aria-labelledby="taste-setup-title">
-        <button className="taste-setup-close" type="button" onClick={onCancel} aria-label="Close taste setup">×</button>
+        {!required && <button className="taste-setup-close" type="button" onClick={onCancel} aria-label="Close taste setup">×</button>}
         <span className="eyebrow">YOUR TASTE, FROM THE START</span>
         <h2 id="taste-setup-title">What are you already into?</h2>
         <p className="taste-setup-intro">A focused starter profile is enough to make your first recommendations feel personal. Choose up to 5 movies, 3 books, 3 albums, 5 genres, 3 artists, and 1 mood. You can change these later.</p>
+        {required && <p className="taste-setup-required-note" role="status">Choose at least one favorite, artist, genre, or mood to continue. You can refine everything later in Settings.</p>}
 
         <section className="taste-search-panel" aria-label="Search the catalog to add favorites">
           <div><strong>Looking for a specific title?</strong><span>Search the catalog and add it to your favorites.</span></div>
@@ -135,13 +138,13 @@ export default function TasteSetup({ catalog, initial, onSave, onCancel }: Taste
         <fieldset className="taste-choice-group">
           <legend>Moods <small>Choose how you want a discovery to feel</small></legend>
           <div className="taste-chip-list">
-            {moods.map((mood) => <button type="button" key={mood} className={`taste-chip ${selectedMoods.includes(mood) ? "selected" : ""}`} aria-pressed={selectedMoods.includes(mood)} onClick={() => toggle(selectedMoods, setSelectedMoods, mood, moodLimit, "mood")}>{mood}</button>)}
+            {TASTE_MOODS.map((mood) => <button type="button" key={mood} className={`taste-chip ${selectedMoods.includes(mood) ? "selected" : ""}`} aria-pressed={selectedMoods.includes(mood)} onClick={() => toggle(selectedMoods, setSelectedMoods, mood, moodLimit, "mood")}>{mood}</button>)}
           </div>
         </fieldset>
 
         <div className="taste-setup-actions">
-          <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>
-          <button type="button" className="primary-button" onClick={() => onSave({ favoriteIds, favoriteItems, favoriteArtists, genres, moods: selectedMoods })}>Use these tastes <span>↗</span></button>
+          {!required && <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>}
+          <button type="button" className="primary-button" disabled={!hasTasteChoices} onClick={() => onSave({ favoriteIds, favoriteItems, favoriteArtists, genres, moods: selectedMoods })}>Use these tastes <span>↗</span></button>
         </div>
         <small className="taste-setup-privacy">These starter choices are stored in this browser. You can change them any time in Settings.</small>
       </section>

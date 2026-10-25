@@ -2429,12 +2429,31 @@
 .taste-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .taste-chip { padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; background: #ffffff04; color: var(--text-secondary); font-size: 10px; cursor: pointer; }
 .taste-chip:hover,.taste-chip.selected { border-color: var(--lavender); background: #b49aff18; color: var(--lavender-hover); }
-.taste-setup-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; }
-.taste-setup-actions .primary-button { min-height: 42px; }
+.taste-setup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 12px; }
+.taste-setup-actions > button { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; height: 42px; min-height: 42px; padding: 0 16px; line-height: 1; }
+.taste-setup-actions .primary-button { gap: 10px; margin-top: 0; }
+.taste-setup-actions .secondary-button { min-width: 108px; }
+.taste-setup-actions .primary-button:disabled { cursor: not-allowed; opacity: .48; transform: none; }
+.taste-setup-required-note { margin: 0 0 18px; padding: 11px 13px; border: 1px solid #b49aff55; border-radius: 9px; color: var(--lavender-hover); background: #b49aff0c; font-size: 11px; line-height: 1.6; }
 .taste-setup-privacy { display: block; margin-top: 12px; color: var(--text-muted); font-size: 10px; text-align: right; }
 .taste-setup-empty { grid-column: 1 / -1; color: var(--text-muted); font-size: 11px; }
 .settings-panel.taste-preferences-summary { margin-bottom: 16px; }
 .taste-preferences-summary > p { color: var(--text-secondary); font-size: 12px; line-height: 1.65; }
+.taste-advanced-panel { margin-bottom: 16px; }
+.taste-advanced-panel > summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; cursor: pointer; list-style: none; }
+.taste-advanced-panel > summary::-webkit-details-marker { display: none; }
+.taste-advanced-panel > summary::after { content: "+"; flex: 0 0 auto; color: var(--lavender); font-size: 22px; }
+.taste-advanced-panel[open] > summary::after { content: "−"; }
+.taste-advanced-panel > summary > span:first-child { display: grid; gap: 5px; }
+.taste-advanced-panel > summary strong { color: var(--text-primary); font: 600 20px/1.3 var(--font-heading); }
+.taste-advanced-panel > summary small,.taste-advanced-summary-count,.taste-preset-hint { color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+.taste-advanced-summary-count { text-align: right; }
+.taste-advanced-content { margin-top: 24px; }
+.taste-advanced-content .taste-choice-group { margin-bottom: 24px; }
+.taste-preset-search { width: min(360px, 100%); margin: 0 0 12px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; outline: none; color: var(--text-primary); background: #100e14; font: 11px var(--font-body); }
+.taste-preset-search:focus { border-color: var(--lavender); }
+.taste-preset-hint { display: block; margin-top: 8px; }
+.taste-editor-notice { margin: -4px 0 12px !important; color: var(--lavender-hover) !important; }
 .search-preview-dialog { position: relative; display: grid; grid-template-columns: minmax(180px, 260px) minmax(0,1fr); gap: 24px; width: min(680px, 100%); padding: 24px; border: 1px solid #514263; border-radius: 20px; background: #17141d; box-shadow: 0 30px 100px #0009; }
 .search-preview-poster { overflow: hidden; border-radius: 12px; background: #25202d; }
 .search-preview-poster img { display: block; width: 100%; height: 100%; max-height: 360px; object-fit: cover; }
@@ -2562,6 +2581,10 @@
   .account-signout { padding-inline: 8px; }
   .taste-onboarding-cta { align-items: flex-start; flex-direction: column; }
   .taste-setup-dialog { padding: 24px 16px; }
+  .taste-setup-actions { justify-content: stretch; }
+  .taste-setup-actions > button { flex: 1 1 0; }
+  .taste-advanced-panel > summary { align-items: flex-start; }
+  .taste-advanced-summary-count { display: none; }
   .taste-choice-cards { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .taste-choice-group legend small { display: block; margin: 3px 0 0; }
   .search-preview-dialog { grid-template-columns: minmax(90px, 32%) minmax(0,1fr); gap: 14px; padding: 16px; }

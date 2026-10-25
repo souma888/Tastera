@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
+import { TASTE_MOODS } from "./data/tasteOptions";
 import CollectionsPage from "./components/CollectionsPage";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import { mediaItems } from "./data/media";
@@ -53,6 +54,7 @@ type HeroSlide = {
 
 const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
 const recommendationBatchSize = 12;
+const advancedTasteLimits = { genres: 12, favoriteArtists: 8, moods: 3 } as const;
 const moodWords: Record<string, string[]> = {
   "thought-provoking": ["sci-fi", "science fiction", "drama", "philosophy", "art rock"],
   hopeful: ["adventure", "family", "comedy", "pop", "coming-of-age"],
@@ -317,6 +319,9 @@ function App() {
   const [recommendationMix, setRecommendationMix] = useState<CategoryMix>(readStoredMix);
   const [recommendationStrategy, setRecommendationStrategy] = useState<RecommendationStrategy>(readStoredStrategy);
   const [tastePreferences, setTastePreferences] = useState<TastePreferences>(readTastePreferences);
+  const [tasteGenreSearch, setTasteGenreSearch] = useState("");
+  const [tasteCreatorSearch, setTasteCreatorSearch] = useState("");
+  const [tasteEditorNotice, setTasteEditorNotice] = useState("");
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -603,6 +608,11 @@ function App() {
     .map((item) => item.genre.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [catalog, category]);
 
   const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
+  const isTasteSetupRequired = !isCheckingAccount && !isAuthOpen && !tasteSetupComplete;
+  const tasteGenreOptions = useMemo(() => [...new Set([...tastePreferences.genres, ...catalog.map((item) => item.genre.trim())].filter((genre) => genre && genre.toLowerCase() !== "genre not provided"))].sort((left, right) => left.localeCompare(right)), [catalog, tastePreferences.genres]);
+  const tasteCreatorOptions = useMemo(() => [...new Set([...tastePreferences.favoriteArtists, ...catalog.filter((item) => item.category === "Music").map((item) => item.creator.trim())].filter(Boolean))].sort((left, right) => left.localeCompare(right)), [catalog, tastePreferences.favoriteArtists]);
+  const filteredTasteGenres = tasteGenreOptions.filter((genre) => genre.toLowerCase().includes(tasteGenreSearch.trim().toLowerCase()));
+  const filteredTasteCreators = tasteCreatorOptions.filter((creator) => creator.toLowerCase().includes(tasteCreatorSearch.trim().toLowerCase()));
   const guestRecommendations = useMemo(() => {
     if (!tasteSetupComplete || account) return [];
     const quotas = allocateMix(recommendationMix, recommendationBatchSize);
@@ -670,6 +680,25 @@ function App() {
     localStorage.setItem("tastera_taste_setup", JSON.stringify(preferences));
     setTastePreferences(preferences);
     setIsTasteSetupOpen(false);
+    setTasteEditorNotice("");
+    setSeenRecommendationIds([]);
+  }
+
+  function toggleAdvancedTaste(field: "genres" | "favoriteArtists" | "moods", value: string) {
+    const current = tastePreferences[field];
+    const next = current.includes(value)
+      ? current.filter((item) => item !== value)
+      : current.length < advancedTasteLimits[field]
+        ? [...current, value]
+        : null;
+    if (!next) {
+      setTasteEditorNotice(`Choose up to ${advancedTasteLimits[field]} ${field === "favoriteArtists" ? "artists" : field}. Remove one before adding another.`);
+      return;
+    }
+    const preferences = { ...tastePreferences, [field]: next };
+    localStorage.setItem("tastera_taste_setup", JSON.stringify(preferences));
+    setTastePreferences(preferences);
+    setTasteEditorNotice("");
     setSeenRecommendationIds([]);
   }
 
@@ -994,7 +1023,7 @@ function App() {
                   <span className="guide-visual-label">TASTERA · PERSONALIZE</span>
                   <div className="guide-settings-preview"><b>FOR YOU</b><strong>Make your mix.</strong><span>60% MOVIES</span><i /><span>20% BOOKS</span><i /><span>20% MUSIC</span><i /></div>
                 </div>
-                <div className="guide-card-copy"><span className="guide-step">05 / FOR YOU & SETTINGS</span><h2>Tune the next batch</h2><p>For You uses your saves and “More like this” / “Not for me” feedback. In Settings, adjust the movie, book, and music balance and choose the movie ranking method. These preferences are currently saved in this browser.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Settings")}>Adjust your settings →</button></div>
+                <div className="guide-card-copy"><span className="guide-step">05 / FOR YOU & SETTINGS</span><h2>Tune the next batch</h2><p>Choose at least one favorite, artist, genre, or mood during first-run setup to unlock discovery. For You then uses your taste, saves, and feedback. Settings lets you expand to 12 genres, 8 artists, and 3 moods, adjust the category balance, and choose a movie ranking method.</p><button type="button" className="text-button" onClick={() => openGuideFeature("Settings")}>Adjust your settings →</button></div>
               </article>
               <article className="guide-card">
                 <div className="guide-real-visual guide-visual-pathways">
@@ -1016,7 +1045,7 @@ function App() {
             </div>
             <div className="about-story-grid">
               <article className="about-story-card about-story-primary"><span className="eyebrow">THE IDEA</span><h2>Discovery should feel connected.</h2><p>Most catalogs stop at their own category. Tastera starts with movies, books, and music together, then gives people ways to move between them through genres, creators, shared themes, and their own taste signals.</p><p>The aim is not to tell you what you should like. It is to make the next interesting thing easier to find—and to make the path between discoveries visible.</p></article>
-              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Save discoveries to an account-backed Library, organize browser-based collections, and share a collection link.</li><li>Set favorite titles, artists, genres, and moods to personalize guest picks before creating an account.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
+              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Complete the first-run taste setup by choosing at least one favorite, artist, genre, or mood before continuing.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, organize browser-based collections, and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
               <article className="about-story-card"><span className="eyebrow">CONNECTIONS, HONESTLY</span><h2>Every path shows its evidence.</h2><p>Creator pages group records with the same creator credit. Pathways can use an exact shared catalog genre, the same creator, or a shared word from Tastera editorial notes. Saved and feedback activity is called out separately, so it is not mistaken for catalog similarity.</p><p>Setting and influence credits are not consistently present in the catalog yet, so Tastera does not claim those links when the underlying data is missing. These pathways are explainable discovery links, not a trained cross-media ranking model.</p></article>
               <article className="about-story-card"><span className="eyebrow">BUILT IN PUBLIC</span><h2>An evolving independent project.</h2><p>Tastera is being developed by Soumadip Karan. The code, issues, and project progress are available in the public repository. Catalog information and artwork come from third-party sources; provider attribution and image rights remain with their respective owners.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View the GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Meet the developer on GitHub ↗</a></div></article>
             </div>
@@ -1055,6 +1084,40 @@ function App() {
                 <p>{tastePreferences.favoriteIds.length} favorite titles · {tastePreferences.favoriteArtists.length} artists · {tastePreferences.genres.length} genres · {tastePreferences.moods.length} moods. These starter preferences are stored in this browser and influence For You ranking.</p>
               ) : <p>Choose favorite films, books, music artists, genres, and moods to personalize For You before your Library has any saves.</p>}
             </section>
+            <details className="settings-panel taste-advanced-panel">
+              <summary>
+                <span><span className="eyebrow">MORE CONTROL</span><strong>Advanced taste presets</strong><small>Choose a wider range of genres, creators, and moods for your recommendations.</small></span>
+                <span className="taste-advanced-summary-count">{tastePreferences.genres.length} genres · {tastePreferences.favoriteArtists.length} artists · {tastePreferences.moods.length} moods</span>
+              </summary>
+              <div className="taste-advanced-content">
+                <fieldset className="taste-choice-group">
+                  <legend>Genre and theme presets <small>{tastePreferences.genres.length} / {advancedTasteLimits.genres} selected</small></legend>
+                  <input className="taste-preset-search" type="search" value={tasteGenreSearch} onChange={(event) => setTasteGenreSearch(event.target.value)} placeholder="Find a genre or theme" aria-label="Find a genre or theme preset" />
+                  <div className="taste-chip-list">
+                    {filteredTasteGenres.slice(0, 32).map((genre) => <button type="button" key={genre} className={`taste-chip ${tastePreferences.genres.includes(genre) ? "selected" : ""}`} aria-pressed={tastePreferences.genres.includes(genre)} onClick={() => toggleAdvancedTaste("genres", genre)}>{genre}</button>)}
+                    {!filteredTasteGenres.length && <p className="taste-setup-empty">No catalog genres match that search.</p>}
+                  </div>
+                  {filteredTasteGenres.length > 32 && <small className="taste-preset-hint">Showing 32 matches. Search to narrow the list.</small>}
+                </fieldset>
+                <fieldset className="taste-choice-group">
+                  <legend>Artists and creators <small>{tastePreferences.favoriteArtists.length} / {advancedTasteLimits.favoriteArtists} selected</small></legend>
+                  <input className="taste-preset-search" type="search" value={tasteCreatorSearch} onChange={(event) => setTasteCreatorSearch(event.target.value)} placeholder="Find a music artist" aria-label="Find a music artist preset" />
+                  <div className="taste-chip-list">
+                    {filteredTasteCreators.slice(0, 32).map((creator) => <button type="button" key={creator} className={`taste-chip ${tastePreferences.favoriteArtists.includes(creator) ? "selected" : ""}`} aria-pressed={tastePreferences.favoriteArtists.includes(creator)} onClick={() => toggleAdvancedTaste("favoriteArtists", creator)}>{creator}</button>)}
+                    {!filteredTasteCreators.length && <p className="taste-setup-empty">No music creators match that search.</p>}
+                  </div>
+                  {filteredTasteCreators.length > 32 && <small className="taste-preset-hint">Showing 32 matches. Search to narrow the list.</small>}
+                </fieldset>
+                <fieldset className="taste-choice-group">
+                  <legend>Mood presets <small>{tastePreferences.moods.length} / {advancedTasteLimits.moods} selected</small></legend>
+                  <div className="taste-chip-list">
+                    {TASTE_MOODS.map((mood) => <button type="button" key={mood} className={`taste-chip ${tastePreferences.moods.includes(mood) ? "selected" : ""}`} aria-pressed={tastePreferences.moods.includes(mood)} onClick={() => toggleAdvancedTaste("moods", mood)}>{mood}</button>)}
+                  </div>
+                </fieldset>
+                {tasteEditorNotice && <p className="taste-editor-notice" role="status">{tasteEditorNotice}</p>}
+                <p className="taste-preset-hint">These controls save automatically in this browser. The starter setup remains shorter; Settings lets you choose up to 12 genres, 8 artists, and 3 moods.</p>
+              </div>
+            </details>
             <section className="settings-panel" aria-labelledby="mix-heading">
               <div className="settings-panel-heading">
                 <div><span className="eyebrow">FOR YOU</span><h2 id="mix-heading">Your category mix</h2></div>
@@ -1755,7 +1818,7 @@ function App() {
         </footer>
       </main>
 
-      {isTasteSetupOpen && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} onSave={saveTasteSetup} onCancel={() => setIsTasteSetupOpen(false)} />}
+      {!isAuthOpen && (isTasteSetupOpen || isTasteSetupRequired) && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} required={isTasteSetupRequired} onSave={saveTasteSetup} onCancel={() => setIsTasteSetupOpen(false)} />}
 
       {(selectedSearchItem || selectedCreator || selectedTheme) && (
         <ConnectionExplorer
