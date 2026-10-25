@@ -1,5 +1,7 @@
 # Backend Guide
 
+**Reviewed:** 2026-10-25.
+
 ## Current status
 
 The FastAPI service is deployed at [tastera.onrender.com](https://tastera.onrender.com); interactive API documentation is available at [/docs](https://tastera.onrender.com/docs). It provides catalog, account, saved-media, and recommendation endpoints. Production uses Neon PostgreSQL; local development uses SQLite by default.
@@ -49,7 +51,7 @@ Routes use the `/api/v1` prefix. Private endpoints require `Authorization: Beare
 | `PUT /me/recommendations/feedback/{media_id}` | Store `more` or `less` feedback |
 | `DELETE /me/recommendations/feedback/{media_id}` | Clear feedback for an item |
 
-The generated `/docs` page is the source of truth for request/response schemas and status codes. Catalog pagination returns `items`, `page`, `limit`, `total`, and `total_pages`; `limit` accepts 1–150. Text search covers title, creator, and primary genre. The Connection Explorer reuses this endpoint with genre/creator search; there is no separate relationship graph or creator API. Recommendation `limit` is capped at 20.
+The saved Library response combines catalog fields with account-specific saved metadata; when timestamps overlap, the saved record's `updated_at` is authoritative. `tests/test_saved_response.py` guards against duplicate `updated_at` keyword arguments and verifies that the saved timestamp wins. The generated `/docs` page is the source of truth for request/response schemas and status codes. Catalog pagination returns `items`, `page`, `limit`, `total`, and `total_pages`; `limit` accepts 1–150. Text search covers title, creator, and primary genre. The Connection Explorer reuses this endpoint with genre/creator search; there is no separate relationship graph or creator API. Recommendation `limit` is capped at 20.
 
 Apply schema changes with `python -m alembic upgrade head`. The Render service does not run migrations on startup, so run this command against the hosted database after deploying a release that adds a migration.
 
@@ -78,4 +80,4 @@ From `backend/` with its virtual environment active:
 pytest
 ```
 
-Do not describe unrun tests as passing. Add coverage for validation, database/migration behavior, account isolation, saved items, and feedback as those areas change.
+Do not describe unrun tests as passing. The saved-response regression test is present, but run `pytest` locally or in CI to verify it. Add coverage for validation, database/migration behavior, account isolation, saved items, and feedback as those areas change.
