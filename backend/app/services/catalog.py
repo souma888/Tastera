@@ -8,10 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.catalog import CreatorAliasRecord, MediaItemRecord
 from app.schemas.media import MediaCategory, MediaFilters, MediaItem, MediaPage
 
-INDIAN_FILM_LANGUAGE_CODES = (
-    "hi", "ta", "te", "ml", "kn", "bn", "pa", "mr", "gu", "or", "as", "ur",
-)
-INDIAN_FILM_DISCOVERY_BONUS = 1.5
+MOVIE_DISCOVERY_BONUS = 1.5
 
 
 def to_schema(record: MediaItemRecord) -> MediaItem:
@@ -74,17 +71,16 @@ def list_media(
 
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     start = (page - 1) * limit
-    regional_visibility = case(
+    movie_visibility = case(
         (
-            (MediaItemRecord.category == MediaCategory.MOVIES.value)
-            & func.lower(MediaItemRecord.language).in_(INDIAN_FILM_LANGUAGE_CODES),
-            INDIAN_FILM_DISCOVERY_BONUS,
+            MediaItemRecord.category == MediaCategory.MOVIES.value,
+            MOVIE_DISCOVERY_BONUS,
         ),
         else_=0.0,
     )
     records = session.scalars(
         statement.order_by(
-            (MediaItemRecord.popularity_score + regional_visibility).desc(),
+            (MediaItemRecord.popularity_score + movie_visibility).desc(),
             MediaItemRecord.created_at.asc(),
             MediaItemRecord.title,
             MediaItemRecord.id,
