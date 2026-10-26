@@ -2972,3 +2972,31 @@
   color: var(--lavender) !important;
   text-decoration: underline !important;
 }
+
+/* Mobile account controls: keep the avatar and Sign out button in separate,
+   non-overlapping columns even when the search field has little room. */
+.topbar { min-width: 0; }
+.topbar-actions { min-width: 0; }
+.account-menu {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.account-identity { flex: 0 1 auto; min-width: 0; }
+.account-initial { flex: 0 0 26px; }
+.account-signout { position: static; flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 650px) {
+  .topbar-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .search-wrap { min-width: 0; flex: 1 1 0; width: 0; }
+  .account-menu { display: inline-flex; flex: 0 0 auto; width: auto; max-width: max-content; gap: 6px; padding: 4px; }
+  .account-identity { flex: 0 0 auto; padding-left: 2px; }
+  .account-initial { width: 28px; height: 28px; flex-basis: 28px; }
+  .account-signout { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 7px 9px; line-height: 1; }
+}
+@media (max-width: 380px) {
+  .topbar-actions { gap: 5px; }
+  .account-menu { gap: 4px; padding: 3px; }
+  .account-initial { width: 26px; height: 26px; flex-basis: 26px; }
+  .account-signout { padding-inline: 7px; font-size: 9px; }
+}
