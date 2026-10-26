@@ -9,6 +9,7 @@ from app.models.catalog import CreatorAliasRecord, MediaItemRecord
 from app.schemas.media import MediaCategory, MediaFilters, MediaItem, MediaPage
 
 MOVIE_DISCOVERY_BONUS = 1.5
+MOVIE_DISCOVER_STARTER_SLOTS = 70
 
 
 def to_schema(record: MediaItemRecord) -> MediaItem:
@@ -71,6 +72,19 @@ def list_media(
 
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     start = (page - 1) * limit
+    top_movie_ids: list[str] = []
+    if category is None:
+        top_movie_ids = session.scalars(
+            statement.where(MediaItemRecord.category == MediaCategory.MOVIES.value)
+            .order_by(
+                MediaItemRecord.popularity_score.desc(),
+                MediaItemRecord.created_at.asc(),
+                MediaItemRecord.title,
+                MediaItemRecord.id,
+            )
+            .limit(MOVIE_DISCOVER_STARTER_SLOTS)
+            .with_only_columns(MediaItemRecord.id)
+        ).all()
     movie_visibility = case(
         (
             MediaItemRecord.category == MediaCategory.MOVIES.value,
@@ -78,13 +92,17 @@ def list_media(
         ),
         else_=0.0,
     )
-    records = session.scalars(
-        statement.order_by(
+    order_by = []
+    if top_movie_ids:
+        order_by.append(case((MediaItemRecord.id.in_(top_movie_ids), 0), else_=1).asc())
+    order_by.extend([
             (MediaItemRecord.popularity_score + movie_visibility).desc(),
             MediaItemRecord.created_at.asc(),
             MediaItemRecord.title,
             MediaItemRecord.id,
-        )
+        ])
+    records = session.scalars(
+        statement.order_by(*order_by)
         .offset(start)
         .limit(limit)
     ).all()

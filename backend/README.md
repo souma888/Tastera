@@ -179,10 +179,9 @@ and the catalog exposes it alongside genres in the Discover filters. Existing
 TMDb rows receive a language value the next time their provider metadata is
 refreshed. After deploying the language migration, rerun the relevant TMDb
 import command to backfill language values for existing catalog entries.
-Discover gives movies a small ranking adjustment so they appear more often on
-the early pages of the general feed, while TMDb popularity still orders movies
-within the boosted group. The adjustment applies to every movie, regardless of
-language.
+In the general Discover feed, the first 70 results are the highest-ranked
+movies. After those starter slots, results return to the popularity-ranked mix,
+with a small visibility adjustment for all movies regardless of language.
 
 Each popular page contains up to 20 movies. The importer waits between movie
 credit requests and retries temporary rate-limit/server errors. Options include
