@@ -2901,9 +2901,6 @@
 
 
 /* Polished, consistent controls for creator links, Library notes and ratings. */
-.creator-link:focus:not(:focus-visible),
-.media-explore-link:focus:not(:focus-visible),
-.connection-creator-button:focus:not(:focus-visible { outline: none; }
 .connection-creator-button { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 5px; padding: 0; outline: none; color: var(--lavender); background: transparent; font: inherit; font-size: 11px; line-height: 1.5; cursor: pointer; }
 .connection-creator-button:hover { color: var(--text-primary); text-decoration: underline; }
 .connection-creator-button:focus-visible { outline: 2px solid var(--lavender); outline-offset: 3px; }
