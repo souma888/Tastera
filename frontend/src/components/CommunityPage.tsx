@@ -32,7 +32,6 @@ export default function CommunityPage({ catalog, savedItems }: { catalog: Media[
   const [selectedPlaylist, setSelectedPlaylist] = useState<{ profileId: string; name: string; description: string; genres: string[] } | null>(null);
   const [notice, setNotice] = useState("");
   const profileInterests = useMemo(() => [...new Set(savedItems.map((item) => item.genre.toLowerCase()).filter(Boolean))], [savedItems]);
-  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
   const sampleProfileItems = (profile: SampleProfile) => {
     const preferred = catalog.filter((item) => profile.favoriteTitles.some((title) => item.title.toLowerCase() === title.toLowerCase()));
     const themed = catalog.filter((item) => profile.genres.some((genre) => item.genre.toLowerCase().includes(genre.toLowerCase())));
