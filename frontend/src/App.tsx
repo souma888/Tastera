@@ -436,6 +436,7 @@ function App() {
   const [feedbackActionError, setFeedbackActionError] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -1215,7 +1216,10 @@ function App() {
             </div>
             {account ? (
               <div className="account-menu">
-                <span className="account-identity"><span className="account-initial">{account.email[0]?.toUpperCase()}</span><span className="account-email">{account.email}</span></span>
+                <div className="account-profile-wrap">
+                  <button type="button" className="account-identity account-profile-trigger" aria-label="Open account information" aria-expanded={isAccountInfoOpen} onClick={() => setIsAccountInfoOpen((open) => !open)} title="Account information"><span className="account-initial">{account.email[0]?.toUpperCase()}</span><span className="account-email">{account.email}</span></button>
+                  {isAccountInfoOpen && <div className="account-info-popover" role="dialog" aria-label="Account information"><span className="account-info-avatar">{account.email[0]?.toUpperCase()}</span><div className="account-info-copy"><strong>Your TASTERA account</strong><span>{account.email}</span><small>Signed in · Personal account</small></div><button type="button" className="account-info-close" aria-label="Close account information" onClick={() => setIsAccountInfoOpen(false)}>×</button></div>}
+                </div>
                 <button type="button" className="account-signout" onClick={signOut}>Sign out</button>
               </div>
             ) : (
