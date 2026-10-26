@@ -1304,20 +1304,106 @@ function App() {
           </section>
         ) : activePage === "About" ? (
           <section className="info-page about-page" aria-labelledby="about-heading">
-            <div className="info-hero">
-              <span className="eyebrow">WHY TASTERA EXISTS</span>
-              <h1 id="about-heading">One curiosity can lead to <span>another world.</span></h1>
-              <p>Tastera is a cross-media discovery project for people whose interests do not stay in one lane. A film can lead to a book; a book can lead to an album; a shared mood can connect all three.</p>
+            <div className="about-hero">
+              <div className="about-hero-copy">
+                <span className="eyebrow">THE STORY BEHIND TASTERA</span>
+                <h1 id="about-heading">Your next favourite thing might be in <span>another world.</span></h1>
+                <p>TASTERA is an independent cross-media discovery project built around one idea: the things we love rarely fit into a single category. A film can lead to a novel, a novel to an album, and one shared feeling can connect them all.</p>
+                <div className="about-hero-actions">
+                  <button type="button" className="primary-button" onClick={() => openGuideFeature("Discover")}>Explore TASTERA <span>↗</span></button>
+                  <a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">Explore the open-source project ↗</a>
+                </div>
+              </div>
+              <div className="about-hero-visual" aria-hidden="true">
+                <div className="about-visual-orbit about-visual-orbit-a" />
+                <div className="about-visual-orbit about-visual-orbit-b" />
+                <div className="about-media-node about-node-movie">FILM<span>Stories in motion</span></div>
+                <div className="about-media-node about-node-book">BOOK<span>Worlds in words</span></div>
+                <div className="about-media-node about-node-music">MUSIC<span>Feelings in sound</span></div>
+                <div className="about-visual-center">t<span>.</span></div>
+                <span className="about-visual-connector about-connector-one" />
+                <span className="about-visual-connector about-connector-two" />
+                <span className="about-visual-connector about-connector-three" />
+              </div>
             </div>
-            <div className="about-story-grid">
-              <article className="about-story-card about-story-primary"><span className="eyebrow">THE IDEA</span><h2>Discovery should feel connected.</h2><p>Most catalogs stop at their own category. Tastera starts with movies, books, and music together, then gives people ways to move between them through genres, creators, shared themes, and their own taste signals.</p><p>The aim is not to tell you what you should like. It is to make the next interesting thing easier to find—and to make the path between discoveries visible.</p></article>
-              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Optionally choose favorite titles, artists, genres, and moods after signing in to personalize recommendations. You can skip this and return to it later in Settings.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, track planned, in-progress, and finished items, rate them, and keep private notes.</li><li>Track book and album progress with a percentage and review recent Library activity. Your ratings contribute to your personal recommendation ranking.</li><li>Organize browser-based collections and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
-              <article className="about-story-card"><span className="eyebrow">CONNECTIONS, HONESTLY</span><h2>Every path shows its evidence.</h2><p>Creator pages group records with the same creator credit. Pathways can use an exact shared catalog genre, the same creator, or a shared word from Tastera editorial notes. Saved and feedback activity is called out separately, so it is not mistaken for catalog similarity.</p><p>Setting and influence credits are not consistently present in the catalog yet, so Tastera does not claim those links when the underlying data is missing. These pathways are explainable discovery links, not a trained cross-media ranking model.</p></article>
-              <article className="about-story-card"><span className="eyebrow">BUILT IN PUBLIC</span><h2>An evolving independent project.</h2><p>Tastera is being developed by Soumadip Karan. The code, issues, and project progress are available in the public repository. Catalog information and artwork come from third-party sources; provider attribution and image rights remain with their respective owners.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View the GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Meet the developer on GitHub ↗</a></div></article>
+
+            <div className="about-manifesto">
+              <span className="about-manifesto-index">01 / THE BELIEF</span>
+              <p>Discovery shouldn’t end at the edge of a catalogue. <em>It should follow your curiosity.</em></p>
+              <span className="about-manifesto-mark">“</span>
             </div>
-            <div className="about-note"><span className="brand-mark">t.</span><p><strong>Discover beyond the obvious.</strong><br />The long-term direction is a transparent, evidence-led discovery experience across media—with better catalogs, clearer connections, and recommendations that earn your trust.</p></div>
+
+            <div className="about-section-heading">
+              <span className="eyebrow">MORE THAN A RECOMMENDATION FEED</span>
+              <h2>A connected way to explore.</h2>
+              <p>Each part of TASTERA gives you a different way to move from “I liked this” to “what should I explore next?”</p>
+            </div>
+            <div className="about-feature-grid">
+              <article className="about-feature-card about-feature-featured">
+                <span className="about-feature-number">01</span><span className="about-feature-icon">✳</span>
+                <span className="eyebrow">PERSONAL DISCOVERY</span><h3>For You, shaped by your taste</h3>
+                <p>Browse a personalized mix of movies, books, and music. Save titles, rate them, and give “More like this” or “Not for me” feedback to influence what appears next.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Discover")}>Start discovering ↗</button>
+              </article>
+              <article className="about-feature-card">
+                <span className="about-feature-number">02</span><span className="about-feature-icon">⌘</span>
+                <span className="eyebrow">VISUAL TASTE</span><h3>Your Taste Map</h3>
+                <p>Explore the neighbourhood around saved and rated items. Pan and zoom through links, inspect shared genres, and distinguish catalog evidence from your own activity.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Taste Map")}>Open Taste Map ↗</button>
+              </article>
+              <article className="about-feature-card">
+                <span className="about-feature-number">03</span><span className="about-feature-icon">▤</span>
+                <span className="eyebrow">YOUR PERSONAL SHELF</span><h3>A Library that remembers</h3>
+                <p>Keep saved titles in your account-backed Library, track planned, in-progress, and finished items, add ratings and private notes, and record reading or listening progress.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Library")}>Visit your Library ↗</button>
+              </article>
+              <article className="about-feature-card">
+                <span className="about-feature-number">04</span><span className="about-feature-icon">⤳</span>
+                <span className="eyebrow">CROSS-MEDIA PATHWAYS</span><h3>Follow a creator or an idea</h3>
+                <p>Move between movies, books, and albums through shared genre labels, creator credits, and editorial theme clues. Each pathway explains why two items are connected.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Discover")}>Follow a connection ↗</button>
+              </article>
+              <article className="about-feature-card">
+                <span className="about-feature-number">05</span><span className="about-feature-icon">◈</span>
+                <span className="eyebrow">MAKE IT YOURS</span><h3>Settings and collections</h3>
+                <p>Adjust the balance between media types, refine your taste presets, change movie ranking options, and group discoveries into collections you can share.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Settings")}>Personalize TASTERA ↗</button>
+              </article>
+              <article className="about-feature-card about-feature-community">
+                <span className="about-feature-number">06</span><span className="about-feature-icon">♧</span>
+                <span className="eyebrow">SHARED CURIOSITY</span><h3>Community, with clear boundaries</h3>
+                <p>The Community area currently uses clearly labelled sample explorer profiles and preview activity. It is a product preview, not a claim that real users’ private Libraries are being shared.</p>
+                <button type="button" className="text-button" onClick={() => openGuideFeature("Community")}>See Community ↗</button>
+              </article>
+            </div>
+
+            <div className="about-truth-grid">
+              <div className="about-truth-main">
+                <span className="eyebrow">HOW THE CONNECTIONS WORK</span><h2>Show the reason, not just the result.</h2>
+                <p>TASTERA’s current pathways are explainable catalogue links—not a fully trained cross-media AI model. Connections can be based on an exact shared genre, matching creator credit, or a shared theme word in TASTERA editorial notes. Your saves and recommendation feedback are displayed separately from similarity evidence.</p>
+                <p>Recommendation ranking currently combines implemented genre-based signals and movie-focused item-item collaborative filtering work. Semantic embeddings, a validated all-media hybrid ranker, and dedicated collaborative models for books and music remain future work. The project is being built incrementally, with evaluation and honest explanations as priorities.</p>
+              </div>
+              <div className="about-truth-side">
+                <span className="eyebrow">CURRENT PRINCIPLES</span>
+                <ul><li><span>↗</span><div><strong>Explainable by design</strong><small>Show the genre, creator, or editorial clue behind a pathway.</small></div></li><li><span>◎</span><div><strong>Your Library is personal</strong><small>Saved items, ratings, and private notes belong to your account.</small></div></li><li><span>⌁</span><div><strong>Still evolving</strong><small>Sample Community activity is labelled; planned features aren’t presented as finished.</small></div></li></ul>
+              </div>
+            </div>
+
+            <div className="about-roadmap">
+              <div className="about-roadmap-heading"><span className="eyebrow">WHAT COMES NEXT</span><h2>Built in public. Improved in stages.</h2><p>TASTERA is a living project. These are directions for future development, not promises that every feature is already available.</p></div>
+              <div className="about-roadmap-list">
+                <article><span className="about-roadmap-step">NOW</span><div><h3>Reliability and catalog depth</h3><p>Keep sign-in, Library saves, profile controls, responsive layouts, and deployment stable while expanding movie, book, and music coverage.</p></div></article>
+                <article><span className="about-roadmap-step">NEXT</span><div><h3>Smarter retrieval and ranking</h3><p>Explore semantic embeddings, hybrid recommendation signals, richer creator and theme links, and offline evaluation to measure whether recommendations improve.</p></div></article>
+                <article><span className="about-roadmap-step">LATER</span><div><h3>A wider discovery ecosystem</h3><p>Potential directions include natural-language discovery, conversational recommendations, more media categories, real server-backed collections and social features, and a clearer view of how taste changes over time.</p></div></article>
+              </div>
+            </div>
+
+            <div className="about-project-footer">
+              <div className="about-project-mark">t<span>.</span></div>
+              <div className="about-project-copy"><span className="eyebrow">AN INDEPENDENT PROJECT</span><h2>Made for the curious.</h2><p>TASTERA is developed by Soumadip Karan. The source code, issues, and ongoing work are public. The aim is to make cross-media discovery more personal, more transparent, and more fun to explore.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Developer profile ↗</a><a href="mailto:soumadipkaran8@gmail.com?subject=TASTERA%20feedback">Share feedback ↗</a></div></div>
+            </div>
+            <div className="about-provider-credit"><span className="about-provider-mark">TMDB</span><p><strong>Movie data and images</strong><span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span></p><a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">The Movie Database ↗</a></div>
           </section>
-        ) : activePage === "Contact" ? (
           <section className="info-page contact-page" aria-labelledby="contact-heading">
             <div className="contact-hero">
               <div className="contact-hero-copy">
