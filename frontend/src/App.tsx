@@ -761,8 +761,6 @@ function App() {
     .map((item) => item.genre.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [catalog, category]);
 
   const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
-  const isTasteSetupRequired = false;
-
   useEffect(() => {
     if (account && !isCheckingAccount && !isAuthOpen && !tasteSetupComplete && !hasDismissedTasteSetup) {
       setIsTasteSetupOpen(true);
