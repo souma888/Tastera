@@ -29,3 +29,22 @@
 .connection-loading { padding: 10px 0; }
 .connection-explorer .creator-link { color: var(--lavender); }
 @media (max-width: 650px) { .connection-explorer-backdrop { padding: 8px; } .connection-explorer { max-height: 92vh; padding: 17px; border-radius: 15px; } .connection-item-heading { grid-template-columns: 88px minmax(0,1fr); gap: 12px; padding-right: 32px; } .connection-item-heading > img,.connection-item-heading > .connection-result-placeholder { width: 88px; } .connection-results-grid { grid-template-columns: 1fr; } .connection-results-heading { align-items: flex-start; flex-direction: column; } }
+
+/* Keep creator navigation as a text link, never a native outlined button. */
+.connection-creator-button,
+.connection-creator-button:hover,
+.connection-creator-button:active,
+.connection-creator-button:focus,
+.connection-creator-button:focus-visible {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--lavender);
+}
+.connection-creator-button:hover,
+.connection-creator-button:focus-visible { text-decoration: underline; }
