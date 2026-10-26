@@ -1319,20 +1319,51 @@ function App() {
           </section>
         ) : activePage === "Contact" ? (
           <section className="info-page contact-page" aria-labelledby="contact-heading">
-            <div className="info-hero">
-              <span className="eyebrow">CONTACT THE CREATOR</span>
-              <h1 id="contact-heading">Help make the next version <span>better.</span></h1>
-              <p>I’m Soumadip, the person building Tastera. Found a broken poster, a confusing connection, a book or album we should add, or a feature you wish existed? Send me the details directly.</p>
+            <div className="contact-hero">
+              <div className="contact-hero-copy">
+                <span className="eyebrow"><span className="contact-live-dot" /> CONTACT THE CREATOR</span>
+                <h1 id="contact-heading">Good discoveries start with a <span>conversation.</span></h1>
+                <p>Have an idea, spotted a bug, or found something missing from the catalog? Tell me. Thoughtful feedback helps make TASTERA more useful for everyone.</p>
+                <a className="contact-primary-cta" href="mailto:soumadipkaran8@gmail.com?subject=TASTERA%20feedback">Send a message <span aria-hidden="true">↗</span></a>
+                <span className="contact-hero-footnote">Independent project · Built and improved with community feedback</span>
+              </div>
+              <div className="contact-hero-art" aria-hidden="true">
+                <div className="contact-orbit contact-orbit-one" />
+                <div className="contact-orbit contact-orbit-two" />
+                <div className="contact-art-mark">t<span>.</span></div>
+                <div className="contact-art-note contact-art-note-one"><span>01</span> A good idea</div>
+                <div className="contact-art-note contact-art-note-two"><span>02</span> A better discovery</div>
+              </div>
             </div>
-            <div className="contact-intro"><span className="contact-avatar">S</span><div><strong>Soumadip Karan</strong><span>Creator & developer of Tastera</span><p>For bug reports, include the page name, what you expected, and what happened. For catalog suggestions, include the title and whether it is a movie, book, or album.</p></div></div>
+            <div className="contact-section-heading">
+              <span className="eyebrow">PICK YOUR PATH</span>
+              <h2>Reach out, your way.</h2>
+              <p>Choose the channel that suits what you want to share.</p>
+            </div>
             <div className="contact-grid contact-grid-detailed">
-              <article className="contact-card"><span className="contact-icon"><ContactLogo kind="email" /></span><div><span className="eyebrow">EMAIL · BEST FOR FEEDBACK</span><a href="mailto:soumadipkaran8@gmail.com?subject=Tastera%20feedback">soumadipkaran8@gmail.com</a><a href="mailto:soumadipkaran88@gmail.com?subject=Tastera%20feedback">soumadipkaran88@gmail.com</a><small>Send an idea, bug report, or catalog correction.</small></div></article>
-              <article className="contact-card"><span className="contact-icon contact-instagram"><ContactLogo kind="instagram" /></span><div><span className="eyebrow">INSTAGRAM</span><a href="https://www.instagram.com/soumadip1608?exln=b2xwZTRmdHNqdmlj" target="_blank" rel="noreferrer">@soumadip1608 ↗</a><small>Follow or send a direct message.</small></div></article>
-              <article className="contact-card"><span className="contact-icon contact-whatsapp"><ContactLogo kind="whatsapp" /></span><div><span className="eyebrow">WHATSAPP</span><a href="https://wa.me/917074796529" target="_blank" rel="noreferrer">+91 70747 96529 ↗</a><small>Open a WhatsApp conversation.</small></div></article>
-              <article className="contact-card"><span className="contact-icon contact-github"><ContactLogo kind="github" /></span><div><span className="eyebrow">TASTERA SOURCE CODE</span><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">github.com/souma888/Tastera ↗</a><small>Browse the code and report project issues.</small></div></article>
-              <article className="contact-card"><span className="contact-icon contact-github"><ContactLogo kind="github" /></span><div><span className="eyebrow">DEVELOPER PROFILE</span><a href="https://github.com/souma888" target="_blank" rel="noreferrer">github.com/souma888 ↗</a><small>See my other work on GitHub.</small></div></article>
+              <article className="contact-card contact-card-email">
+                <span className="contact-icon"><ContactLogo kind="email" /></span>
+                <div><span className="eyebrow">BEST FOR FEEDBACK</span><h3>Email</h3><p>Bug reports, feature ideas, catalog corrections, or anything that needs a little detail.</p><a className="contact-card-link" href="mailto:soumadipkaran8@gmail.com?subject=TASTERA%20feedback">soumadipkaran8@gmail.com <span aria-hidden="true">↗</span></a></div>
+              </article>
+              <article className="contact-card contact-card-instagram">
+                <span className="contact-icon contact-instagram"><ContactLogo kind="instagram" /></span>
+                <div><span className="eyebrow">SOCIAL</span><h3>Instagram</h3><p>Quick thoughts, casual feedback, or a message about the project.</p><a className="contact-card-link" href="https://www.instagram.com/soumadip1608?exln=b2xwZTRmdHNqdmlj" target="_blank" rel="noreferrer">@soumadip1608 <span aria-hidden="true">↗</span></a></div>
+              </article>
+              <article className="contact-card contact-card-whatsapp">
+                <span className="contact-icon contact-whatsapp"><ContactLogo kind="whatsapp" /></span>
+                <div><span className="eyebrow">DIRECT MESSAGE</span><h3>WhatsApp</h3><p>Prefer a direct conversation? Open a chat and say hello.</p><a className="contact-card-link" href="https://wa.me/917074796529" target="_blank" rel="noreferrer">+91 70747 96529 <span aria-hidden="true">↗</span></a></div>
+              </article>
+              <article className="contact-card contact-card-github">
+                <span className="contact-icon contact-github"><ContactLogo kind="github" /></span>
+                <div><span className="eyebrow">OPEN SOURCE</span><h3>GitHub repository</h3><p>Explore the implementation, report a reproducible issue, or follow the project's progress.</p><a className="contact-card-link" href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View TASTERA source <span aria-hidden="true">↗</span></a></div>
+              </article>
             </div>
-            <p className="contact-response-note">Please don’t send passwords or private account details. A page name and a short description are enough for me to investigate most issues.</p>
+            <div className="contact-message-guide">
+              <div className="contact-guide-symbol" aria-hidden="true">✳</div>
+              <div><span className="eyebrow">HELP ME HELP YOU</span><h2>A little context goes a long way.</h2><p>For a bug, mention the page, what you expected, and what happened. For a catalog suggestion, include the title and whether it’s a movie, book, or album. Screenshots are welcome.</p></div>
+              <a href="mailto:soumadipkaran8@gmail.com?subject=TASTERA%20feedback" aria-label="Email TASTERA feedback">Let’s talk <span aria-hidden="true">↗</span></a>
+            </div>
+            <p className="contact-response-note"><span aria-hidden="true">🔒</span> Please don’t send passwords or private account details. TASTERA is an independent project, so replies may not be immediate.</p>
           </section>
         ) : activePage === "Settings" ? (
           <section className="settings-page" aria-labelledby="settings-heading">
