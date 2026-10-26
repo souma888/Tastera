@@ -444,6 +444,7 @@ function App() {
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
   const [isTasteSetupOpen, setIsTasteSetupOpen] = useState(false);
+  const [hasDismissedTasteSetup, setHasDismissedTasteSetup] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedSearchItem, setSelectedSearchItem] = useState<Media | null>(null);
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
@@ -760,7 +761,13 @@ function App() {
     .map((item) => item.genre.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [catalog, category]);
 
   const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
-  const isTasteSetupRequired = !isCheckingAccount && !isAuthOpen && !tasteSetupComplete;
+  const isTasteSetupRequired = false;
+
+  useEffect(() => {
+    if (account && !isCheckingAccount && !isAuthOpen && !tasteSetupComplete && !hasDismissedTasteSetup) {
+      setIsTasteSetupOpen(true);
+    }
+  }, [account, hasDismissedTasteSetup, isAuthOpen, isCheckingAccount, tasteSetupComplete]);
   const tasteGenreOptions = useMemo(() => [...new Set([...tastePreferences.genres, ...catalog.map((item) => item.genre.trim())].filter((genre) => genre && genre.toLowerCase() !== "genre not provided"))].sort((left, right) => left.localeCompare(right)), [catalog, tastePreferences.genres]);
   const tasteCreatorOptions = useMemo(() => [...new Set([...tastePreferences.favoriteArtists, ...catalog.filter((item) => item.category === "Music").map((item) => item.creator.trim())].filter(Boolean))].sort((left, right) => left.localeCompare(right)), [catalog, tastePreferences.favoriteArtists]);
   const filteredTasteGenres = tasteGenreOptions.filter((genre) => genre.toLowerCase().includes(tasteGenreSearch.trim().toLowerCase()));
@@ -841,6 +848,7 @@ function App() {
     localStorage.setItem("tastera_taste_setup", JSON.stringify(preferences));
     setTastePreferences(preferences);
     setIsTasteSetupOpen(false);
+    setHasDismissedTasteSetup(false);
     setTasteEditorNotice("");
     setSeenRecommendationIds([]);
   }
@@ -1301,7 +1309,7 @@ function App() {
             </div>
             <div className="about-story-grid">
               <article className="about-story-card about-story-primary"><span className="eyebrow">THE IDEA</span><h2>Discovery should feel connected.</h2><p>Most catalogs stop at their own category. Tastera starts with movies, books, and music together, then gives people ways to move between them through genres, creators, shared themes, and their own taste signals.</p><p>The aim is not to tell you what you should like. It is to make the next interesting thing easier to find—and to make the path between discoveries visible.</p></article>
-              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Complete the first-run taste setup by choosing at least one favorite, artist, genre, or mood before continuing.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, track planned, in-progress, and finished items, rate them, and keep private notes.</li><li>Track book and album progress with a percentage and review recent Library activity. Your ratings contribute to your personal recommendation ranking.</li><li>Organize browser-based collections and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
+              <article className="about-story-card"><span className="eyebrow">WHAT YOU CAN DO</span><h2>One catalog, several ways in.</h2><ul><li>Search and filter movies, books, and music; choose 50, 100, or 150 results per page.</li><li>Optionally choose favorite titles, artists, genres, and moods after signing in to personalize recommendations. You can skip this and return to it later in Settings.</li><li>Use Settings for expanded taste presets—up to 12 genres, 8 artists, and 3 moods—alongside category mix and movie ranking controls.</li><li>Save discoveries to an account-backed Library, track planned, in-progress, and finished items, rate them, and keep private notes.</li><li>Track book and album progress with a percentage and review recent Library activity. Your ratings contribute to your personal recommendation ranking.</li><li>Organize browser-based collections and share a collection link.</li><li>Refresh For You, tune its category mix, and give “More like this” or “Not for me” feedback.</li><li>Open cross-media pathways and creator pages, then explore saved and rated signals on the draggable Taste Map.</li></ul></article>
               <article className="about-story-card"><span className="eyebrow">CONNECTIONS, HONESTLY</span><h2>Every path shows its evidence.</h2><p>Creator pages group records with the same creator credit. Pathways can use an exact shared catalog genre, the same creator, or a shared word from Tastera editorial notes. Saved and feedback activity is called out separately, so it is not mistaken for catalog similarity.</p><p>Setting and influence credits are not consistently present in the catalog yet, so Tastera does not claim those links when the underlying data is missing. These pathways are explainable discovery links, not a trained cross-media ranking model.</p></article>
               <article className="about-story-card"><span className="eyebrow">BUILT IN PUBLIC</span><h2>An evolving independent project.</h2><p>Tastera is being developed by Soumadip Karan. The code, issues, and project progress are available in the public repository. Catalog information and artwork come from third-party sources; provider attribution and image rights remain with their respective owners.</p><div className="about-links"><a href="https://github.com/souma888/Tastera" target="_blank" rel="noreferrer">View the GitHub repository ↗</a><a href="https://github.com/souma888" target="_blank" rel="noreferrer">Meet the developer on GitHub ↗</a></div></article>
             </div>
@@ -2134,7 +2142,7 @@ function App() {
         </footer>
       </main>
 
-      {!isAuthOpen && (isTasteSetupOpen || isTasteSetupRequired) && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} required={isTasteSetupRequired} onSave={saveTasteSetup} onCancel={() => setIsTasteSetupOpen(false)} />}
+      {!isAuthOpen && isTasteSetupOpen && account && <TasteSetup catalog={recommendationCatalog} initial={tastePreferences} onSave={saveTasteSetup} onCancel={() => { setIsTasteSetupOpen(false); setHasDismissedTasteSetup(true); }} />}
 
       {(selectedSearchItem || selectedCreator || selectedTheme) && (
         <ConnectionExplorer
