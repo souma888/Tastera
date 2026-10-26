@@ -36,6 +36,18 @@ function formatMetadataDate(value: string) {
   return date.toLocaleDateString(undefined, { month: "short", year: "numeric" });
 }
 
+function formatProviderRegion(region: string) {
+  if (!/^[A-Z]{2}$/i.test(region)) return region;
+  try { return new Intl.DisplayNames(["en"], { type: "region" }).of(region) ?? region; }
+  catch { return region; }
+}
+
+function formatLanguage(language: string) {
+  if (!/^[a-z]{2,3}$/i.test(language)) return language;
+  try { return new Intl.DisplayNames(["en"], { type: "language" }).of(language) ?? language; }
+  catch { return language; }
+}
+
 export default function MediaCard({
   item,
   isSaved,
@@ -123,12 +135,12 @@ export default function MediaCard({
         </a>
       )}
 
-      <div className="card-meta">{genreLabel.toUpperCase()}</div>
+      <div className="card-meta">{genreLabel.toUpperCase()}{item.language ? ` · ${formatLanguage(item.language).toUpperCase()}` : ""}</div>
       <h3>{item.title}</h3>
       <p className="creator">
         {onOpenCreator ? <button type="button" className="creator-link" onClick={() => onOpenCreator(item.creator)}>{item.creator} · View creator</button> : item.creator}
       </p>
-      {item.watch_url && <a className="where-to-watch-link" href={item.watch_url} target="_blank" rel="noreferrer">Check watch options{item.provider_region ? ` · ${item.provider_region}` : ""} · JustWatch / TMDb ↗</a>}
+      {item.watch_url && <a className="where-to-watch-link" href={item.watch_url} target="_blank" rel="noreferrer" aria-label={`View watch options for ${item.title}${item.provider_region ? ` in ${formatProviderRegion(item.provider_region)}` : ""} (TMDb)`}>View watch options{item.provider_region ? ` · ${formatProviderRegion(item.provider_region)}` : ""} ↗</a>}
       {item.source && item.updated_at && <p className="media-data-freshness"><span>{item.source}</span><span>{metadataDate ? `Updated ${metadataDate}` : "Metadata date unavailable"}</span></p>}
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>

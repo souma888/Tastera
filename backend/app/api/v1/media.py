@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_session
 from app.models.catalog import CreatorAliasRecord, MediaItemRecord, MediaRelationshipRecord
-from app.schemas.media import MediaCategory, MediaItem, MediaPage, SemanticMediaPage, SemanticMediaResult
-from app.services.catalog import get_media, list_media, to_schema
+from app.schemas.media import MediaCategory, MediaFilters, MediaItem, MediaPage, SemanticMediaPage, SemanticMediaResult
+from app.services.catalog import get_media, get_media_filters, list_media, to_schema
 from app.services.semantic_search import EMBEDDING_MODEL, search_semantic
 
 
@@ -51,6 +51,7 @@ def search_media_semantically(
     session: Annotated[Session, Depends(get_session)],
     q: Annotated[str, Query(min_length=3, max_length=500)],
     category: MediaCategory | None = None,
+    language: Annotated[str | None, Query(min_length=2, max_length=40)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     exclude_ids: Annotated[list[str], Query()] = [],
 ) -> SemanticMediaPage:
@@ -60,7 +61,7 @@ def search_media_semantically(
     if len(query) < 3:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Search text must contain at least three non-space characters.")
     try:
-        matches = search_semantic(session, query, category=category, limit=limit, exclude_ids=set(exclude_ids))
+        matches = search_semantic(session, query, category=category, language=language, limit=limit, exclude_ids=set(exclude_ids))
     except SQLAlchemyError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -79,12 +80,22 @@ def get_media_catalog(
     session: Annotated[Session, Depends(get_session)],
     category: MediaCategory | None = None,
     q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    language: Annotated[str | None, Query(min_length=2, max_length=40)] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=150)] = 20,
 ) -> MediaPage:
     """List catalog media with optional category and text filtering."""
 
-    return list_media(session, category=category, query=q, page=page, limit=limit)
+    return list_media(session, category=category, query=q, language=language, page=page, limit=limit)
+
+
+@router.get("/filters", response_model=MediaFilters)
+def get_catalog_filters(
+    session: Annotated[Session, Depends(get_session)],
+    category: MediaCategory | None = None,
+) -> MediaFilters:
+    """List genre and language filter values for the full selected category."""
+    return get_media_filters(session, category=category)
 
 
 @router.get("/{media_id}", response_model=MediaItem)

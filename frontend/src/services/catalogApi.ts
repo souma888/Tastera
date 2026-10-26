@@ -3,10 +3,13 @@ import { apiBaseUrl } from "./apiBaseUrl";
 
 export interface CatalogQuery {
   category?: MediaCategory;
+  language?: string;
   q?: string;
   page?: number;
   limit?: number;
 }
+
+export interface CatalogFilters { genres: string[]; languages: string[] }
 
 export interface SemanticSearchPage {
   query: string;
@@ -38,6 +41,7 @@ export async function getCatalog(
   const parameters = new URLSearchParams();
 
   if (query.category) parameters.set("category", query.category);
+  if (query.language) parameters.set("language", query.language);
   if (query.q) parameters.set("q", query.q);
   if (query.page) parameters.set("page", String(query.page));
   if (query.limit) parameters.set("limit", String(query.limit));
@@ -50,12 +54,21 @@ export async function getCatalog(
   return response.json() as Promise<MediaPage>;
 }
 
+export async function getCatalogFilters(category?: MediaCategory): Promise<CatalogFilters> {
+  const parameters = new URLSearchParams();
+  if (category) parameters.set("category", category);
+  const response = await fetch(`${apiBaseUrl}/media/filters?${parameters}`);
+  if (!response.ok) throw new Error(`Catalog filter request failed with status ${response.status}.`);
+  return response.json() as Promise<CatalogFilters>;
+}
+
 export async function getSemanticCatalog(
   query: string,
-  options: { category?: MediaCategory; limit?: number; signal?: AbortSignal; excludeIds?: string[] } = {},
+  options: { category?: MediaCategory; language?: string; limit?: number; signal?: AbortSignal; excludeIds?: string[] } = {},
 ): Promise<SemanticSearchPage> {
   const parameters = new URLSearchParams({ q: query, limit: String(options.limit ?? 50) });
   if (options.category) parameters.set("category", options.category);
+  if (options.language) parameters.set("language", options.language);
   options.excludeIds?.forEach((id) => parameters.append("exclude_ids", id));
   const response = await fetch(`${apiBaseUrl}/media/semantic?${parameters}`, { signal: options.signal });
   if (!response.ok) {

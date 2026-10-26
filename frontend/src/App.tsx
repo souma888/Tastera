@@ -27,12 +27,21 @@ import {
   setRecommendationFeedback,
   signIn,
 } from "./services/accountApi";
-import { getCatalog, getSemanticCatalog } from "./services/catalogApi";
+import { getCatalog, getCatalogFilters, getSemanticCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
 import type { CoreMediaCategory, LibraryActivity, Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage, SavedMedia, SavedMediaUpdate } from "./types/media";
 import "./App.css";
 
 const categories: MediaFilter[] = ["All", "Movies", "TV", "Books", "Music", "Games", "Podcasts"];
+
+function languageLabel(language: string) {
+  if (/^[a-z]{2,3}$/i.test(language)) {
+    try {
+      return new Intl.DisplayNames(["en"], { type: "language" }).of(language) ?? language;
+    } catch { return language; }
+  }
+  return language;
+}
 
 const navigationItems = [
   ["Discover", "⌂"],
@@ -451,6 +460,9 @@ function App() {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [activeDiscoveryPrompt, setActiveDiscoveryPrompt] = useState<(typeof discoveryPrompts)[number] | null>(null);
   const [genreFilter, setGenreFilter] = useState("All genres");
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [languageFilter, setLanguageFilter] = useState("All languages");
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
 
 
   useEffect(() => {
@@ -574,6 +586,7 @@ function App() {
     setSearch("");
     setPageNumber(1);
     setCategory(mediaCategory ?? "All");
+    setLanguageFilter("All languages");
     navigate(page);
   }
 
@@ -698,6 +711,7 @@ function App() {
         if (searchMode === "semantic" && searchQuery) {
           const page = await getSemanticCatalog(searchQuery, {
             category: category === "All" ? undefined : category,
+            language: languageFilter === "All languages" ? undefined : languageFilter,
             limit: Math.min(pageSize, 50),
             signal: controller.signal,
           });
@@ -708,6 +722,7 @@ function App() {
           const page = await getCatalog(
             {
               category: category === "All" ? undefined : category,
+              language: languageFilter === "All languages" ? undefined : languageFilter,
               q: searchQuery || undefined,
               page: pageNumber,
               limit: pageSize,
@@ -741,7 +756,25 @@ function App() {
       window.clearTimeout(loadCatalog);
       controller.abort();
     };
-  }, [activePage, category, search, searchMode, pageNumber, pageSize, unavailableMusicArtwork]);
+  }, [activePage, category, languageFilter, search, searchMode, pageNumber, pageSize, unavailableMusicArtwork]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getCatalogFilters(category === "All" ? undefined : category)
+      .then((filters) => {
+        if (!controller.signal.aborted) {
+          setAvailableGenres(filters.genres);
+          setAvailableLanguages(filters.languages);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setAvailableGenres([]);
+          setAvailableLanguages([]);
+        }
+      });
+    return () => controller.abort();
+  }, [category]);
 
   const visibleMedia = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -751,6 +784,7 @@ function App() {
       const matchesCategory =
         category === "All" || item.category === category;
       const matchesGenre = genreFilter === "All genres" || item.genre === genreFilter;
+      const matchesLanguage = languageFilter === "All languages" || item.language?.toLowerCase() === languageFilter.toLowerCase();
       const promptText = `${item.title} ${item.creator} ${item.genre} ${item.connection}`.toLowerCase();
       const matchesPrompt = !activeDiscoveryPrompt || activeDiscoveryPrompt.terms.some((term) => promptText.includes(term));
 
@@ -761,13 +795,9 @@ function App() {
         item.genre.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query);
 
-      return matchesCategory && matchesGenre && matchesPrompt && matchesSearch;
+      return matchesCategory && matchesGenre && matchesLanguage && matchesPrompt && matchesSearch;
     });
-  }, [activePage, activeDiscoveryPrompt, catalog, category, genreFilter, savedItems, search, searchMode]);
-
-  const availableGenres = useMemo(() => [...new Set(catalog
-    .filter((item) => category === "All" || item.category === category)
-    .map((item) => item.genre.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [catalog, category]);
+  }, [activePage, activeDiscoveryPrompt, catalog, category, genreFilter, languageFilter, savedItems, search, searchMode]);
 
   const tasteSetupComplete = tastePreferences.favoriteIds.length + tastePreferences.favoriteArtists.length + tastePreferences.genres.length + tastePreferences.moods.length > 0;
   useEffect(() => {
@@ -1101,6 +1131,7 @@ function App() {
       setCategory("All");
       setActiveDiscoveryPrompt(null);
       setGenreFilter("All genres");
+      setLanguageFilter("All languages");
     }
   }
 
@@ -1717,6 +1748,7 @@ function App() {
                             onClick={() => {
                               setSearch("");
                               setCategory(mediaCategory);
+                              setLanguageFilter("All languages");
                               navigate("Discover");
                             }}
                           >
@@ -1837,6 +1869,7 @@ function App() {
                       setSearch("");
                       setPageNumber(1);
                       setCategory(activeHeroSlide.category ?? "All");
+                      setLanguageFilter("All languages");
                       navigate(activeHeroSlide.destination);
                       if (activeHeroSlide.destination === "Discover") {
                         window.setTimeout(() => document.getElementById("discovery")?.scrollIntoView({ behavior: "smooth" }), 0);
@@ -2098,6 +2131,7 @@ function App() {
                           setActiveDiscoveryPrompt(next);
                           setCategory(next?.category ?? "All");
                           setGenreFilter("All genres");
+                          setLanguageFilter("All languages");
                           setPageNumber(1);
                         }}
                       >{prompt.label}</button>
@@ -2117,6 +2151,7 @@ function App() {
                       setCategory(item);
                       setActiveDiscoveryPrompt(null);
                       setGenreFilter("All genres");
+                      setLanguageFilter("All languages");
                       setPageNumber(1);
                     }}
                   >
@@ -2136,6 +2171,8 @@ function App() {
                   }} />
                   <label htmlFor="catalog-genre-filter">Genre</label>
                   <ThemedSelect ariaLabel="Genre filter" id="catalog-genre-filter" value={genreFilter} options={[{ value: "All genres", label: "All genres" }, ...availableGenres.map((genre) => ({ value: genre, label: genre }))]} onChange={(value) => { setGenreFilter(value); setPageNumber(1); }} />
+                  <label htmlFor="catalog-language-filter">Language</label>
+                  <ThemedSelect ariaLabel="Language filter" id="catalog-language-filter" value={languageFilter} options={[{ value: "All languages", label: "All languages" }, ...availableLanguages.map((language) => ({ value: language, label: languageLabel(language) }))]} onChange={(value) => { setLanguageFilter(value); setPageNumber(1); }} />
                   <span>Catalog is ordered by popularity. More filters appear as reliable metadata becomes available.</span>
                 </div>
               )}

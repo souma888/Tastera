@@ -21,6 +21,7 @@ class MediaItemRecord(Base):
     primary_genre: Mapped[str] = mapped_column(String(100), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     artwork_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    language: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
     watch_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     provider_region: Mapped[str | None] = mapped_column(String(8), nullable=True)
     connection: Mapped[str] = mapped_column(Text)

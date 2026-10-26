@@ -26,6 +26,7 @@ TMDB_API = "https://api.themoviedb.org/3"
 TMDB_IMAGE = "https://image.tmdb.org/t/p/w500"
 PROVIDER = "tmdb-movie"
 WATCH_PROVIDER_REGION = "US"
+INDIAN_MOVIE_LANGUAGES = ("hi", "ta", "te", "ml", "kn")
 
 
 @dataclass
@@ -138,6 +139,7 @@ def _upsert_movie(
             creator=creator,
             category="Movies",
             primary_genre=primary_genre,
+            language=movie.get("original_language"),
             description=movie.get("overview") or None,
             artwork_url=artwork,
             watch_url=provider_data.get("link"),
@@ -155,6 +157,7 @@ def _upsert_movie(
     record.creator = creator
     record.category = "Movies"
     record.primary_genre = primary_genre
+    record.language = movie.get("original_language")
     record.description = movie.get("overview") or None
     record.artwork_url = artwork
     record.watch_url = provider_data.get("link")
@@ -227,6 +230,96 @@ def import_popular_movies(
     return summary
 
 
+def import_indian_movies(
+    *,
+    total: int = 1000,
+    request_delay: float = 0.25,
+    watch_region: str = "IN",
+) -> ImportSummary:
+    """Import highly rated Indian films, weighted toward Hindi cinema.
+
+    The default target reserves about 60% for Hindi films and splits the rest
+    evenly across Tamil, Telugu, Malayalam, and Kannada films. TMDb's vote
+    count ordering favors established, widely rated titles over obscure entries.
+    """
+    token = os.getenv("TMDB_READ_ACCESS_TOKEN")
+    if not token:
+        raise RuntimeError(
+            "Set TMDB_READ_ACCESS_TOKEN to a TMDb API Read Access Token before importing."
+        )
+    if total < 1 or total > 5000:
+        raise ValueError("total must be between 1 and 5000")
+
+    hindi_target = round(total * 0.6)
+    remaining = total - hindi_target
+    regional_targets = [remaining // 4] * 4
+    for index in range(remaining % 4):
+        regional_targets[index] += 1
+    language_targets = dict(zip(INDIAN_MOVIE_LANGUAGES, [hindi_target, *regional_targets]))
+
+    summary = ImportSummary()
+    with httpx.Client(
+        headers={"Authorization": f"Bearer {token}", "accept": "application/json"},
+        timeout=30,
+    ) as client, SessionLocal() as session:
+        with catalog_import_run(session, "tmdb-indian-movie") as run:
+            genres_response = _request(client, "/genre/movie/list", {"language": "en-US"})
+            genre_names = {int(genre["id"]): genre["name"] for genre in genres_response["genres"]}
+            genre_cache: dict[str, Genre] = {}
+
+            for original_language, target in language_targets.items():
+                imported_candidates = 0
+                page = 1
+                while imported_candidates < target:
+                    result = _request(
+                        client,
+                        "/discover/movie",
+                        {
+                            "language": "en-US",
+                            "with_original_language": original_language,
+                            "with_origin_country": "IN",
+                            "vote_count.gte": 50,
+                            "sort_by": "vote_count.desc",
+                            "include_adult": "false",
+                            "page": page,
+                        },
+                    )
+                    movies = result.get("results", [])
+                    if not movies:
+                        break
+
+                    for movie in movies:
+                        external_id = str(movie.get("id", ""))
+                        if not external_id.isdigit() or not (movie.get("title") or movie.get("original_title")):
+                            summary.skipped += 1
+                            run.skipped += 1
+                            continue
+                        try:
+                            outcome = _upsert_movie(
+                                session, movie, genre_names, genre_cache, client, watch_region
+                            )
+                            if outcome == "added":
+                                summary.added += 1
+                                run.added += 1
+                            else:
+                                summary.updated += 1
+                                run.updated += 1
+                            session.commit()
+                            imported_candidates += 1
+                        except (httpx.HTTPError, KeyError, ValueError):
+                            session.rollback()
+                            summary.skipped += 1
+                            run.skipped += 1
+                        if request_delay:
+                            time.sleep(request_delay)
+
+                    if page >= int(result.get("total_pages", page)):
+                        break
+                    page += 1
+
+    return summary
+
+
 def import_popular_tv(*, pages: int = 1, language: str = "en-US", request_delay: float = 0.25, watch_region: str = WATCH_PROVIDER_REGION) -> ImportSummary:
     """Import popular TV metadata and region-scoped TMDb watch links."""
     token = os.getenv("TMDB_READ_ACCESS_TOKEN")
@@ -267,6 +360,7 @@ def import_popular_tv(*, pages: int = 1, language: str = "en-US", request_delay:
                         region = watch_region.upper()
                         providers = _request(client, f"/tv/{external_id}/watch/providers", {}).get("results", {}).get(region, {})
                         record.title, record.creator, record.category = title, creator, "TV"
+                        record.language = show.get("original_language")
                         record.primary_genre = primary
                         record.description = show.get("overview") or None
                         record.artwork_url = f"{TMDB_IMAGE}{image_path}" if image_path else None
@@ -288,22 +382,31 @@ def import_popular_tv(*, pages: int = 1, language: str = "en-US", request_delay:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--indian", action="store_true", help="Import a Hindi-heavy mix of Indian films.")
+    parser.add_argument("--indian-count", type=int, default=1000, help="Target count for --indian (default: 1000).")
     parser.add_argument("--media-type", choices=("movie", "tv"), default="movie", help="TMDb catalog type to import.")
     parser.add_argument("--pages", type=int, default=1, help="Popular movie pages to import (20 records per page).")
     parser.add_argument("--language", default="en-US", help="TMDb metadata language.")
     parser.add_argument("--request-delay", type=float, default=0.25, help="Seconds between movie detail requests.")
-    parser.add_argument("--watch-region", default=WATCH_PROVIDER_REGION, help="ISO country code for TMDb watch availability links (default: US).")
+    parser.add_argument("--watch-region", default=None, help="ISO country code for TMDb watch availability links (defaults to IN with --indian, otherwise US).")
     args = parser.parse_args()
     if args.request_delay < 0:
         parser.error("--request-delay cannot be negative")
 
-    importer = import_popular_tv if args.media_type == "tv" else import_popular_movies
-    summary = importer(
-        pages=args.pages,
-        language=args.language,
-        request_delay=args.request_delay,
-        watch_region=args.watch_region,
-    )
+    if args.indian:
+        summary = import_indian_movies(
+            total=args.indian_count,
+            request_delay=args.request_delay,
+            watch_region=args.watch_region or "IN",
+        )
+    else:
+        importer = import_popular_tv if args.media_type == "tv" else import_popular_movies
+        summary = importer(
+            pages=args.pages,
+            language=args.language,
+            request_delay=args.request_delay,
+            watch_region=args.watch_region or WATCH_PROVIDER_REGION,
+        )
     print(
         f"TMDb import run {summary.run_id} complete: {summary.added} added, "
         f"{summary.updated} updated, {summary.skipped} skipped."

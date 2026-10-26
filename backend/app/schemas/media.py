@@ -26,6 +26,7 @@ class MediaItem(BaseModel):
     category: MediaCategory
     genre: str
     image: HttpUrl | None = None
+    language: str | None = None
     watch_url: HttpUrl | None = None
     provider_region: str | None = None
     description: str | None = None
@@ -45,6 +46,13 @@ class MediaPage(BaseModel):
     limit: int = Field(ge=1)
     total: int = Field(ge=0)
     total_pages: int = Field(ge=0)
+
+
+class MediaFilters(BaseModel):
+    """Distinct genre and language options for catalog filters."""
+
+    genres: list[str]
+    languages: list[str]
 
 
 class SemanticMediaResult(BaseModel):

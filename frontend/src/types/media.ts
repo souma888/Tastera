@@ -10,6 +10,7 @@ export interface Media {
   category: MediaCategory;
   genre: string;
   image: string | null;
+  language?: string | null;
   watch_url?: string | null;
   provider_region?: string | null;
   connection: string;

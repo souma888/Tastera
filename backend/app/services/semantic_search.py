@@ -8,7 +8,7 @@ from functools import lru_cache
 from os import getenv
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.database import DATABASE_URL
@@ -76,6 +76,7 @@ def search_semantic(
     query: str,
     *,
     category: MediaCategory | None,
+    language: str | None = None,
     limit: int,
     exclude_ids: set[str] | None = None,
 ) -> list[tuple[MediaItemRecord, float]]:
@@ -111,6 +112,8 @@ def search_semantic(
     )
     if category:
         statement = statement.where(MediaItemRecord.category == category.value)
+    if language:
+        statement = statement.where(func.lower(MediaItemRecord.language) == language.strip().lower())
     if exclude_ids:
         statement = statement.where(~MediaItemRecord.id.in_(exclude_ids))
     rows = session.execute(statement.order_by(distance).limit(limit)).all()

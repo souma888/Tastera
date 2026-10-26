@@ -174,11 +174,33 @@ $env:TMDB_READ_ACCESS_TOKEN = "your-read-access-token"
 python -m app.import_tmdb --pages 5
 ```
 
+TMDb's original-language code is saved with each imported movie and TV title,
+and the catalog exposes it alongside genres in the Discover filters. Existing
+TMDb rows receive a language value the next time their provider metadata is
+refreshed. After deploying the language migration, rerun the relevant TMDb
+import command to backfill language values for existing catalog entries.
+
 Each popular page contains up to 20 movies. The importer waits between movie
 credit requests and retries temporary rate-limit/server errors. Options include
 `--pages` (1–500), `--language` (default `en-US`), and `--request-delay`
 (default `0.25` seconds). The first import can add up to 100 movies with the
 example command. Run it again to update matching records without duplicates.
+
+To build a larger Indian-film catalog, use the same importer with `--indian`.
+Its default target is 1,000 titles: about 60% Hindi films and the rest split
+across Tamil, Telugu, Malayalam, and Kannada films. Within each language it
+prioritizes titles with the most TMDb votes and requires at least 50 votes.
+TMDb metadata and poster artwork are imported with the existing source
+attribution and ID-based deduplication:
+
+```powershell
+python -m app.import_tmdb --indian --indian-count 1000
+```
+
+The import makes several TMDb requests per title to retrieve credits and
+watch-provider links, so the first run can take a while. Set
+`--request-delay 0` to skip the delay between detail requests if you need a
+faster run; TMDb may still rate-limit bursts. The command can be safely rerun.
 
 TMDb requires attribution for non-commercial API use. The frontend includes the
 required notice: “This product uses the TMDB API but is not endorsed or
@@ -247,6 +269,25 @@ MusicBrainz core metadata is CC0; supplementary tags require attribution and
 non-commercial share-alike treatment. Cover-art rights vary by image, so do not
 assume Cover Art Archive images are freely licensed for redistribution or
 commercial use.
+
+### Import Indian songs and their albums
+
+The song importer searches MusicBrainz recordings for Hindi, Punjabi, Bengali,
+Tamil, Telugu, Malayalam, and Kannada tags. Its default target is 1,000 songs,
+weighted 70% Hindi and 30% across the other six language groups. It ranks
+results using community tag votes and MusicBrainz search relevance. A track is
+included only when it is connected to a release group with a confirmed front
+cover in Cover Art Archive. The importer adds the track, its album, and a
+`track-on-album` catalog relationship; artwork remains hosted externally.
+
+```powershell
+python -m app.import_indian_songs --count 1000
+```
+
+MusicBrainz requests are paced at one per second, so discovery can take several
+minutes. The run can add fewer than the target if MusicBrainz has too few
+matching records with confirmed covers. Existing tracks and albums are updated
+by their MusicBrainz IDs when the command is repeated.
 
 ## Test
 
