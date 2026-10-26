@@ -2934,3 +2934,41 @@
   .library-rating button { width: 32px; height: 32px; }
   .community-inline-profile { padding: 12px; }
 }
+
+/* Final reset: prevent native browser button borders/focus rectangles on text links. */
+.creator-link,
+.creator-link:visited,
+.creator-link:hover,
+.creator-link:active,
+.creator-link:focus,
+.creator-link:focus-visible,
+.connection-creator-button,
+.connection-creator-button:visited,
+.connection-creator-button:hover,
+.connection-creator-button:active,
+.connection-creator-button:focus,
+.connection-creator-button:focus-visible,
+.connection-back-link,
+.connection-back-link:hover,
+.connection-back-link:focus,
+.connection-back-link:focus-visible,
+.taste-related-creator,
+.taste-related-creator:hover,
+.taste-related-creator:active,
+.taste-related-creator:focus,
+.taste-related-creator:focus-visible {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  text-decoration-thickness: from-font;
+}
+.creator-link:focus-visible,
+.connection-creator-button:focus-visible,
+.connection-back-link:focus-visible,
+.taste-related-creator:focus-visible {
+  color: var(--lavender) !important;
+  text-decoration: underline !important;
+}
