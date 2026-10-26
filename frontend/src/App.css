@@ -3042,3 +3042,46 @@
 .community-quick-profile small { color: var(--text-muted); font-size: 10px; line-height: 1.6; }
 .community-activity-grid article { flex-wrap: wrap; }
 .community-activity-grid article > .community-quick-profile { flex: 1 0 100%; }
+
+/* Signed-in avatar is an interactive account control, with a compact identity popover. */
+.account-profile-wrap { position: relative; display: flex; flex: 0 1 auto; min-width: 0; }
+.account-profile-trigger {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.account-profile-trigger:hover,
+.account-profile-trigger[aria-expanded="true"] { background: #b39aff0d; }
+.account-profile-trigger:focus-visible { outline: 2px solid var(--lavender); outline-offset: 2px; }
+.account-info-popover {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) 26px;
+  align-items: start;
+  gap: 12px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid #b39aff45;
+  border-radius: 15px;
+  background: linear-gradient(145deg,#201a29,#110f15);
+  box-shadow: 0 16px 42px #0008;
+}
+.account-info-avatar { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #332844; color: var(--lavender); font-size: 17px; font-weight: 700; }
+.account-info-copy { display: grid; min-width: 0; gap: 6px; padding-top: 2px; }
+.account-info-copy strong { color: var(--text-primary); font-size: 12px; }
+.account-info-copy > span { overflow-wrap: anywhere; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
+.account-info-copy small { color: var(--text-muted); font-size: 10px; }
+.account-info-close { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 1px solid #ffffff18; border-radius: 50%; color: var(--text-secondary); background: #ffffff08; font-size: 18px; line-height: 1; cursor: pointer; }
+.account-info-close:hover { color: var(--text-primary); border-color: #b39aff66; }
+@media (max-width: 380px) {
+  .account-info-popover { right: -4px; }
+}
