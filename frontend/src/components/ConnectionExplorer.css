@@ -4,7 +4,7 @@
 .connection-explorer-heading { padding: 6px 44px 18px 0; }
 .connection-explorer-heading h2,.connection-item-heading h2 { margin: 8px 0; font: 600 clamp(24px, 3vw, 36px)/1.1 var(--font-heading); }
 .connection-explorer-heading p,.connection-item-heading p { max-width: 680px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
-.connection-back-link,.connection-creator-button { padding: 0; color: var(--lavender); background: none; font: inherit; font-size: 11px; text-align: left; }
+.connection-back-link,.connection-creator-button { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0; border: 0; border-radius: 0; outline: none; color: var(--lavender); background: transparent; box-shadow: none; font: inherit; font-size: 11px; line-height: 1.5; text-align: left; cursor: pointer; appearance: none; }
 .connection-item-heading { display: grid; grid-template-columns: 130px minmax(0,1fr); align-items: center; gap: 20px; padding: 5px 45px 22px 0; }
 .connection-item-heading > img,.connection-item-heading > .connection-result-placeholder { width: 130px; aspect-ratio: 3/4; border: 1px solid var(--border); border-radius: 10px; object-fit: cover; }
 .connection-item-heading p { margin: 10px 0; }
