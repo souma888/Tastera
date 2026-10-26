@@ -2,8 +2,9 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 
 from app.core.database import Base
 
@@ -38,6 +39,29 @@ class MediaItemRecord(Base):
     genre_links: Mapped[list["MediaGenre"]] = relationship(
         back_populates="media_item", cascade="all, delete-orphan"
     )
+    embedding: Mapped["MediaEmbeddingRecord | None"] = relationship(
+        back_populates="media_item", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class MediaEmbeddingRecord(Base):
+    """Model-versioned semantic representation of one catalog item."""
+
+    __tablename__ = "media_embeddings"
+
+    media_item_id: Mapped[str] = mapped_column(
+        ForeignKey("media_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    model_name: Mapped[str] = mapped_column(String(200), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), index=True)
+    embedding: Mapped[list[float]] = mapped_column(
+        Vector(384).with_variant(JSON(), "sqlite")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    media_item: Mapped[MediaItemRecord] = relationship(back_populates="embedding")
 
 
 class MediaIdentifier(Base):

@@ -7,6 +7,9 @@ psycopg[binary]
 argon2-cffi
 PyJWT
 email-validator
+pgvector
+sentence-transformers
+openai
 
 # Development and testing
 pytest

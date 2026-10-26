@@ -1,6 +1,6 @@
 # TASTERA Project Status
 
-**Last reviewed:** 2026-10-25
+**Last reviewed:** 2026-10-26
 **Status:** Live cross-media discovery product; catalog pathways and personal activity views are implemented.
 **Scope:** Movies, books, and music discovery with visible catalog and user-activity connections.
 
@@ -32,6 +32,9 @@
 - Account authentication with Argon2 password hashing and signed bearer sessions; per-account saved media and recommendation feedback. Frontend recovery preserves the current session and cached Library during temporary API failures, provides a manual refresh path, and treats confirmed `401` responses as expired sessions.
 - Manual importers for popular TMDb movies, rating-ranked Open Library works, and popularity-proxy MusicBrainz albums with confirmed Cover Art Archive covers.
 - MovieLens audit/recommender notebooks and app-feedback offline evaluation tooling.
+- Sentence Transformer catalog embedding model, idempotent embedding refresh command, pgvector migration, and semantic search route are implemented in code. They require the new migration and an embedding pass before semantic search is available in production.
+- The app-feedback evaluator now compares embeddings alongside genre and movie item-item ranking and reports Precision@K. The aggregate-only ML Lab API/dashboard hides model scores below the minimum cohort.
+- Authenticated evidence-phrasing endpoint is implemented. Add `OPENAI_API_KEY` to the backend host to enable model-written phrasing; otherwise it returns a deterministic fallback with the same structured evidence.
 
 ## Connection and recommendation limits
 
@@ -43,13 +46,14 @@
 
 ## Remaining work
 
-1. Gather enough distinct user feedback to compare recommendation relevance, variety, and catalog coverage on real app signals; preserve an untouched final evaluation where the data supports it.
-2. Continue improving catalog breadth, popular-item coverage, genres, creator normalization, duplicate handling, and artwork reliability across Books and Music.
-3. Add consistent structured theme, setting, influence, and cross-media relationship metadata with source provenance if those pathways are to go beyond current creator/genre/editorial evidence.
-4. Build and separately evaluate book and music recommenders when sufficient interaction data exists; only then assess personalized cross-media ranking.
-5. Expand backend and browser end-to-end coverage for accounts, isolation, saves, feedback, pagination, creator/theme lookups, and connection explanations. A saved-response timestamp regression test exists; full frontend/browser-flow coverage remains open.
-6. Address account security gaps: email verification, password recovery, session revocation, and login rate limiting.
-7. Add production monitoring, database backup/restore guidance, migration checks, import-run observability, and release/rollback procedures.
-8. Re-run MovieLens notebooks when making fresh reproducibility claims; the current experiments do not establish cross-media quality.
+1. Apply the pgvector migration and generate current catalog embeddings; configure `OPENAI_API_KEY` if model-written explanations are desired.
+2. Gather enough distinct user feedback to compare recommendation relevance, variety, and catalog coverage on real app signals; preserve an untouched final evaluation where the data supports it.
+3. Continue improving catalog breadth, popular-item coverage, genres, creator normalization, duplicate handling, and artwork reliability across Books and Music.
+4. Add consistent structured theme, setting, influence, and cross-media relationship metadata with source provenance if those pathways are to go beyond current creator/genre/editorial evidence.
+5. Build and separately evaluate book and music recommenders when sufficient interaction data exists; only then assess personalized cross-media ranking.
+6. Expand backend and browser end-to-end coverage for accounts, isolation, saves, feedback, pagination, creator/theme lookups, and connection explanations. A saved-response timestamp regression test exists; full frontend/browser-flow coverage remains open.
+7. Address account security gaps: email verification, password recovery, session revocation, and login rate limiting.
+8. Add production monitoring, database backup/restore guidance, migration checks, import-run observability, and release/rollback procedures.
+9. Re-run MovieLens notebooks when making fresh reproducibility claims; the current experiments do not establish cross-media quality.
 
 See [roadmap](roadmap.md), [architecture](architecture.md), [frontend guide](frontend.md), [backend guide](backend.md), and [ML roadmap](ml-roadmap.md).

@@ -5,11 +5,13 @@ React, TypeScript, and Vite client for the TASTERA cross-media discovery app.
 ## Product views
 
 - **Discover:** API-backed movie, book, and music browsing with title/creator/genre search, category and genre filters, popularity ordering, pagination, and selectable 50/100/150 page sizes. Six editorial demo records support browsing when the API is unavailable.
+- **Semantic search:** use the **AI** toggle to search descriptions, themes, mood, and ideas across media with Sentence Transformer vectors in PostgreSQL/pgvector. Similarity results are model inferences, not factual relationships.
 - **Connection Explorer:** open an item to follow exact shared genre tags, matching creator credits, or shared words in eligible Tastera editorial notes. The explorer can open another item or its creator page. Saved/feedback activity is identified separately from catalog evidence.
 - **Creator pages:** use the catalog search API and exact normalized creator credits to gather that creator's records across media types.
 - **Taste Map:** graphs the user's saved and feedback items around shared catalog genres, with deduplicated links, pan/zoom controls, related catalog items, and a genre search view.
 - **Accounts and Library:** registration/sign-in uses the backend; saved media is account-scoped and persisted through the API. A bearer token and a per-account Library snapshot are held in `sessionStorage` for the current tab session. A temporary API/network failure keeps cached items visible and offers a manual Library refresh; only a confirmed `401` clears the session and requests sign-in. The server remains authoritative, and the client does not automatically retry account mutations.
 - **For You and Settings:** personalized onboarding, mixed recommendations, batch refresh, configurable category proportions, movie ranking strategy, and persisted “More like this” / “Not for me” feedback.
+- **ML Lab:** compare genre, movie item-item, and embedding ranking with Precision@K, Recall@K, NDCG@K, catalog coverage, and diversity when the evaluation cohort is large enough.
 - **Profile:** saved-item counts, category and genre patterns, recent saves, and feedback summaries.
 - **Collections:** themed shelves and shareable snapshot links stored locally in the browser; edits do not sync to an already shared copy.
 - **Guide, About, Contact:** in-app help, scope and limitations, and developer contact links.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCatalog } from "../services/catalogApi";
+import { getCatalog, getSemanticCatalog } from "../services/catalogApi";
+import { explainConnection, type ConnectionExplanation } from "../services/aiApi";
 import type { Media } from "../types/media";
 import "./ConnectionExplorer.css";
 
@@ -11,6 +12,8 @@ type Props = {
   catalog: Media[];
   savedItems: Media[];
   feedbackItems: Activity[];
+  authToken: string | null;
+  onRequireSignIn: () => void;
   onToggleSaved: (id: string) => void;
   onClose: () => void;
 };
@@ -66,11 +69,29 @@ function mergeMedia(...groups: Media[][]) {
   return [...new Map(groups.flat().map((item) => [item.id, item])).values()];
 }
 
-export default function ConnectionExplorer({ item, creator, theme, catalog, savedItems, feedbackItems, onToggleSaved, onClose }: Props) {
+export default function ConnectionExplorer({ item, creator, theme, catalog, savedItems, feedbackItems, authToken, onRequireSignIn, onToggleSaved, onClose }: Props) {
   const [activeItem, setActiveItem] = useState<Media | null>(item ?? null);
   const [creatorPage, setCreatorPage] = useState(creator ?? null);
   const [themePage, setThemePage] = useState(theme ?? null);
   const [lookup, setLookup] = useState<CatalogLookup>({ key: "", items: [] });
+  const [explanations, setExplanations] = useState<Record<string, ConnectionExplanation>>({});
+  const [explanationBusy, setExplanationBusy] = useState<string[]>([]);
+  const [explanationErrors, setExplanationErrors] = useState<Record<string, string>>({});
+  const [semanticLookup, setSemanticLookup] = useState<{ itemId: string; items: { item: Media; similarity: number }[] } | null>(null);
+
+  async function requestExplanation(targetId: string) {
+    if (!authToken || !activeItem) return;
+    setExplanationBusy((current) => [...new Set([...current, targetId])]);
+    setExplanationErrors((current) => ({ ...current, [targetId]: "" }));
+    try {
+      const result = await explainConnection(authToken, activeItem.id, targetId);
+      setExplanations((current) => ({ ...current, [targetId]: result }));
+    } catch (error) {
+      setExplanationErrors((current) => ({ ...current, [targetId]: error instanceof Error ? error.message : "Could not generate an explanation." }));
+    } finally {
+      setExplanationBusy((current) => current.filter((id) => id !== targetId));
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,6 +108,17 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
     void Promise.all(queries.map((q) => getCatalog({ q, limit: 150 }, controller.signal)))
       .then((pages) => setLookup({ key, items: pages.flatMap((page) => page.items) }))
       .catch(() => { if (!controller.signal.aborted) setLookup({ key, items: [] }); });
+    return () => controller.abort();
+  }, [activeItem, creatorPage, themePage]);
+
+  useEffect(() => {
+    if (!activeItem || creatorPage || themePage) return;
+    const controller = new AbortController();
+    const query = [activeItem.title, activeItem.creator, activeItem.category, activeItem.genre, activeItem.description]
+      .filter(Boolean).join(". ").slice(0, 480);
+    getSemanticCatalog(query, { limit: 12, signal: controller.signal, excludeIds: [activeItem.id] })
+      .then((page) => setSemanticLookup({ itemId: activeItem.id, items: page.items.map(({ item: result, similarity }) => ({ item: result, similarity })) }))
+      .catch(() => { if (!controller.signal.aborted) setSemanticLookup({ itemId: activeItem.id, items: [] }); });
     return () => controller.abort();
   }, [activeItem, creatorPage, themePage]);
 
@@ -122,6 +154,9 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
     return allItems.filter((candidate) => normalizeGenre(candidate.genre).includes(normalizeGenre(themePage)[0] ?? ""))
       .sort((left, right) => Number(activeIds.has(right.id)) - Number(activeIds.has(left.id)) || left.title.localeCompare(right.title));
   }, [allItems, themePage, activeIds]);
+  const semanticResults = activeItem && semanticLookup?.itemId === activeItem.id ? semanticLookup.items : [];
+  const semanticLoading = Boolean(activeItem && !creatorPage && !themePage && semanticLookup?.itemId !== activeItem.id);
+  const crossMediaSemanticResults = semanticResults.filter(({ item: result }) => result.category !== activeItem?.category);
 
   return (
     <div className="connection-explorer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -186,7 +221,32 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
                   <span><small>{entry.category} · {entry.genre}</small><strong>{entry.title}</strong><em>{entry.creator}</em></span>
                 </button>
                 <ul>{evidence.slice(0, 3).map((link) => <li key={`${entry.id}-${link.label}-${link.detail}`}><b>{link.label}</b><span>{link.detail}</span></li>)}</ul>
+                <div className="connection-ai-explanation">
+                  {authToken ? <button type="button" onClick={() => void requestExplanation(entry.id)} disabled={explanationBusy.includes(entry.id)}>{explanationBusy.includes(entry.id) ? "Writing…" : explanations[entry.id] ? "Refresh explanation" : "Explain with AI"}</button>
+                    : <button type="button" onClick={onRequireSignIn}>Sign in for an AI explanation</button>}
+                  {explanations[entry.id] && <div className="connection-ai-result"><span className="eyebrow">{explanations[entry.id].generated ? "AI WORDING · EVIDENCE BELOW IS THE SOURCE OF TRUTH" : "GROUNDED EXPLANATION · AI PROVIDER UNAVAILABLE"}</span><p>{explanations[entry.id].explanation}</p><small>Evidence: {explanations[entry.id].evidence.map((fact) => `${fact.label}: ${fact.value}`).join(" · ") || "No structured relationship evidence was found."}</small></div>}
+                  {explanationErrors[entry.id] && <small className="connection-ai-error" role="alert">{explanationErrors[entry.id]}</small>}
+                </div>
               </article>)}
+            </div>
+            <div className="connection-semantic-section">
+              <div className="connection-results-heading"><div><span className="eyebrow">MODEL-INFERRED SIMILARITY</span><h3>Related by meaning</h3></div><span>{crossMediaSemanticResults.length} matches</span></div>
+              <p className="connection-semantic-note">These matches come from Sentence Transformer embeddings of catalog metadata. They suggest semantic similarity; they are not verified factual links or predictions of personal preference.</p>
+              {semanticLoading && <p className="connection-loading">Comparing item descriptions and metadata…</p>}
+              <div className="connection-results-grid">
+                {crossMediaSemanticResults.slice(0, 8).map(({ item: result, similarity }) => <article className="connection-result-card" key={`semantic-${result.id}`}>
+                  <button type="button" className="connection-result" onClick={() => setActiveItem(result)}>
+                    {result.image ? <img src={result.image} alt="" loading="lazy" /> : <span className="connection-result-placeholder">{result.category}</span>}
+                    <span><small>{result.category} · {result.genre}</small><strong>{result.title}</strong><em>{result.creator}</em><small className="semantic-score">Cosine similarity · {similarity.toFixed(2)}</small></span>
+                  </button>
+                  <div className="connection-ai-explanation">
+                    {authToken ? <button type="button" onClick={() => void requestExplanation(result.id)} disabled={explanationBusy.includes(result.id)}>{explanationBusy.includes(result.id) ? "Writing…" : explanations[result.id] ? "Refresh explanation" : "Explain with AI"}</button> : <button type="button" onClick={onRequireSignIn}>Sign in for an AI explanation</button>}
+                    {explanations[result.id] && <div className="connection-ai-result"><span className="eyebrow">{explanations[result.id].generated ? "AI WORDING · STRUCTURED EVIDENCE BELOW" : "GROUNDED EXPLANATION"}</span><p>{explanations[result.id].explanation}</p><small>Evidence: {explanations[result.id].evidence.map((fact) => `${fact.label}: ${fact.value}`).join(" · ") || "No shared creator or genre was found; the semantic match itself is model-inferred."}</small></div>}
+                    {explanationErrors[result.id] && <small className="connection-ai-error" role="alert">{explanationErrors[result.id]}</small>}
+                  </div>
+                </article>)}
+              </div>
+              {!semanticLoading && !crossMediaSemanticResults.length && <p className="connection-empty">No cross-media semantic matches are available yet. Confirm that the PostgreSQL catalog has been embedded.</p>}
             </div>
             {!isLoading && !pathways.length && <p className="connection-empty">No matching creator, genre, or reviewed editorial theme is available in the current catalog. The explorer does not invent setting or influence links when that metadata is missing.</p>}
             <p className="connection-evidence-note">Catalog genres and creator credits are metadata evidence. Editorial-theme links are interpretive, and are shown only when both Tastera notes use the same theme word. Your saves and feedback are labeled separately.</p>

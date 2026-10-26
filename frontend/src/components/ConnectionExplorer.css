@@ -48,3 +48,15 @@
 }
 .connection-creator-button:hover,
 .connection-creator-button:focus-visible { text-decoration: underline; }
+.connection-semantic-section { margin-top: 28px; padding-top: 18px; border-top: 1px solid #ffffff12; }
+.connection-semantic-note { margin: 9px 0 16px; color: var(--text-muted); font-size: 10px; line-height: 1.7; }
+.semantic-score { color: #d9c8ff !important; }
+.connection-ai-explanation { display: grid; justify-items: start; gap: 9px; margin: 10px 12px 12px; }
+.connection-ai-explanation > button { padding: 7px 10px; border: 1px solid #b39aff40; border-radius: 8px; color: #e1d6ff; background: #b39aff0d; font-size: 10px; cursor: pointer; }
+.connection-ai-explanation > button:hover { border-color: #b39aff90; }
+.connection-ai-explanation > button:disabled { opacity: .55; cursor: wait; }
+.connection-ai-result { display: grid; gap: 7px; padding: 11px 12px; border-left: 2px solid #b39aff75; background: #b39aff08; }
+.connection-ai-result .eyebrow { font-size: 8px; }
+.connection-ai-result p { margin: 0; color: var(--text-secondary); font-size: 11px; line-height: 1.65; }
+.connection-ai-result small,.connection-ai-error { color: var(--text-muted); font-size: 9px; line-height: 1.6; }
+.connection-ai-error { color: #ffaaaa; }

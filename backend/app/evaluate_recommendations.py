@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import SessionLocal
 from app.models.account import RecommendationFeedbackRecord, SavedMediaRecord
-from app.models.catalog import MediaGenre, MediaItemRecord
+from app.models.catalog import MediaEmbeddingRecord, MediaGenre, MediaItemRecord
+from app.services.semantic_search import EMBEDDING_MODEL
 
 
 @dataclass(frozen=True)
@@ -185,6 +186,33 @@ def _item_item_ranking(
     return [value[3] for value in ranked]
 
 
+def _embedding_ranking(
+    row: EvaluationRow,
+    candidates: list[MediaItemRecord],
+    vectors: dict[str, list[float]],
+) -> list[MediaItemRecord]:
+    """Rank candidates by cosine similarity to a training-history centroid."""
+
+    seeds = [vectors[item_id] for item_id in row.train_ids if item_id in vectors]
+    if not seeds:
+        return []
+    dimensions = len(seeds[0])
+    profile = [sum(vector[index] for vector in seeds) / len(seeds) for index in range(dimensions)]
+    norm = math.sqrt(sum(value * value for value in profile))
+    if not norm:
+        return []
+    profile = [value / norm for value in profile]
+    ranked = []
+    for item in candidates:
+        vector = vectors.get(item.id)
+        if vector is None or len(vector) != dimensions:
+            continue
+        score = sum(left * right for left, right in zip(profile, vector, strict=True))
+        ranked.append((score, item.title.casefold(), item.id, item))
+    ranked.sort(key=lambda value: (-value[0], value[1], value[2]))
+    return [value[3] for value in ranked]
+
+
 def _diversity(items: list[MediaItemRecord]) -> float:
     if len(items) < 2:
         return 0.0
@@ -210,6 +238,19 @@ def evaluate_category(
         .where(MediaItemRecord.category == category)
         .options(selectinload(MediaItemRecord.genre_links).joinedload(MediaGenre.genre))
     ).all()
+    embedding_rows = session.scalars(
+        select(MediaEmbeddingRecord)
+        .join(MediaItemRecord, MediaItemRecord.id == MediaEmbeddingRecord.media_item_id)
+        .where(
+            MediaEmbeddingRecord.model_name == EMBEDDING_MODEL,
+            MediaItemRecord.category == category,
+        )
+    ).all()
+    vectors = {
+        row.media_item_id: list(row.embedding)
+        for row in embedding_rows
+        if row.embedding is not None
+    }
     items = {item.id: item for item in catalog}
     positive_by_account: dict[str, list[PositiveSignal]] = defaultdict(list)
     for signal in peer_positives:
@@ -221,10 +262,15 @@ def evaluate_category(
             "catalog_items": len(catalog),
             "positive_events": len(positives),
             "eligible_accounts": len(rows),
+            "embedding_items": len(vectors),
+            "embedding_catalog_coverage": round(len(set(vectors) & set(items)) / max(len(items), 1), 4),
             "status": "insufficient data; need at least 5 eligible accounts",
         }
 
+    embedding_coverage = len(set(vectors) & set(items)) / max(len(items), 1)
     methods = ["genre"]
+    if catalog and embedding_coverage == 1.0:
+        methods.append("embeddings")
     if category == "Movies":
         methods.append("item_item")
     coverage: dict[str, set[str]] = {name: set() for name in methods}
@@ -232,11 +278,14 @@ def evaluate_category(
     recalls: dict[str, list[float]] = {name: [] for name in methods}
     ndcgs: dict[str, list[float]] = {name: [] for name in methods}
     diversities: dict[str, list[float]] = {name: [] for name in methods}
+    precisions: dict[str, list[float]] = {name: [] for name in methods}
 
     for row in rows:
         excluded = set(row.train_ids) | set(row.disliked_ids)
         candidates = [item for item in catalog if item.id not in excluded]
         rankings = {"genre": _genre_ranking(row, items, candidates)}
+        if "embeddings" in methods:
+            rankings["embeddings"] = _embedding_ranking(row, candidates, vectors)
         if category == "Movies":
             rankings["item_item"] = _item_item_ranking(
                 row, candidates, positive_by_account
@@ -249,6 +298,7 @@ def evaluate_category(
                 if item.id in row.target_ids
             ]
             hits[method].append(float(bool(ranks)))
+            precisions[method].append(len(ranks) / k)
             recall = len(ranks) / len(row.target_ids)
             dcg = sum(1.0 / math.log2(rank + 1) for rank in ranks)
             ideal = sum(
@@ -264,6 +314,7 @@ def evaluate_category(
     for method in methods:
         results[method] = {
             "hit_rate_at_k": round(sum(hits[method]) / len(rows), 4),
+            "precision_at_k": round(sum(precisions[method]) / len(rows), 4),
             "recall_at_k": round(sum(recalls[method]) / len(rows), 4),
             "ndcg_at_k": round(sum(ndcgs[method]) / len(rows), 4),
             "catalog_coverage": round(len(coverage[method]) / max(len(catalog), 1), 4),
@@ -274,6 +325,8 @@ def evaluate_category(
         "catalog_items": len(catalog),
         "positive_events": len(positives),
         "eligible_accounts": len(rows),
+        "embedding_items": len(vectors),
+        "embedding_catalog_coverage": round(embedding_coverage, 4),
         "k": k,
         "method_results": results,
         "status": (

@@ -17,10 +17,10 @@ Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon 
 
 ## Next product work
 
-1. **Improve relationship evidence:** add source-attributed normalized themes, settings, influences, adaptations, and creator relationships as catalog sources support them. Keep inferred or editorial relationships clearly distinguished from facts.
-2. **Normalize creator identities:** merge known aliases and credit variants while preserving the source credit and provenance.
-3. **Improve Books and Music coverage:** curate mainstream catalog additions, genre completeness, duplicates, and resilient cover/artwork URLs; record each import's added/updated/skipped totals.
-4. **Evaluate recommendations:** collect enough opt-in app interactions, compare relevance, catalog coverage, and diversity, and retain an untouched final evaluation where feasible.
+1. **Activate and measure semantic discovery:** apply the pgvector migration, generate catalog embeddings, configure the optional explanation API key, and gather enough opt-in feedback for the ML Lab to report Precision@K and coverage. Treat current embedding comparisons as preliminary proxy evaluation.
+2. **Improve relationship evidence:** add source-attributed normalized themes, settings, influences, adaptations, and creator relationships as catalog sources support them. Keep inferred or editorial relationships clearly distinguished from facts.
+3. **Normalize creator identities:** merge known aliases and credit variants while preserving the source credit and provenance.
+4. **Improve Books and Music coverage:** curate mainstream catalog additions, genre completeness, duplicates, and resilient cover/artwork URLs; record each import's added/updated/skipped totals.
 5. **Build category-specific recommenders:** evaluate books and music methods only after there is enough suitable catalog and interaction data. Treat cross-media ranking as a separate research question.
 
 ## Reliability, security, and research

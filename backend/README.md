@@ -8,6 +8,7 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /health`: returns a lightweight service health response.
 - `GET /api/v1/media`: lists the labeled development catalog with category, text,
   and pagination query parameters.
+- `GET /api/v1/media/semantic`: retrieves catalog items by natural-language meaning with Sentence Transformer embeddings stored in PostgreSQL/pgvector.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
@@ -20,6 +21,8 @@ FastAPI service foundation for the TASTERA discovery platform.
 - Catalog search and creator/theme exploration reuse `GET /api/v1/media`; there is no separate cross-media relationship endpoint. The frontend compares normalized creator credits and genre tags and labels editorial and user-activity signals separately.
 - `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
   `more` / `less` recommendation signal for the signed-in account.
+- `POST /api/v1/ai/connection-explanation`: phrases server-computed catalog evidence with the optional OpenAI Responses API for a signed-in account.
+- `GET /api/v1/evaluation/recommendations`: returns aggregate-only offline recommender metrics for the ML Lab dashboard.
 - `tests/test_health.py`: tests the health endpoint.
 - `tests/test_saved_response.py`: verifies saved Library responses use the saved-record `updated_at` timestamp rather than duplicating the catalog field.
 
@@ -31,6 +34,11 @@ transparent baseline signal, not a trained cross-media model. Personal ratings
 affect the account's genre and movie similarity ranking; notes are private
 context and are not analyzed. Saved Library response serialization merges catalog fields before applying saved-record metadata, so the saved record's `updated_at` takes precedence. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
+
+Semantic retrieval uses `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+and PostgreSQL `pgvector`. SQLite remains suitable for ordinary local app work,
+but semantic queries require PostgreSQL. The model loads lazily on first use and
+runs on CPU; allow sufficient memory and initial model download time on the API host.
 
 ## Requirements
 
@@ -86,6 +94,48 @@ Apply pending schema changes with `python -m alembic upgrade head` before
 running a catalog importer against that database. The popularity score
 migration adds the catalog sort field; rerun each catalog importer to refresh
 scores on records that were imported before the field existed.
+
+### Semantic search and embeddings
+
+After deploying a release that contains migration `20261026_08`, run the normal
+Alembic upgrade against PostgreSQL (use the direct/unpooled migration URL where
+available), then create or refresh catalog vectors from `backend/`:
+
+```powershell
+python -m alembic upgrade head
+python -m app.embed_catalog
+```
+
+The embedding command is repeatable: it skips unchanged catalog text and
+re-embeds records when title, creator, category, genres, description, or model
+version changes. Use `--force` to rebuild all vectors. Re-run it after imports
+or material catalog edits. SQLite migration uses JSON so the app remains
+usable, but nearest-neighbor retrieval is PostgreSQL-only. PostgreSQL migration
+enables `pgvector` and creates a cosine HNSW index.
+
+Natural-language search uses `GET /api/v1/media/semantic?q=...&category=...`.
+The Discover search box's **AI** toggle switches from keyword matching to
+semantic retrieval. Connection Explorer marks semantic pathways as model
+inference, not factual links or predictions of personal preference.
+
+### Grounded AI wording
+
+Set `OPENAI_API_KEY` and optionally `TASTERA_EXPLANATION_MODEL` in the backend
+host's protected environment settings to enable generated wording. The default
+model is `gpt-4.1-mini`. Keep the key out of Vercel frontend variables and Git.
+The authenticated request is user-triggered and sends only catalog titles,
+categories, and server-computed evidence. Exact structured evidence remains
+separate in the response as the source of truth. If the provider is not
+configured or fails, the API returns a deterministic evidence-grounded sentence.
+
+### Evaluation dashboard
+
+Open **ML Lab** in the app to compare Precision@K and catalog coverage for the
+genre baseline, movie item-item ranker, and embedding profile. The scorecard
+also includes Recall@K, NDCG@K, and intra-list diversity. The app hides metrics
+until at least five accounts meet the existing minimum-history cohort. These are
+offline interaction-based proxy metrics, not impression-aware online results.
+The endpoint returns aggregate scores only, never account-level rows.
 
 ## Accounts and saved items
 

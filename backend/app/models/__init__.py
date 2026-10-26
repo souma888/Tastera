@@ -1,6 +1,6 @@
 """Database models for TASTERA."""
 
-from app.models.catalog import Genre, MediaGenre, MediaIdentifier, MediaItemRecord
+from app.models.catalog import Genre, MediaEmbeddingRecord, MediaGenre, MediaIdentifier, MediaItemRecord
 from app.models.account import (
     AccountRecord,
     LibraryActivityRecord,
@@ -13,6 +13,7 @@ __all__ = [
     "Genre",
     "LibraryActivityRecord",
     "MediaGenre",
+    "MediaEmbeddingRecord",
     "MediaIdentifier",
     "MediaItemRecord",
     "RecommendationFeedbackRecord",

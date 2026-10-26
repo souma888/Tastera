@@ -1,10 +1,10 @@
 # Backend Guide
 
-**Reviewed:** 2026-10-25.
+**Reviewed:** 2026-10-26.
 
 ## Current status
 
-The FastAPI service is deployed at [tastera.onrender.com](https://tastera.onrender.com); interactive API documentation is available at [/docs](https://tastera.onrender.com/docs). It provides catalog, account, saved-media, and recommendation endpoints. Production uses Neon PostgreSQL; local development uses SQLite by default.
+The FastAPI service is deployed at [tastera.onrender.com](https://tastera.onrender.com); interactive API documentation is available at [/docs](https://tastera.onrender.com/docs). Current code includes catalog, account, saved-media, recommendation, semantic search, grounded AI wording, and aggregate evaluation endpoints. Production uses Neon PostgreSQL; local development uses SQLite by default. Semantic search activates only after migration `20261026_08` and a catalog embedding pass; new code should not be assumed deployed until the hosting release completes.
 
 Recommendations use saved genres, per-item personal ratings, and persisted per-account `more`/`less` signals to adjust genre weights; movie co-save similarity uses positively rated saves as stronger seeds. This is a transparent baseline, not a trained or evaluated model. TMDb movie import is manual; scheduled ingestion is not implemented. Library notes are private and are not analyzed.
 

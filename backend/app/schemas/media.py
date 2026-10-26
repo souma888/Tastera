@@ -40,3 +40,19 @@ class MediaPage(BaseModel):
     limit: int = Field(ge=1)
     total: int = Field(ge=0)
     total_pages: int = Field(ge=0)
+
+
+class SemanticMediaResult(BaseModel):
+    """One semantically retrieved item and its cosine similarity score."""
+
+    item: MediaItem
+    similarity: float = Field(ge=-1, le=1)
+
+
+class SemanticMediaPage(BaseModel):
+    """Bounded nearest-neighbor results for a natural-language query."""
+
+    query: str
+    model: str
+    items: list[SemanticMediaResult]
+    total: int = Field(ge=0)

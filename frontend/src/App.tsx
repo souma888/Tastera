@@ -7,6 +7,7 @@ import CollectionsPage from "./components/CollectionsPage";
 import CommunityPage from "./components/CommunityPage";
 import ThemedSelect from "./components/ThemedSelect";
 import ConnectionExplorer from "./components/ConnectionExplorer";
+import EvaluationDashboard from "./components/EvaluationDashboard";
 import { mediaItems } from "./data/media";
 import {
   AccountApiError,
@@ -24,7 +25,7 @@ import {
   setRecommendationFeedback,
   signIn,
 } from "./services/accountApi";
-import { getCatalog } from "./services/catalogApi";
+import { getCatalog, getSemanticCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
 import type { LibraryActivity, Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage, SavedMedia, SavedMediaUpdate } from "./types/media";
 import "./App.css";
@@ -38,6 +39,7 @@ const navigationItems = [
   ["Collections", "▧"],
   ["Community", "♧"],
   ["Your Profile", "◉"],
+  ["ML Lab", "⌁"],
   ["Settings", "⚙"],
   ["Guide", "?"],
   ["About", "✦"],
@@ -383,6 +385,7 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 function App() {
   const [category, setCategory] = useState<MediaFilter>("All");
   const [search, setSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<"keyword" | "semantic">("keyword");
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(mediaItems.length);
@@ -702,28 +705,50 @@ function App() {
       setCatalogError(null);
 
       try {
-        const page = await getCatalog(
-          {
+        if (searchMode === "semantic" && searchQuery && searchQuery.length < 3) {
+          setCatalog([]);
+          setTotalPages(0);
+          setTotalItems(0);
+          setCatalogError("Enter at least 3 characters to search by meaning.");
+          return;
+        }
+        if (searchMode === "semantic" && searchQuery) {
+          const page = await getSemanticCatalog(searchQuery, {
             category: category === "All" ? undefined : category,
-            q: searchQuery || undefined,
-            page: pageNumber,
-            limit: pageSize,
-          },
-          controller.signal,
-        );
-
-        setCatalog(page.items.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
-        setTotalPages(page.total_pages);
-        setTotalItems(page.total);
+            limit: Math.min(pageSize, 50),
+            signal: controller.signal,
+          });
+          setCatalog(page.items.map((result) => result.item).filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
+          setTotalPages(1);
+          setTotalItems(page.total);
+        } else {
+          const page = await getCatalog(
+            {
+              category: category === "All" ? undefined : category,
+              q: searchQuery || undefined,
+              page: pageNumber,
+              limit: pageSize,
+            },
+            controller.signal,
+          );
+          setCatalog(page.items.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
+          setTotalPages(page.total_pages);
+          setTotalItems(page.total);
+        }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
 
-        setCatalog(mediaItems.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
-        setTotalPages(1);
-        setTotalItems(mediaItems.length);
-        setCatalogError(
-          "The catalog API is unavailable, so you are viewing the local demo collection.",
-        );
+        if (searchMode === "semantic") {
+          setCatalog([]);
+          setTotalPages(0);
+          setTotalItems(0);
+          setCatalogError(error instanceof Error ? error.message : "Semantic search is unavailable right now.");
+        } else {
+          setCatalog(mediaItems.filter((item) => item.category !== "Music" || (item.image && !unavailableMusicArtwork.includes(item.id))));
+          setTotalPages(1);
+          setTotalItems(mediaItems.length);
+          setCatalogError("The catalog API is unavailable, so you are viewing the local demo collection.");
+        }
       } finally {
         if (!controller.signal.aborted) setIsCatalogLoading(false);
       }
@@ -733,7 +758,7 @@ function App() {
       window.clearTimeout(loadCatalog);
       controller.abort();
     };
-  }, [activePage, category, search, pageNumber, pageSize, unavailableMusicArtwork]);
+  }, [activePage, category, search, searchMode, pageNumber, pageSize, unavailableMusicArtwork]);
 
   const visibleMedia = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -747,7 +772,7 @@ function App() {
       const matchesPrompt = !activeDiscoveryPrompt || activeDiscoveryPrompt.terms.some((term) => promptText.includes(term));
 
       const matchesSearch =
-        query.length === 0 ||
+        searchMode === "semantic" || query.length === 0 ||
         item.title.toLowerCase().includes(query) ||
         item.creator.toLowerCase().includes(query) ||
         item.genre.toLowerCase().includes(query) ||
@@ -755,7 +780,7 @@ function App() {
 
       return matchesCategory && matchesGenre && matchesPrompt && matchesSearch;
     });
-  }, [activePage, activeDiscoveryPrompt, catalog, category, genreFilter, savedItems, search]);
+  }, [activePage, activeDiscoveryPrompt, catalog, category, genreFilter, savedItems, search, searchMode]);
 
   const availableGenres = useMemo(() => [...new Set(catalog
     .filter((item) => category === "All" || item.category === category)
@@ -1166,6 +1191,13 @@ function App() {
                 }}
               >
               <span aria-hidden="true">⌕</span>
+              <button
+                type="button"
+                className={`search-mode-toggle ${searchMode === "semantic" ? "active" : ""}`}
+                aria-pressed={searchMode === "semantic"}
+                title={searchMode === "semantic" ? "Switch to keyword search" : "Search by meaning"}
+                onClick={() => { setSearchMode((mode) => mode === "keyword" ? "semantic" : "keyword"); setPageNumber(1); }}
+              >{searchMode === "semantic" ? "Meaning" : "AI"}</button>
               <input
                 value={search}
                 onChange={(event) => {
@@ -1177,7 +1209,7 @@ function App() {
                   }
                 }}
                 onFocus={() => setIsSearchFocused(true)}
-                placeholder="Search titles, creators, or genres..."
+                placeholder={searchMode === "semantic" ? "Describe a mood, theme, or idea…" : "Search titles, creators, or genres..."}
                 aria-label="Search media"
               />
               {search && (
@@ -1238,7 +1270,9 @@ function App() {
           </div>
         </header>
 
-        {activePage === "Collections" ? (
+        {activePage === "ML Lab" ? (
+          <EvaluationDashboard />
+        ) : activePage === "Collections" ? (
           <CollectionsPage catalog={catalog} />
         ) : activePage === "Community" ? (
           <CommunityPage catalog={recommendationCatalog} savedItems={savedItems} />
@@ -2273,6 +2307,8 @@ function App() {
           catalog={recommendationCatalog}
           savedItems={savedItems}
           feedbackItems={recommendationFeedbackItems}
+          authToken={authToken}
+          onRequireSignIn={() => { setAuthMode("sign-in"); setAuthError(null); setIsAuthOpen(true); }}
           onToggleSaved={toggleSaved}
           onClose={() => { setSelectedSearchItem(null); setSelectedCreator(null); setSelectedTheme(null); }}
         />
