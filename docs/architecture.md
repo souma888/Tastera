@@ -29,7 +29,7 @@ Browser
         SQLite (local default)
 ```
 
-The application code now includes semantic retrieval, ML Lab evaluation, and authenticated evidence phrasing. Production semantic retrieval requires migration `20261026_08` followed by `python -m app.embed_catalog`; this repository change alone does not apply the live database migration or configure an OpenAI secret.
+The application includes semantic retrieval, ML Lab evaluation, and authenticated evidence phrasing. Production is migrated through `20261026_08` and has catalog embeddings. Query inference uses FastEmbed's quantized ONNX runtime with the same 384-dimensional Sentence Transformer model family, avoiding PyTorch memory overhead on Render's free service. The OpenAI key is configured on the backend host.
 
 Offline catalog import and MovieLens research are separate from request-time inference:
 

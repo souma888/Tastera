@@ -78,6 +78,7 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
   const [explanationBusy, setExplanationBusy] = useState<string[]>([]);
   const [explanationErrors, setExplanationErrors] = useState<Record<string, string>>({});
   const [semanticLookup, setSemanticLookup] = useState<{ itemId: string; items: { item: Media; similarity: number }[] } | null>(null);
+  const [semanticError, setSemanticError] = useState<string | null>(null);
 
   async function requestExplanation(targetId: string) {
     if (!authToken || !activeItem) return;
@@ -116,9 +117,18 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
     const controller = new AbortController();
     const query = [activeItem.title, activeItem.creator, activeItem.category, activeItem.genre, activeItem.description]
       .filter(Boolean).join(". ").slice(0, 480);
+    setSemanticError(null);
     getSemanticCatalog(query, { limit: 12, signal: controller.signal, excludeIds: [activeItem.id] })
-      .then((page) => setSemanticLookup({ itemId: activeItem.id, items: page.items.map(({ item: result, similarity }) => ({ item: result, similarity })) }))
-      .catch(() => { if (!controller.signal.aborted) setSemanticLookup({ itemId: activeItem.id, items: [] }); });
+      .then((page) => {
+        setSemanticLookup({ itemId: activeItem.id, items: page.items.map(({ item: result, similarity }) => ({ item: result, similarity })) });
+        setSemanticError(null);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setSemanticLookup({ itemId: activeItem.id, items: [] });
+          setSemanticError(error instanceof Error ? error.message : "Semantic matches are temporarily unavailable.");
+        }
+      });
     return () => controller.abort();
   }, [activeItem, creatorPage, themePage]);
 
@@ -233,6 +243,7 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
               <div className="connection-results-heading"><div><span className="eyebrow">MODEL-INFERRED SIMILARITY</span><h3>Related by meaning</h3></div><span>{crossMediaSemanticResults.length} matches</span></div>
               <p className="connection-semantic-note">These matches come from Sentence Transformer embeddings of catalog metadata. They suggest semantic similarity; they are not verified factual links or predictions of personal preference.</p>
               {semanticLoading && <p className="connection-loading">Comparing item descriptions and metadata…</p>}
+              {!semanticLoading && semanticError && <p className="connection-empty" role="alert">Semantic matches are temporarily unavailable: {semanticError}</p>}
               <div className="connection-results-grid">
                 {crossMediaSemanticResults.slice(0, 8).map(({ item: result, similarity }) => <article className="connection-result-card" key={`semantic-${result.id}`}>
                   <button type="button" className="connection-result" onClick={() => setActiveItem(result)}>
@@ -246,7 +257,7 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
                   </div>
                 </article>)}
               </div>
-              {!semanticLoading && !crossMediaSemanticResults.length && <p className="connection-empty">No cross-media semantic matches are available yet. Confirm that the PostgreSQL catalog has been embedded.</p>}
+              {!semanticLoading && !semanticError && !crossMediaSemanticResults.length && <p className="connection-empty">No cross-media semantic matches were found for this item.</p>}
             </div>
             {!isLoading && !pathways.length && <p className="connection-empty">No matching creator, genre, or reviewed editorial theme is available in the current catalog. The explorer does not invent setting or influence links when that metadata is missing.</p>}
             <p className="connection-evidence-note">Catalog genres and creator credits are metadata evidence. Editorial-theme links are interpretive, and are shown only when both Tastera notes use the same theme word. Your saves and feedback are labeled separately.</p>

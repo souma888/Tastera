@@ -8,7 +8,7 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `GET /health`: returns a lightweight service health response.
 - `GET /api/v1/media`: lists the labeled development catalog with category, text,
   and pagination query parameters.
-- `GET /api/v1/media/semantic`: retrieves catalog items by natural-language meaning with Sentence Transformer embeddings stored in PostgreSQL/pgvector.
+- `GET /api/v1/media/semantic`: retrieves catalog items by natural-language meaning with FastEmbed/ONNX query vectors and Sentence Transformer embeddings stored in PostgreSQL/pgvector.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
@@ -35,10 +35,14 @@ affect the account's genre and movie similarity ranking; notes are private
 context and are not analyzed. Saved Library response serialization merges catalog fields before applying saved-record metadata, so the saved record's `updated_at` takes precedence. See
 [project status](../docs/PROJECT_STATUS.md) and the [backend guide](../docs/backend.md).
 
-Semantic retrieval uses `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
-and PostgreSQL `pgvector`. SQLite remains suitable for ordinary local app work,
-but semantic queries require PostgreSQL. The model loads lazily on first use and
-runs on CPU; allow sufficient memory and initial model download time on the API host.
+Semantic retrieval uses the 384-dimensional
+`sentence-transformers/all-MiniLM-L6-v2` model through FastEmbed's quantized
+ONNX Runtime backend and PostgreSQL `pgvector`. This avoids loading PyTorch in
+the API process and is suitable for Render's 512 MiB free service. Existing
+vectors from this model remain usable; no catalog re-embedding is required.
+SQLite remains suitable for ordinary local app work, but semantic queries
+require PostgreSQL. The ONNX model loads lazily on first use and downloads on
+the first API request after a fresh instance starts.
 
 ## Requirements
 
@@ -64,7 +68,8 @@ PostgreSQL, set `TASTERA_DATABASE_URL` before running Alembic, the seed command,
 and the API, for example `postgresql+psycopg://user:password@host:5432/tastera`.
 After deploying a backend release with a new migration, run `python -m alembic upgrade head`
 from `backend` with `PYTHONPATH` set to that directory and `TASTERA_DATABASE_URL`
-pointing to the hosted database. The Render start command does not run migrations.
+pointing to the hosted database. The current Tastera Render start command also
+runs `python -m alembic upgrade head` before seeding and starting the API.
 
 Open `http://127.0.0.1:8000/health` for the health check and `http://127.0.0.1:8000/docs` for interactive API documentation.
 

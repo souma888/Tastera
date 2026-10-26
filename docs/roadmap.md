@@ -17,7 +17,7 @@ Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon 
 
 ## Next product work
 
-1. **Activate and measure semantic discovery:** apply the pgvector migration, generate catalog embeddings, configure the optional explanation API key, and gather enough opt-in feedback for the ML Lab to report Precision@K and coverage. Treat current embedding comparisons as preliminary proxy evaluation.
+1. **Measure semantic discovery:** gather enough opt-in feedback for the ML Lab to report Precision@K and coverage. Treat current embedding comparisons as preliminary proxy evaluation.
 2. **Improve relationship evidence:** add source-attributed normalized themes, settings, influences, adaptations, and creator relationships as catalog sources support them. Keep inferred or editorial relationships clearly distinguished from facts.
 3. **Normalize creator identities:** merge known aliases and credit variants while preserving the source credit and provenance.
 4. **Improve Books and Music coverage:** curate mainstream catalog additions, genre completeness, duplicates, and resilient cover/artwork URLs; record each import's added/updated/skipped totals.

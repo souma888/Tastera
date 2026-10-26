@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from functools import lru_cache
 from os import getenv
 
@@ -24,15 +25,15 @@ EMBEDDING_DIMENSIONS = 384
 
 @lru_cache(maxsize=1)
 def _model():
-    """Load the CPU model on first use, not during API process startup."""
+    """Load the quantized ONNX encoder on first use, not at API startup."""
 
     try:
-        from sentence_transformers import SentenceTransformer
+        from fastembed import TextEmbedding
     except ImportError as error:
         raise RuntimeError(
-            "Install backend requirements to enable semantic search."
+            "Install backend requirements to enable semantic search (FastEmbed is missing)."
         ) from error
-    return SentenceTransformer(EMBEDDING_MODEL, device="cpu")
+    return TextEmbedding(model_name=EMBEDDING_MODEL, threads=1)
 
 
 def item_text(item: MediaItemRecord) -> str:
@@ -53,18 +54,21 @@ def content_hash(text: str) -> str:
 def encode_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
-    vectors = _model().encode(
-        texts,
-        batch_size=32,
-        normalize_embeddings=True,
-        convert_to_numpy=True,
-        show_progress_bar=False,
-    )
-    if vectors.shape[1] != EMBEDDING_DIMENSIONS:
-        raise RuntimeError(
-            f"Embedding model must produce {EMBEDDING_DIMENSIONS} dimensions; got {vectors.shape[1]}."
-        )
-    return [[float(value) for value in vector] for vector in vectors]
+    vectors = _model().embed(texts, batch_size=min(32, len(texts)), parallel=None)
+    normalized: list[list[float]] = []
+    for vector in vectors:
+        values = [float(value) for value in vector]
+        if len(values) != EMBEDDING_DIMENSIONS:
+            raise RuntimeError(
+                f"Embedding model must produce {EMBEDDING_DIMENSIONS} dimensions; got {len(values)}."
+            )
+        norm = math.sqrt(sum(value * value for value in values))
+        if norm == 0:
+            raise RuntimeError("Embedding model returned a zero-length vector.")
+        normalized.append([value / norm for value in values])
+    if len(normalized) != len(texts):
+        raise RuntimeError("Embedding model returned an unexpected number of vectors.")
+    return normalized
 
 
 def search_semantic(

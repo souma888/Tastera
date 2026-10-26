@@ -32,9 +32,9 @@
 - Account authentication with Argon2 password hashing and signed bearer sessions; per-account saved media and recommendation feedback. Frontend recovery preserves the current session and cached Library during temporary API failures, provides a manual refresh path, and treats confirmed `401` responses as expired sessions.
 - Manual importers for popular TMDb movies, rating-ranked Open Library works, and popularity-proxy MusicBrainz albums with confirmed Cover Art Archive covers.
 - MovieLens audit/recommender notebooks and app-feedback offline evaluation tooling.
-- Sentence Transformer catalog embedding model, idempotent embedding refresh command, pgvector migration, and semantic search route are implemented in code. They require the new migration and an embedding pass before semantic search is available in production.
+- Sentence Transformer catalog embeddings, the pgvector migration, and semantic search are active in production. The production catalog has 1,120 vectors; query inference uses FastEmbed's quantized ONNX runtime to fit Render's 512 MiB free service. First requests after a cold start can still be delayed while Render wakes and the model loads.
 - The app-feedback evaluator now compares embeddings alongside genre and movie item-item ranking and reports Precision@K. The aggregate-only ML Lab API/dashboard hides model scores below the minimum cohort.
-- Authenticated evidence-phrasing endpoint is implemented. Add `OPENAI_API_KEY` to the backend host to enable model-written phrasing; otherwise it returns a deterministic fallback with the same structured evidence.
+- Authenticated evidence-phrasing endpoint is implemented. `OPENAI_API_KEY` is configured on the backend host for model-written phrasing; deterministic evidence-based wording remains the fallback.
 
 ## Connection and recommendation limits
 

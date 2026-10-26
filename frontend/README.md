@@ -5,7 +5,7 @@ React, TypeScript, and Vite client for the TASTERA cross-media discovery app.
 ## Product views
 
 - **Discover:** API-backed movie, book, and music browsing with title/creator/genre search, category and genre filters, popularity ordering, pagination, and selectable 50/100/150 page sizes. Six editorial demo records support browsing when the API is unavailable.
-- **Semantic search:** use the **AI** toggle to search descriptions, themes, mood, and ideas across media with Sentence Transformer vectors in PostgreSQL/pgvector. Similarity results are model inferences, not factual relationships.
+- **Semantic search:** use the **AI** toggle to search descriptions, themes, mood, and ideas across media with 384-dimensional Sentence Transformer vectors in PostgreSQL/pgvector. The API runs the query encoder through FastEmbed's quantized ONNX backend to fit small instances. Similarity results are model inferences, not factual relationships.
 - **Connection Explorer:** open an item to follow exact shared genre tags, matching creator credits, or shared words in eligible Tastera editorial notes. The explorer can open another item or its creator page. Saved/feedback activity is identified separately from catalog evidence.
 - **Creator pages:** use the catalog search API and exact normalized creator credits to gather that creator's records across media types.
 - **Taste Map:** graphs the user's saved and feedback items around shared catalog genres, with deduplicated links, pan/zoom controls, related catalog items, and a genre search view.
