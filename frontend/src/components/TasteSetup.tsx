@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Media, MediaCategory } from "../types/media";
+import type { CoreMediaCategory, Media } from "../types/media";
 import { getCatalog } from "../services/catalogApi";
 import { TASTE_MOODS } from "../data/tasteOptions";
 import ThemedSelect from "./ThemedSelect";
@@ -20,8 +20,8 @@ type TasteSetupProps = {
   onCancel: () => void;
 };
 
-const categories: MediaCategory[] = ["Movies", "Books", "Music"];
-const favoriteLimits: Record<MediaCategory, number> = { Movies: 5, Books: 3, Music: 3 };
+const categories: CoreMediaCategory[] = ["Movies", "Books", "Music"];
+const favoriteLimits: Record<CoreMediaCategory, number> = { Movies: 5, Books: 3, Music: 3 };
 const genreLimit = 5;
 const artistLimit = 3;
 const moodLimit = 1;
@@ -32,7 +32,7 @@ export default function TasteSetup({ catalog, initial, required = false, onSave,
   const [favoriteArtists, setFavoriteArtists] = useState(initial.favoriteArtists);
   const [genres, setGenres] = useState(initial.genres);
   const [selectedMoods, setSelectedMoods] = useState(initial.moods);
-  const [searchCategory, setSearchCategory] = useState<MediaCategory>("Movies");
+  const [searchCategory, setSearchCategory] = useState<CoreMediaCategory>("Movies");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Media[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function TasteSetup({ catalog, initial, required = false, onSave,
   const choices = useMemo(() => Object.fromEntries(categories.map((category) => [
     category,
     allItems.filter((item) => item.category === category).slice(0, 16),
-  ])) as Record<MediaCategory, Media[]>, [allItems]);
+  ])) as Record<CoreMediaCategory, Media[]>, [allItems]);
   const artists = useMemo(() => [...new Set(catalog.filter((item) => item.category === "Music").map((item) => item.creator))].slice(0, 16), [catalog]);
   const genreOptions = useMemo(() => [...new Set(catalog.map((item) => item.genre).filter((genre) => genre && genre.toLowerCase() !== "genre not provided"))].slice(0, 18), [catalog]);
   const hasTasteChoices = favoriteIds.length + favoriteArtists.length + genres.length + selectedMoods.length > 0;
@@ -73,7 +73,8 @@ export default function TasteSetup({ catalog, initial, required = false, onSave,
       return;
     }
     const selectedCount = favoriteIds.filter((id) => allItems.find((entry) => entry.id === id)?.category === item.category).length;
-    if (selectedCount >= favoriteLimits[item.category]) { setSearchMessage(`Choose up to ${favoriteLimits[item.category]} ${item.category.toLowerCase()} favorites.`); return; }
+    const limit = favoriteLimits[item.category as CoreMediaCategory] ?? 0;
+    if (selectedCount >= limit) { setSearchMessage(`Choose up to ${limit} ${item.category.toLowerCase()} favorites.`); return; }
     setFavoriteIds((current) => [...current, item.id]);
     setFavoriteItems((current) => [...new Map([...current, item].map((entry) => [entry.id, entry])).values()]);
     setSearchMessage("");
@@ -105,7 +106,7 @@ export default function TasteSetup({ catalog, initial, required = false, onSave,
         <section className="taste-search-panel" aria-label="Search the catalog to add favorites">
           <div><strong>Looking for a specific title?</strong><span>Search the catalog and add it to your favorites.</span></div>
           <div className="taste-search-controls">
-            <ThemedSelect ariaLabel="Search category" value={searchCategory} options={categories.map((category) => ({ value: category, label: category }))} onChange={(value) => setSearchCategory(value as MediaCategory)} />
+            <ThemedSelect ariaLabel="Search category" value={searchCategory} options={categories.map((category) => ({ value: category, label: category }))} onChange={(value) => setSearchCategory(value as CoreMediaCategory)} />
             <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={`Search ${searchCategory.toLowerCase()} by title or creator`} aria-label={`Search ${searchCategory.toLowerCase()} by title or creator`} />
           </div>
           <p className="taste-search-status" role="status">{searchLoading ? "Searching the catalog…" : searchQuery.trim().length < 2 ? "Type at least two characters to search the live catalog." : searchMessage}</p>

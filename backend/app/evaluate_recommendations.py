@@ -339,13 +339,13 @@ def evaluate_category(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--category", choices=("Movies", "Books", "Music", "all"), default="all")
+    parser.add_argument("--category", choices=("Movies", "Books", "Music", "TV", "Games", "Podcasts", "all"), default="all")
     parser.add_argument("--k", type=int, default=12)
     parser.add_argument("--minimum-history", type=int, default=2)
     args = parser.parse_args()
     if args.k < 1 or args.minimum_history < 1:
         parser.error("--k and --minimum-history must be positive")
-    categories = ("Movies", "Books", "Music") if args.category == "all" else (args.category,)
+    categories = ("Movies", "Books", "Music", "TV", "Games", "Podcasts") if args.category == "all" else (args.category,)
     try:
         with SessionLocal() as session:
             for category in categories:

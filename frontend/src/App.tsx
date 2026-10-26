@@ -8,6 +8,7 @@ import CommunityPage from "./components/CommunityPage";
 import ThemedSelect from "./components/ThemedSelect";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import EvaluationDashboard from "./components/EvaluationDashboard";
+import ImportLibrary from "./components/ImportLibrary";
 import { mediaItems } from "./data/media";
 import {
   AccountApiError,
@@ -27,10 +28,10 @@ import {
 } from "./services/accountApi";
 import { getCatalog, getSemanticCatalog } from "./services/catalogApi";
 import type { Account } from "./services/accountApi";
-import type { LibraryActivity, Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage, SavedMedia, SavedMediaUpdate } from "./types/media";
+import type { CoreMediaCategory, LibraryActivity, Media, MediaCategory, MediaFilter, Recommendation, RecommendationPage, SavedMedia, SavedMediaUpdate } from "./types/media";
 import "./App.css";
 
-const categories: MediaFilter[] = ["All", "Movies", "Books", "Music"];
+const categories: MediaFilter[] = ["All", "Movies", "TV", "Books", "Music", "Games", "Podcasts"];
 
 const navigationItems = [
   ["Discover", "⌂"],
@@ -49,7 +50,7 @@ const navigationItems = [
 type Page = (typeof navigationItems)[number][0];
 type RecommendationStrategy = "auto" | "genre" | "item_item";
 type SocialPrivacy = "private" | "friends" | "community";
-type CategoryMix = Record<MediaCategory, number>;
+type CategoryMix = Record<CoreMediaCategory, number>;
 type RecommendationTuning = { popularity: number; novelty: number; familiarity: number };
 const defaultRecommendationTuning: RecommendationTuning = { popularity: 20, novelty: 15, familiarity: 65 };
 type HeroSlide = {
@@ -65,7 +66,7 @@ type HeroSlide = {
   landscapeAlt?: string;
 };
 
-const mediaCategories: MediaCategory[] = ["Movies", "Books", "Music"];
+const mediaCategories: CoreMediaCategory[] = ["Movies", "Books", "Music"];
 const recommendationBatchSize = 12;
 const advancedTasteLimits = { genres: 12, favoriteArtists: 8, moods: 3 } as const;
 const moodWords: Record<string, string[]> = {
@@ -352,6 +353,9 @@ function statusLabelsForActivity(category: MediaCategory, value: string | null) 
     Movies: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
     Books: { planned: "Want to read", in_progress: "Reading", finished: "Finished" },
     Music: { planned: "Want to listen", in_progress: "Listening", finished: "Finished" },
+    TV: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
+    Games: { planned: "Want to play", in_progress: "Playing", finished: "Finished" },
+    Podcasts: { planned: "Want to listen", in_progress: "Listening", finished: "Finished" },
   };
   return labels[category][value ?? ""] ?? "Updated";
 }
@@ -1121,6 +1125,13 @@ function App() {
     }
   }
 
+  function surpriseMe() {
+    const pool = catalog.filter((item) => !savedItems.some((savedItem) => savedItem.id === item.id));
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    setSelectedSearchItem(pick);
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1273,9 +1284,9 @@ function App() {
         {activePage === "ML Lab" ? (
           <EvaluationDashboard />
         ) : activePage === "Collections" ? (
-          <CollectionsPage catalog={catalog} />
+          <CollectionsPage catalog={catalog} token={authToken} />
         ) : activePage === "Community" ? (
-          <CommunityPage catalog={recommendationCatalog} savedItems={savedItems} />
+          <CommunityPage catalog={recommendationCatalog} savedItems={savedItems} token={authToken} />
         ) : activePage === "Guide" ? (
           <section className="info-page guide-page" aria-labelledby="guide-heading">
             <div className="info-hero">
@@ -1921,6 +1932,7 @@ function App() {
                     <h2 id="for-you-heading">For you.</h2>
                   </div>
                   <div className="for-you-actions">
+                    <button type="button" className="taste-preferences-button" onClick={surpriseMe} disabled={!catalog.some((item) => !savedItems.some((savedItem) => savedItem.id === item.id))}>Surprise me</button>
                     {account && (
                       <span className="result-count">
                         {recommendations.length > 0
@@ -2150,6 +2162,8 @@ function App() {
               )}
 
               {activePage === "Library" && account && (
+                <>
+                <ImportLibrary catalog={catalog} onSave={async (id) => { if (authToken) await saveMedia(authToken, id); }} onComplete={refreshLibrary} />
                 <section className="library-activity-panel" aria-labelledby="library-activity-heading">
                   <div className="library-activity-heading">
                     <div><span className="eyebrow">YOUR RECENT ACTIVITY</span><h3 id="library-activity-heading">A little history</h3></div>
@@ -2171,6 +2185,7 @@ function App() {
                     </ol>
                   ) : <p className="library-activity-empty">Save an item or add a rating to start your private activity history.</p>}
                 </section>
+                </>
               )}
 
               {search.trim() && (

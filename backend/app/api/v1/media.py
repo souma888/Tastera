@@ -4,15 +4,46 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_session
+from app.models.catalog import CreatorAliasRecord, MediaItemRecord, MediaRelationshipRecord
 from app.schemas.media import MediaCategory, MediaItem, MediaPage, SemanticMediaPage, SemanticMediaResult
 from app.services.catalog import get_media, list_media, to_schema
 from app.services.semantic_search import EMBEDDING_MODEL, search_semantic
 
 
 router = APIRouter(prefix="/media", tags=["media"])
+
+
+@router.get("/{media_id}/relationships")
+def get_media_relationships(media_id: str, session: Annotated[Session, Depends(get_session)]):
+    """Return sourced catalog links, distinct from semantic similarity."""
+    if session.get(MediaItemRecord, media_id) is None:
+        raise HTTPException(status_code=404, detail="Media item not found.")
+    rows = session.scalars(select(MediaRelationshipRecord).where(
+        (MediaRelationshipRecord.source_media_id == media_id) | (MediaRelationshipRecord.target_media_id == media_id)
+    ).order_by(MediaRelationshipRecord.relationship_type)).all()
+    result = []
+    for relation in rows:
+        other_id = relation.target_media_id if relation.source_media_id == media_id else relation.source_media_id
+        item = session.get(MediaItemRecord, other_id)
+        if item is not None:
+            result.append({"type": relation.relationship_type, "provenance": relation.provenance,
+                "source_url": relation.source_url, "confidence": relation.confidence,
+                "item": to_schema(item)})
+    return result
+
+
+@router.get("/creators/aliases")
+def resolve_creator_alias(query: Annotated[str, Query(min_length=1, max_length=200)], session: Annotated[Session, Depends(get_session)]):
+    """Resolve a manually attributed alias without overwriting the source credit."""
+    alias = session.scalar(select(CreatorAliasRecord).where(func.lower(CreatorAliasRecord.alias) == query.strip().lower()))
+    if alias is None:
+        return {"query": query, "canonical_name": query, "matched": False, "provenance": None}
+    return {"query": query, "canonical_name": alias.canonical_name, "matched": True,
+        "provenance": alias.provenance, "source_url": alias.source_url}
 
 
 @router.get("/semantic", response_model=SemanticMediaPage)

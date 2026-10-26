@@ -2,13 +2,14 @@
 
 **Last reviewed:** 2026-10-26
 **Status:** Live cross-media discovery product; catalog pathways and personal activity views are implemented.
-**Scope:** Movies, books, and music discovery with visible catalog and user-activity connections.
+**Scope:** Movies, TV, books, music, games, and podcasts in catalog browsing; current personalized ranking is still strongest for movies, books, and music.
 
 ## Implemented product
 
 ### Discover and catalog pathways
 
 - Browse the API catalog by category and genre; search titles, creators, and genres; sort by provider popularity; use pagination with a 50, 100, or 150 item page size.
+- Catalog filters and the ML Lab accept Movies, TV, Books, Music, Games, and Podcasts. TV, Games, and Podcasts remain empty until their on-demand import commands populate the database.
 - Open a catalog or recommendation card to see explainable pathways across media. The explorer uses exact normalized genre tags, matching creator credits, and overlapping concepts in eligible Tastera editorial notes. It labels a user's saves/feedback separately.
 - Open creator pages that group items with the same normalized catalog creator credit.
 - Search catalog records for an exact normalized genre from a Taste Map theme node.
@@ -21,8 +22,12 @@
 - For You uses saved items, ratings, onboarding preferences, category mix, feedback, popularity, and movie co-save similarity where available. Users can refresh the batch and adjust the mix and movie strategy.
 - Onboarding accepts favorite catalog items, artists/creators, genres, and moods.
 - Taste Map is built from the user's saved items and recommendation feedback. It links those signals to shared genres, deduplicates edges, supports pan/zoom and node selection, and shows related catalog items.
-- Collections support themed shelves and shareable snapshots. Collections live in the browser; changes are not synchronized to an earlier shared snapshot.
-- Community preview offers fictional sample explorers/activity, shared-genre suggestions, and starter lists. Follows and copies are browser-local previews, not a real friend network or public publishing system.
+- Signed-in collections are stored in Neon, editable across devices, and can be shared through revocable public pages; guest collections remain local snapshots.
+- Community includes opt-in public profiles, server-backed follow/unfollow, and clearly labeled fictional sample explorers/activity. Library saves, ratings, and notes remain private.
+- Letterboxd, Goodreads, and Spotify CSV/JSON imports are parsed in the browser and preview matched catalog items before adding them to the account Library; the raw file is not uploaded.
+- TMDb movie and TV importers can store regional watch-options links. Podcast import uses Apple's iTunes Search API; game import uses the free non-commercial IGDB API with developer credentials.
+- Source-attributed relationship and creator-alias tables, an importer for reviewed CSV links, and connection-explorer rendering are implemented. Only manually supplied data produces factual adaptation/alias links; the repository does not yet include a broad reviewed link dataset.
+- The PWA caches the static app shell only; API responses and account data are not cached. Taste Map supports keyboard pan, zoom, reset, and visible focus.
 - Account data can be exported as JSON or deleted; export includes browser-local taste/collection settings when initiated from Settings. Catalog cards show source and last metadata update when available.
 - Guide, About, and Contact sections describe the current interface and project.
 
@@ -30,10 +35,11 @@
 
 - FastAPI, SQLAlchemy, Alembic, Neon PostgreSQL in production, and SQLite for local setup.
 - Account authentication with Argon2 password hashing and signed bearer sessions; per-account saved media and recommendation feedback. Frontend recovery preserves the current session and cached Library during temporary API failures, provides a manual refresh path, and treats confirmed `401` responses as expired sessions.
-- Manual importers for popular TMDb movies, rating-ranked Open Library works, and popularity-proxy MusicBrainz albums with confirmed Cover Art Archive covers.
+- Manual importers for popular TMDb movies/TV with regional watch links, iTunes podcasts, IGDB games, rating-ranked Open Library works, and popularity-proxy MusicBrainz albums with confirmed Cover Art Archive covers.
 - MovieLens audit/recommender notebooks and app-feedback offline evaluation tooling.
 - Sentence Transformer catalog embeddings, the pgvector migration, and semantic search are active in production. The production catalog has 1,120 vectors; query inference uses FastEmbed's quantized ONNX runtime to fit Render's 512 MiB free service. First requests after a cold start can still be delayed while Render wakes and the model loads.
 - The app-feedback evaluator now compares embeddings alongside genre and movie item-item ranking and reports Precision@K. The aggregate-only ML Lab API/dashboard hides model scores below the minimum cohort.
+- The ML Lab has category/K guidance and privacy-specific empty states. New categories with no eligible accounts intentionally show no aggregate results.
 - Authenticated evidence-phrasing endpoint is implemented. `OPENAI_API_KEY` is configured on the backend host for model-written phrasing; deterministic evidence-based wording remains the fallback.
 
 ## Connection and recommendation limits

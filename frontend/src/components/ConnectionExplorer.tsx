@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCatalog, getSemanticCatalog } from "../services/catalogApi";
+import { getCanonicalCreator, getCatalog, getMediaRelationships, getSemanticCatalog, type MediaRelationship } from "../services/catalogApi";
 import { explainConnection, type ConnectionExplanation } from "../services/aiApi";
 import type { Media } from "../types/media";
 import "./ConnectionExplorer.css";
@@ -79,6 +79,8 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
   const [explanationErrors, setExplanationErrors] = useState<Record<string, string>>({});
   const [semanticLookup, setSemanticLookup] = useState<{ itemId: string; items: { item: Media; similarity: number }[] } | null>(null);
   const [semanticError, setSemanticError] = useState<string | null>(null);
+  const [sourceRelationships, setSourceRelationships] = useState<MediaRelationship[]>([]);
+  const [canonicalCreator, setCanonicalCreator] = useState(creator ?? "");
 
   async function requestExplanation(targetId: string) {
     if (!authToken || !activeItem) return;
@@ -113,6 +115,24 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
   }, [activeItem, creatorPage, themePage]);
 
   useEffect(() => {
+    if (!creatorPage) { setCanonicalCreator(""); return; }
+    const controller = new AbortController();
+    void getCanonicalCreator(creatorPage, controller.signal).then((name) => {
+      if (!controller.signal.aborted) setCanonicalCreator(name);
+    });
+    return () => controller.abort();
+  }, [creatorPage]);
+
+  useEffect(() => {
+    if (!activeItem || creatorPage || themePage) { setSourceRelationships([]); return; }
+    const controller = new AbortController();
+    void getMediaRelationships(activeItem.id, controller.signal).then(setSourceRelationships).catch(() => {
+      if (!controller.signal.aborted) setSourceRelationships([]);
+    });
+    return () => controller.abort();
+  }, [activeItem, creatorPage, themePage]);
+
+  useEffect(() => {
     if (!activeItem || creatorPage || themePage) return;
     const controller = new AbortController();
     const query = [activeItem.title, activeItem.creator, activeItem.category, activeItem.genre, activeItem.description]
@@ -143,7 +163,7 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
   ]), [savedItems, feedbackItems]);
   const pathways = useMemo(() => {
     if (!activeItem) return [];
-    return allItems
+    const discovered = allItems
       .filter((candidate) => candidate.id !== activeItem.id)
       .map((candidate) => ({ item: candidate, evidence: findEvidence(activeItem, candidate, activeIds) }))
       .filter((entry) => entry.evidence.length > 0)
@@ -152,13 +172,20 @@ export default function ConnectionExplorer({ item, creator, theme, catalog, save
         right.evidence.reduce((sum, evidence) => sum + evidence.strength, 0) - left.evidence.reduce((sum, evidence) => sum + evidence.strength, 0) ||
         left.item.title.localeCompare(right.item.title))
       .slice(0, 12);
-  }, [activeItem, allItems, activeIds]);
+    const explicit = sourceRelationships.map((relationship) => ({
+      item: relationship.item,
+      evidence: [{ label: relationship.type === "adaptation" ? "Source-linked adaptation" : `Source-linked ${relationship.type}`, detail: `Catalog relationship recorded by ${relationship.provenance}.${relationship.source_url ? ` Source: ${relationship.source_url}` : ""}`, strength: 10 }],
+      crossMedia: relationship.item.category !== activeItem.category,
+    }));
+    const explicitIds = new Set(explicit.map((entry) => entry.item.id));
+    return [...explicit, ...discovered.filter((entry) => !explicitIds.has(entry.item.id))].slice(0, 12);
+  }, [activeItem, allItems, activeIds, sourceRelationships]);
   const creatorItems = useMemo(() => {
     if (!creatorPage) return [];
-    const key = creatorKey(creatorPage);
-    return allItems.filter((candidate) => creatorKey(candidate.creator) === key).sort((left, right) =>
+    const keys = new Set([creatorKey(creatorPage), creatorKey(canonicalCreator)]);
+    return allItems.filter((candidate) => keys.has(creatorKey(candidate.creator))).sort((left, right) =>
       left.category.localeCompare(right.category) || left.title.localeCompare(right.title));
-  }, [allItems, creatorPage]);
+  }, [allItems, creatorPage, canonicalCreator]);
   const themeItems = useMemo(() => {
     if (!themePage) return [];
     return allItems.filter((candidate) => normalizeGenre(candidate.genre).includes(normalizeGenre(themePage)[0] ?? ""))

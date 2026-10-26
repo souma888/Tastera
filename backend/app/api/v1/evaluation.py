@@ -15,12 +15,12 @@ router = APIRouter(prefix="/evaluation", tags=["evaluation"])
 
 @router.get("/recommendations", response_model=EvaluationDashboardReport)
 def get_recommendation_evaluation(
-    category: Literal["Movies", "Books", "Music", "all"] = "Movies",
+    category: Literal["Movies", "Books", "Music", "TV", "Games", "Podcasts", "all"] = "Movies",
     k: Annotated[int, Query(ge=1, le=50)] = 12,
 ) -> EvaluationDashboardReport:
     """Return aggregate metrics only, requiring the evaluator's 5-account floor."""
 
-    categories = ("Movies", "Books", "Music") if category == "all" else (category,)
+    categories = ("Movies", "Books", "Music", "TV", "Games", "Podcasts") if category == "all" else (category,)
     reports: list[EvaluationCategoryReport] = []
     try:
         with SessionLocal() as session:

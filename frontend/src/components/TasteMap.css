@@ -278,6 +278,7 @@
   color: var(--taste-cyan);
   background-color: #15323a;
 }
+.node-tv .taste-node-dot,.detail-tv { color:#7dc8ff; background-color:#182d43; }
 
 .node-book .taste-node-dot,
 .detail-book {
@@ -290,6 +291,8 @@
   color: #f0b4dc;
   background-color: #321e30;
 }
+.node-game .taste-node-dot,.detail-game { color:#9cda91; background-color:#1d3527; }
+.node-podcast .taste-node-dot,.detail-podcast { color:#ffc17f; background-color:#3b2a1d; }
 
 .node-theme .taste-node-dot,
 .detail-theme {
@@ -577,7 +580,8 @@
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
-  outline: 0 !important;
+  outline: 2px solid var(--lavender) !important;
+  outline-offset: 3px !important;
   box-shadow: none !important;
   background: transparent !important;
   color: var(--taste-purple);
@@ -589,3 +593,4 @@
 }
 .taste-related-creator:hover,
 .taste-related-creator:focus-visible { text-decoration: underline; }
+.taste-canvas:focus-visible { outline: 2px solid var(--lavender); outline-offset: 3px; }

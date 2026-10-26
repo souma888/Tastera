@@ -25,6 +25,7 @@ from app.services.import_tracking import catalog_import_run
 TMDB_API = "https://api.themoviedb.org/3"
 TMDB_IMAGE = "https://image.tmdb.org/t/p/w500"
 PROVIDER = "tmdb-movie"
+WATCH_PROVIDER_REGION = "US"
 
 
 @dataclass
@@ -91,6 +92,7 @@ def _upsert_movie(
     genre_names: dict[int, str],
     genre_cache: dict[str, Genre],
     client: httpx.Client,
+    watch_region: str = WATCH_PROVIDER_REGION,
 ) -> str:
     external_id = str(movie["id"])
     identifier = session.scalar(
@@ -102,6 +104,7 @@ def _upsert_movie(
     record = session.get(MediaItemRecord, identifier.media_item_id) if identifier else None
 
     credits = _request(client, f"/movie/{external_id}/credits", {})
+    provider_data = _request(client, f"/movie/{external_id}/watch/providers", {}).get("results", {}).get(watch_region.upper(), {})
     creator = _director(credits)
     title = (movie.get("title") or movie.get("original_title") or "Untitled movie").strip()
     if record is None:
@@ -137,6 +140,8 @@ def _upsert_movie(
             primary_genre=primary_genre,
             description=movie.get("overview") or None,
             artwork_url=artwork,
+            watch_url=provider_data.get("link"),
+            provider_region=watch_region.upper() if provider_data.get("link") else None,
             connection="Imported from TMDb; editorial connections have not been reviewed.",
             source="TMDb",
             popularity_score=popularity_score,
@@ -152,6 +157,8 @@ def _upsert_movie(
     record.primary_genre = primary_genre
     record.description = movie.get("overview") or None
     record.artwork_url = artwork
+    record.watch_url = provider_data.get("link")
+    record.provider_region = watch_region.upper() if provider_data.get("link") else None
     record.source = "TMDb"
     record.popularity_score = popularity_score
     record.genre_links.clear()
@@ -164,6 +171,7 @@ def import_popular_movies(
     pages: int = 1,
     language: str = "en-US",
     request_delay: float = 0.25,
+    watch_region: str = WATCH_PROVIDER_REGION,
 ) -> ImportSummary:
     """Import popular movies, fetching directors and poster metadata."""
 
@@ -200,7 +208,7 @@ def import_popular_movies(
                         continue
                     try:
                         outcome = _upsert_movie(
-                            session, movie, genre_names, genre_cache, client
+                            session, movie, genre_names, genre_cache, client, watch_region
                         )
                         if outcome == "added":
                             summary.added += 1
@@ -219,19 +227,82 @@ def import_popular_movies(
     return summary
 
 
+def import_popular_tv(*, pages: int = 1, language: str = "en-US", request_delay: float = 0.25, watch_region: str = WATCH_PROVIDER_REGION) -> ImportSummary:
+    """Import popular TV metadata and region-scoped TMDb watch links."""
+    token = os.getenv("TMDB_READ_ACCESS_TOKEN")
+    if not token:
+        raise RuntimeError("Set TMDB_READ_ACCESS_TOKEN to import TMDb TV metadata.")
+    if pages < 1 or pages > 500:
+        raise ValueError("pages must be between 1 and 500")
+    summary = ImportSummary()
+    provider = "tmdb-tv"
+    with httpx.Client(headers={"Authorization": f"Bearer {token}", "accept": "application/json"}, timeout=30) as client, SessionLocal() as session:
+        with catalog_import_run(session, provider) as run:
+            summary.run_id = run.id
+            genre_response = _request(client, "/genre/tv/list", {"language": language})
+            genre_names = {int(row["id"]): row["name"] for row in genre_response.get("genres", [])}
+            genre_cache: dict[str, Genre] = {}
+            for page in range(1, pages + 1):
+                shows = _request(client, "/tv/popular", {"language": language, "page": page}).get("results", [])
+                for show in shows:
+                    external_id = str(show.get("id", ""))
+                    title = (show.get("name") or show.get("original_name") or "").strip()
+                    if not external_id.isdigit() or not title:
+                        summary.skipped += 1; run.skipped += 1
+                        continue
+                    try:
+                        creators = [person.get("name", "").strip() for person in show.get("created_by", []) if person.get("name")]
+                        if not creators:
+                            credits = _request(client, f"/tv/{external_id}/aggregate_credits", {}).get("crew", [])
+                            creators = [person.get("name", "").strip() for person in credits if person.get("job") == "Executive Producer" and person.get("name")][:3]
+                        creator = ", ".join(dict.fromkeys(creators)) or "Unknown creator"
+                        identifier = session.scalar(select(MediaIdentifier).where(MediaIdentifier.provider == provider, MediaIdentifier.external_id == external_id))
+                        record = session.get(MediaItemRecord, identifier.media_item_id) if identifier else None
+                        if record is None:
+                            record = MediaItemRecord(id=f"tmdb-tv-{external_id}", title=title, creator=creator, category="TV", primary_genre="Genre not provided", connection="Imported from TMDb; relationship links have not been reviewed.", source="TMDb", identifiers=[MediaIdentifier(provider=provider, external_id=external_id)])
+                            session.add(record)
+                        names = [genre_names[value] for value in show.get("genre_ids", []) if value in genre_names]
+                        primary, genres = _genre_for(session, names, genre_cache)
+                        image_path = show.get("poster_path")
+                        region = watch_region.upper()
+                        providers = _request(client, f"/tv/{external_id}/watch/providers", {}).get("results", {}).get(region, {})
+                        record.title, record.creator, record.category = title, creator, "TV"
+                        record.primary_genre = primary
+                        record.description = show.get("overview") or None
+                        record.artwork_url = f"{TMDB_IMAGE}{image_path}" if image_path else None
+                        record.watch_url = providers.get("link")
+                        record.provider_region = region if record.watch_url else None
+                        record.popularity_score = math.log1p(show.get("popularity", 0)) if show.get("popularity", 0) > 0 else 0
+                        record.source = "TMDb"
+                        record.genre_links.clear(); record.genre_links.extend(MediaGenre(genre=genre) for genre in genres)
+                        if identifier is None and record.id != f"tmdb-tv-{external_id}":
+                            record.identifiers.append(MediaIdentifier(provider=provider, external_id=external_id))
+                        session.commit()
+                        if record.id == f"tmdb-tv-{external_id}" and identifier is None: summary.added += 1; run.added += 1
+                        else: summary.updated += 1; run.updated += 1
+                    except (httpx.HTTPError, KeyError, ValueError, TypeError):
+                        session.rollback(); summary.skipped += 1; run.skipped += 1
+                    if request_delay: time.sleep(request_delay)
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--media-type", choices=("movie", "tv"), default="movie", help="TMDb catalog type to import.")
     parser.add_argument("--pages", type=int, default=1, help="Popular movie pages to import (20 records per page).")
     parser.add_argument("--language", default="en-US", help="TMDb metadata language.")
     parser.add_argument("--request-delay", type=float, default=0.25, help="Seconds between movie detail requests.")
+    parser.add_argument("--watch-region", default=WATCH_PROVIDER_REGION, help="ISO country code for TMDb watch availability links (default: US).")
     args = parser.parse_args()
     if args.request_delay < 0:
         parser.error("--request-delay cannot be negative")
 
-    summary = import_popular_movies(
+    importer = import_popular_tv if args.media_type == "tv" else import_popular_movies
+    summary = importer(
         pages=args.pages,
         language=args.language,
         request_delay=args.request_delay,
+        watch_region=args.watch_region,
     )
     print(
         f"TMDb import run {summary.run_id} complete: {summary.added} added, "

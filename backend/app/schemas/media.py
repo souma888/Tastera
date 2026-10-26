@@ -12,6 +12,9 @@ class MediaCategory(str, Enum):
     MOVIES = "Movies"
     BOOKS = "Books"
     MUSIC = "Music"
+    TV = "TV"
+    GAMES = "Games"
+    PODCASTS = "Podcasts"
 
 
 class MediaItem(BaseModel):
@@ -23,6 +26,8 @@ class MediaItem(BaseModel):
     category: MediaCategory
     genre: str
     image: HttpUrl | None = None
+    watch_url: HttpUrl | None = None
+    provider_region: str | None = None
     description: str | None = None
     connection: str = Field(
         description="Editorial explanation for this development catalog item."

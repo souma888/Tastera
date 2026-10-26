@@ -53,19 +53,20 @@ export default function EvaluationDashboard() {
           </div>
           <strong>{percentage(methods[name][metric])}</strong>
         </div>)}
-      </div> : <div className="ml-chart-empty">Metrics appear once the evaluation cohort is large enough.</div>}
+      </div> : <div className="ml-chart-empty"><strong>Waiting for enough {category.toLowerCase()} activity</strong><span>To protect privacy, Tastera only shows these aggregate scores after at least five accounts have enough positive signals in this category. Try another category, or check back as the community grows.</span></div>}
     </section>
   );
 
   return (
     <section className="ml-lab-page" aria-labelledby="ml-lab-title">
       <header className="ml-lab-hero">
-        <div><span className="eyebrow">TASTERA · MODEL EVALUATION</span><h1 id="ml-lab-title">The ML lab.</h1><p>Compare simple genre ranking, movie co-save similarity, and metadata embeddings against the same chronological holdout.</p></div>
+        <div><span className="eyebrow">TASTERA · MODEL EVALUATION</span><h1 id="ml-lab-title">The ML lab.</h1><p>Choose a media category to compare recommendation methods on that category’s catalog and account activity. These are offline experiments, not your personal recommendations.</p></div>
         <div className="ml-lab-controls">
-          <label>Category<select value={category} onChange={(event) => setCategory(event.target.value)}><option>Movies</option><option>Books</option><option>Music</option></select></label>
-          <label>Top K<select value={k} onChange={(event) => setK(Number(event.target.value))}><option value={5}>5</option><option value={10}>10</option><option value={12}>12</option><option value={20}>20</option></select></label>
+          <label><span>1. Choose what to evaluate</span><select aria-label="Choose a media category to evaluate" value={category} onChange={(event) => setCategory(event.target.value)}><option>Movies</option><option>TV</option><option>Books</option><option>Music</option><option>Games</option><option>Podcasts</option></select></label>
+          <label><span>2. Results per list (K)</span><select aria-label="Choose the number of recommendations evaluated" value={k} onChange={(event) => setK(Number(event.target.value))}><option value={5}>5</option><option value={10}>10</option><option value={12}>12</option><option value={20}>20</option></select></label>
         </div>
       </header>
+      <p className="ml-lab-instructions"><strong>How to use this page:</strong> Choose a category above, then choose K. Tastera compares its available recommendation methods for that selection. A category with too little account activity will show a privacy-safe explanation instead of scores.</p>
       {loading ? <div className="ml-status" role="status">Loading aggregate evaluation…</div>
         : error ? <div className="ml-status ml-status-error" role="alert">{error}</div>
         : !report ? <div className="ml-status">No report is available for this category.</div>

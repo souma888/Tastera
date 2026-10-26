@@ -1,6 +1,6 @@
 # TASTERA
 
-**Discover what connects you.** TASTERA is a cross-media discovery app for movies, books, and music. It helps people follow a title, creator, or shared catalog theme into another kind of media, with the reason for each pathway shown.
+**Discover what connects you.** TASTERA is a cross-media discovery app for movies, TV, books, music, games, and podcasts. It helps people follow a title, creator, or shared catalog theme into another kind of media, with the reason for each pathway shown.
 
 ## Live application
 
@@ -12,13 +12,15 @@ The canonical frontend URL is [soumadip-tastera.vercel.app](https://soumadip-tas
 
 ## What the app does
 
-- **Discover:** browse movies, books, and albums; search titles, creators, and genres; filter by category or genre; select 50, 100, or 150 items per page; and page through popularity-ordered results.
+- **Discover:** browse movies, TV, books, music, games, and podcasts; search titles, creators, and genres; filter by category or genre; select 50, 100, or 150 items per page; and page through popularity-ordered results.
 - **Follow connections:** open a catalog card or recommendation to see related cross-media items. Each link is labeled as a shared creator credit, exact normalized genre, shared word in Tastera editorial notes, or your own saved/feedback activity.
 - **Creator pages:** collect catalog records that use the same creator credit, such as an author, director, or recording artist.
-- **Taste Map:** trace saved items and recommendation feedback to their catalog genres. Select a genre to search matching catalog records; drag to pan, scroll to zoom, and inspect why nodes connect.
+- **Taste Map:** trace saved items and recommendation feedback to their catalog genres. Select a genre to search matching catalog records; drag or use arrow keys to pan, scroll or use +/- to zoom, and inspect why nodes connect.
 - **Personalize:** choose starter titles, artists, genres, and moods; view For You recommendations; refresh the batch; tune the Movies/Books/Music mix; and send “More like this” or “Not for me” feedback.
 - **Library and Profile:** keep account-backed saved items and view category, genre, recent-save, and feedback summaries.
-- **Collections:** make themed shelves and share a link. Collections currently live in the browser; a shared link carries a snapshot and does not sync later edits back to its owner.
+- **Collections and community:** keep guest collections in this browser or sync them to your signed-in account; create revocable public collection pages and opt in to a discoverable profile/follow graph. Library activity remains private.
+- **Import and availability:** privately preview Letterboxd, Goodreads, or Spotify export files against the catalog; supported TV/movie catalog imports can include region-specific TMDb watch-option links.
+- **ML Lab and PWA:** choose a media category for aggregate evaluation; install the static app shell and reopen it offline after an initial visit.
 - **Guide, About, Contact:** learn how the app works, what data powers it, and how to reach the developer.
 
 Pathways use the metadata currently available. Genre and creator links are catalog evidence; overlapping editorial-theme words are interpretive. Setting and influence credits are not consistently present, so the app does not invent those connections. These pathways are explainable discovery links, not a trained cross-media recommender. For You is a transparent baseline with movie co-save ranking where available; it is not a fully evaluated ML model.
@@ -62,6 +64,7 @@ The local default is SQLite. Set `TASTERA_DATABASE_URL` before migrations and st
 - [Recommendation research roadmap](docs/ml-roadmap.md)
 - [Notebook guide](notebooks/README.md)
 - [Dataset register](docs/dataset-register.md)
+- [Free-tier workflow and import commands](docs/FREE_TIER_WORKFLOW.md)
 
 ## Catalog data and attribution
 

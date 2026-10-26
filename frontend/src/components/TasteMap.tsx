@@ -3,8 +3,8 @@ import { useMemo, useRef, useState } from "react";
 import type { Media } from "../types/media";
 import "./TasteMap.css";
 
-type NodeKind = "you" | "movie" | "book" | "music" | "theme";
-type Filter = "all" | "movie" | "book" | "music" | "theme";
+type NodeKind = "you" | "movie" | "tv" | "book" | "music" | "game" | "podcast" | "theme";
+type Filter = Exclude<NodeKind, "you"> | "all";
 type TasteNode = {
   id: string;
   label: string;
@@ -30,13 +30,16 @@ type TasteMapProps = {
 const filterOptions: { label: string; value: Filter }[] = [
   { label: "All", value: "all" },
   { label: "Movies", value: "movie" },
+  { label: "TV", value: "tv" },
   { label: "Books", value: "book" },
   { label: "Music", value: "music" },
+  { label: "Games", value: "game" },
+  { label: "Podcasts", value: "podcast" },
   { label: "Shared genres", value: "theme" },
 ];
 
 function nodeKind(category: Media["category"]): NodeKind {
-  return category === "Movies" ? "movie" : category === "Books" ? "book" : "music";
+  return category === "Movies" ? "movie" : category === "TV" ? "tv" : category === "Books" ? "book" : category === "Games" ? "game" : category === "Podcasts" ? "podcast" : "music";
 }
 
 function genreKeys(value: string) {
@@ -147,8 +150,11 @@ export default function TasteMap({ savedItems, feedbackItems, catalog, onExplore
   const kindLabel: Record<NodeKind, string> = {
     you: "YOUR PROFILE",
     movie: "MOVIE",
+    tv: "TV SHOW",
     book: "BOOK",
     music: "MUSIC",
+    game: "GAME",
+    podcast: "PODCAST",
     theme: "SHARED GENRE",
   };
   const selectedEntry = [...savedItems, ...feedbackItems.map((entry) => entry.item)].find((item) => item.id === selected.id);
@@ -230,6 +236,21 @@ export default function TasteMap({ savedItems, feedbackItems, catalog, onExplore
       <div className="taste-layout">
         <div
           className={`taste-canvas ${isPanning ? "is-panning" : ""}`}
+          role="region"
+          tabIndex={0}
+          aria-describedby="taste-map-keyboard-hint"
+          onKeyDown={(event) => {
+            const step = event.shiftKey ? 64 : 28;
+            if (event.key === "ArrowLeft") setViewport((current) => ({ ...current, x: current.x + step }));
+            else if (event.key === "ArrowRight") setViewport((current) => ({ ...current, x: current.x - step }));
+            else if (event.key === "ArrowUp") setViewport((current) => ({ ...current, y: current.y + step }));
+            else if (event.key === "ArrowDown") setViewport((current) => ({ ...current, y: current.y - step }));
+            else if (event.key === "+" || event.key === "=") setViewport((current) => ({ ...current, zoom: Math.min(1.8, current.zoom + 0.15) }));
+            else if (event.key === "-") setViewport((current) => ({ ...current, zoom: Math.max(0.65, current.zoom - 0.15) }));
+            else if (event.key === "Home") setViewport({ x: 0, y: 0, zoom: 1 });
+            else return;
+            event.preventDefault();
+          }}
           onPointerDown={beginPan}
           onPointerMove={movePan}
           onPointerUp={endPan}
@@ -284,7 +305,7 @@ export default function TasteMap({ savedItems, feedbackItems, catalog, onExplore
               );
             })}
           </div>
-          <p className="map-interaction-hint">Drag empty space to pan · Scroll to zoom · Hover a node to trace its links</p>
+          <p className="map-interaction-hint" id="taste-map-keyboard-hint">Drag or use arrow keys to pan · Scroll or use + / − to zoom · Home resets · Hover or focus a node to trace its links</p>
           <div className="constellation-legend">
             <span><i className="legend-movie" /> Movies</span>
             <span><i className="legend-book" /> Books</span>

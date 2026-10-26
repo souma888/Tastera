@@ -4,7 +4,7 @@
 
 ## Current product baseline
 
-Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon PostgreSQL in production. The app supports movie/book/music discovery, accounts, saved items, user feedback, Profile, For You, Taste Map, collections, and in-app project information. Catalog cards and Taste Map genres link into evidence-labeled cross-media and creator exploration. See [Project Status](PROJECT_STATUS.md) for current behavior and limits.
+Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon PostgreSQL in production. The catalog supports movies, TV, books, music, games, and podcasts; personal ranking currently focuses on movies, books, and music. Account-backed collections/follows, private export imports, source-attributed relationships, regional watch links, and an installable app shell are implemented. See [Project Status](PROJECT_STATUS.md) for current behavior and limits.
 
 ## Completed product priorities
 
@@ -14,14 +14,17 @@ Tastera runs a React/Vite frontend on Vercel, a FastAPI API on Render, and Neon 
 - Added title/creator/genre search, popular-first browsing, page-size selection, onboarding tastes, recommendation explanations, and catalog-based relationship/creator exploration.
 - Made the Taste Map reflect saved/feedback activity and shared catalog genres; added traceability, related catalog results, selection, panning, and zoom.
 - Expanded Guide/About/Contact sections to describe the product and its available features.
+- Added TV, Games, and Podcasts catalog categories with manual, on-demand free-tier import paths; added TMDb regional watch options and “Surprise me.”
+- Replaced browser-only social foundations with account collections, revocable public share pages, opt-in public profiles, and a real follow graph.
+- Added private Letterboxd/Goodreads/Spotify export matching, manually reviewed adaptation/creator-alias import paths, PWA shell caching, and keyboard-operable Taste Map controls.
 
 ## Next product work
 
-1. **Measure semantic discovery:** gather enough opt-in feedback for the ML Lab to report Precision@K and coverage. Treat current embedding comparisons as preliminary proxy evaluation.
-2. **Improve relationship evidence:** add source-attributed normalized themes, settings, influences, adaptations, and creator relationships as catalog sources support them. Keep inferred or editorial relationships clearly distinguished from facts.
-3. **Normalize creator identities:** merge known aliases and credit variants while preserving the source credit and provenance.
-4. **Improve Books and Music coverage:** curate mainstream catalog additions, genre completeness, duplicates, and resilient cover/artwork URLs; record each import's added/updated/skipped totals.
-5. **Build category-specific recommenders:** evaluate books and music methods only after there is enough suitable catalog and interaction data. Treat cross-media ranking as a separate research question.
+1. **Measure new categories:** run modest import batches, inspect data coverage, and gather enough eligible feedback for category-specific ML Lab reports.
+2. **Curate verified links and aliases:** source and review real adaptation/creator-alias rows before claiming those graph links are broadly available.
+3. **Complete category-specific user experience:** broaden taste onboarding and ranking beyond Movies/Books/Music only after the new catalogs have enough quality and activity.
+4. **Improve source attribution and catalog quality:** maintain provider terms, duplication checks, artwork reliability, and import-run monitoring as catalog coverage grows.
+5. **Harden the social launch:** add reporting, blocking, abuse limits, and privacy review before growing public profile and collection discovery.
 
 ## Reliability, security, and research
 

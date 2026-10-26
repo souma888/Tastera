@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Media, MediaCategory } from "../types/media";
+import { followPerson, getCommunityProfile, getPublicPeople, updateCommunityProfile, unfollowPerson, type PublicPerson } from "../services/accountApi";
 
 type CommunityShelf = { name: string; description: string; genres: string[]; category: MediaCategory | "All" };
 type SampleProfile = { id: string; name: string; initials: string; label: string; bio: string; genres: string[]; activity: string[]; favoriteTitles: string[]; playlists: { name: string; description: string; genres: string[] }[] };
@@ -25,13 +26,25 @@ function loadFollowedShelves(): string[] {
   catch { return []; }
 }
 
-export default function CommunityPage({ catalog, savedItems }: { catalog: Media[]; savedItems: Media[] }) {
+export default function CommunityPage({ catalog, savedItems, token }: { catalog: Media[]; savedItems: Media[]; token: string | null }) {
   const [following, setFollowing] = useState<string[]>(loadFollowing);
   const [followedShelves, setFollowedShelves] = useState<string[]>(loadFollowedShelves);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<{ profileId: string; name: string; description: string; genres: string[] } | null>(null);
   const [quickProfileId, setQuickProfileId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [publicPeople, setPublicPeople] = useState<PublicPerson[]>([]);
+  const [displayName, setDisplayName] = useState("");
+  const [publicProfile, setPublicProfile] = useState(false);
+  const [socialBusy, setSocialBusy] = useState(false);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    void Promise.all([getPublicPeople(token), getCommunityProfile(token)]).then(([people, profile]) => {
+      if (!cancelled) { setPublicPeople(people); setDisplayName(profile.display_name); setPublicProfile(profile.public_profile); }
+    }).catch((error: unknown) => { if (!cancelled) setNotice(error instanceof Error ? error.message : "Could not load community accounts."); });
+    return () => { cancelled = true; };
+  }, [token]);
   const profileInterests = useMemo(() => [...new Set(savedItems.map((item) => item.genre.toLowerCase()).filter(Boolean))], [savedItems]);
   const sampleProfileItems = (profile: SampleProfile) => {
     const preferred = catalog.filter((item) => profile.favoriteTitles.some((title) => item.title.toLowerCase() === title.toLowerCase()));
@@ -66,6 +79,7 @@ export default function CommunityPage({ catalog, savedItems }: { catalog: Media[
 
   return <section className="community-page">
     {notice && <p className="community-notice" role="status">{notice}<button type="button" aria-label="Dismiss message" onClick={() => setNotice("")}>×</button></p>}
+    {token && <section className="community-section" aria-labelledby="community-account-title"><div className="community-section-heading"><div><span className="eyebrow">YOUR SOCIAL PROFILE</span><h2 id="community-account-title">Choose whether people can find you</h2></div></div><form className="community-profile-card" onSubmit={(event) => { event.preventDefault(); setSocialBusy(true); void updateCommunityProfile(token, displayName.trim() || "Tastera member", publicProfile).then(() => setNotice(publicProfile ? "Your profile is public and can be followed." : "Your profile is private and hidden from discovery.")).catch((error: unknown) => setNotice(error instanceof Error ? error.message : "Could not update profile.")).finally(() => setSocialBusy(false)); }}><label>Display name<input maxLength={80} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Name shown to other people" /></label><label><input type="checkbox" checked={publicProfile} onChange={(event) => setPublicProfile(event.target.checked)} /> Make my profile discoverable</label><button type="submit" disabled={socialBusy}>{socialBusy ? "Saving…" : "Save privacy settings"}</button><p>Your Library, ratings, and notes stay private. A public profile only exposes your display name and follower count.</p></form><div className="community-section-heading"><div><span className="eyebrow">PUBLIC PROFILES</span><h2>People to follow</h2></div><span>{publicPeople.length} accounts</span></div>{publicPeople.length ? <div className="community-profile-grid">{publicPeople.map((person) => <article className="community-profile-card" key={person.id}><h3>{person.display_name}</h3><p>{person.followers} followers</p><button type="button" disabled={socialBusy} onClick={() => { if (!token) return; setSocialBusy(true); void (person.following ? unfollowPerson(token, person.id) : followPerson(token, person.id)).then(() => setPublicPeople((current) => current.map((entry) => entry.id === person.id ? { ...entry, following: !entry.following, followers: entry.followers + (entry.following ? -1 : 1) } : entry))).catch((error: unknown) => setNotice(error instanceof Error ? error.message : "Could not update follow.")).finally(() => setSocialBusy(false)); }}>{person.following ? "Unfollow" : "Follow"}</button></article>)}</div> : <p className="community-empty">No public profiles are available yet. Turn on profile discovery above if you want to appear here.</p>}</section>}
     <header className="community-hero"><span className="eyebrow">SOCIAL DISCOVERY · PREVIEW</span><h1>Find a little <span>common ground.</span></h1><p>Compare taste, browse sample activity, and collect shelves from fellow explorers. Sample profiles are fictional previews; your personal Library stays private.</p><div className="community-preview-badge"><span aria-hidden="true">✦</span> SAMPLE COMMUNITY · NO REAL USER ACTIVITY SHARED</div></header>
     <section className="community-section"><div className="community-section-heading"><div><span className="eyebrow">SHARED TASTE</span><h2>A thread you might both follow</h2></div><span>{savedItems.length ? `${sharedGenres.length} shared themes` : "Save items to compare"}</span></div>
       {sharedItems.length ? <div className="community-shared-grid">{sharedItems.map((item) => <article key={item.id}><img src={item.image ?? ""} alt={`${item.title} cover`} loading="lazy"/><div><span>{item.category} · {item.genre}</span><strong>{item.title}</strong><small>{item.creator}</small></div></article>)}</div> : <p className="community-empty">Save a few items to your Library and Tastera will surface shared genres with the sample explorers here.</p>}

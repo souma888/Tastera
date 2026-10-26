@@ -26,6 +26,7 @@ export interface AuthResponse {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
+    cache: "no-store",
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
@@ -148,5 +149,54 @@ export function updateSavedMedia(token: string, mediaId: string, update: SavedMe
 export function removeSavedMedia(token: string, mediaId: string) {
   return request<void>(`/me/saved/${encodeURIComponent(mediaId)}`, {
     ...authorized(token, "DELETE"),
+  });
+}
+
+export interface ServerCollection {
+  id: string;
+  name: string;
+  description: string;
+  visibility: "private" | "unlisted" | "public";
+  share_slug: string;
+  items: import("../types/media").Media[];
+}
+
+export function getCollections(token: string) {
+  return request<ServerCollection[]>("/me/collections", authorized(token));
+}
+
+export function saveCollection(token: string, collection: Omit<ServerCollection, "share_slug" | "id"> & { id?: string }) {
+  const payload = { name: collection.name, description: collection.description, visibility: collection.visibility, media_ids: collection.items.map((item) => item.id) };
+  return request<ServerCollection>(`/me/collections${collection.id ? `/${encodeURIComponent(collection.id)}` : ""}`, {
+    ...authorized(token, collection.id ? "PUT" : "POST"),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function removeCollection(token: string, id: string) {
+  return request<void>(`/me/collections/${encodeURIComponent(id)}`, authorized(token, "DELETE"));
+}
+
+export function getSharedCollection(slug: string) {
+  return request<ServerCollection>(`/share/collections/${encodeURIComponent(slug)}`);
+}
+
+export type PublicPerson = { id: string; display_name: string; followers: number; following: boolean };
+export function getCommunityProfile(token: string) {
+  return request<{ display_name: string; public_profile: boolean }>("/me/community/profile", authorized(token));
+}
+export function getPublicPeople(token: string) {
+  return request<PublicPerson[]>("/community/people", authorized(token));
+}
+export function followPerson(token: string, id: string) {
+  return request<void>(`/community/follows/${encodeURIComponent(id)}`, authorized(token, "PUT"));
+}
+export function unfollowPerson(token: string, id: string) {
+  return request<void>(`/community/follows/${encodeURIComponent(id)}`, authorized(token, "DELETE"));
+}
+export function updateCommunityProfile(token: string, displayName: string, publicProfile: boolean) {
+  return request<{ display_name: string; public_profile: boolean }>("/me/community/profile", {
+    ...authorized(token, "PUT"),
+    body: JSON.stringify({ display_name: displayName, public_profile: publicProfile }),
   });
 }

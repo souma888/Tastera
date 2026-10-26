@@ -10,6 +10,8 @@ FastAPI service foundation for the TASTERA discovery platform.
   and pagination query parameters.
 - `GET /api/v1/media/semantic`: retrieves catalog items by natural-language meaning with FastEmbed/ONNX query vectors and Sentence Transformer embeddings stored in PostgreSQL/pgvector.
 - `GET /api/v1/media/{media_id}`: returns one item by stable TASTERA ID.
+- `GET /api/v1/media/{media_id}/relationships`: returns source-attributed, reviewed catalog links such as adaptations.
+- `GET /api/v1/media/creators/aliases`: resolves a manually reviewed creator alias without changing source credits.
 - `POST /api/v1/auth/register` and `POST /api/v1/auth/login`: issue signed bearer sessions.
 - `GET /api/v1/auth/me`: returns the signed-in account.
 - `GET /api/v1/auth/me/export` and `DELETE /api/v1/auth/me`: export or permanently delete server-stored personal data.
@@ -17,6 +19,8 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `PUT` / `DELETE /api/v1/me/saved/{media_id}`: add or remove a Library entry.
 - `PATCH /api/v1/me/saved/{media_id}`: update status, personal rating, private note, or progress.
 - `GET /api/v1/me/saved/activity`: list recent account-scoped Library history.
+- `/api/v1/me/collections`: create, update, list, and delete account-backed collections; `/api/v1/share/collections/{share_slug}` serves only public/unlisted collections.
+- `/api/v1/me/community/profile`, `/api/v1/community/people`, and `/api/v1/community/follows/{person_id}`: opt in to public profile discovery and manage a real follow graph. Personal Library data is not returned by these routes.
 - `GET /api/v1/me/recommendations`: ranks unsaved items by saved genres and explicit feedback.
 - Catalog search and creator/theme exploration reuse `GET /api/v1/media`; there is no separate cross-media relationship endpoint. The frontend compares normalized creator credits and genre tags and labels editorial and user-activity signals separately.
 - `PUT` and `DELETE /api/v1/me/recommendations/feedback/{media_id}`: save or clear a
@@ -27,8 +31,9 @@ FastAPI service foundation for the TASTERA discovery platform.
 - `tests/test_saved_response.py`: verifies saved Library responses use the saved-record `updated_at` timestamp rather than duplicating the catalog field.
 
 The catalog is stored in SQLite by default. Its schema also supports PostgreSQL
-through `TASTERA_DATABASE_URL`. It includes repeatable TMDb, Open Library, and
-MusicBrainz importers. Catalog page size is capped at 150; unartworked Music
+through `TASTERA_DATABASE_URL`. It includes repeatable TMDb movie/TV, Open Library,
+MusicBrainz, iTunes podcast, and IGDB game importers, plus a CSV importer for
+manually reviewed adaptations and creator aliases. Catalog page size is capped at 150; unartworked Music
 records are excluded from catalog browse results. Recommendation feedback is a
 transparent baseline signal, not a trained cross-media model. Personal ratings
 affect the account's genre and movie similarity ranking; notes are private

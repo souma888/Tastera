@@ -1,4 +1,4 @@
-import type { MediaCategory, MediaPage } from "../types/media";
+import type { Media, MediaCategory, MediaPage } from "../types/media";
 import { apiBaseUrl } from "./apiBaseUrl";
 
 export interface CatalogQuery {
@@ -13,6 +13,22 @@ export interface SemanticSearchPage {
   model: string;
   items: { item: MediaPage["items"][number]; similarity: number }[];
   total: number;
+}
+
+export interface MediaRelationship { type: string; provenance: string; source_url: string | null; confidence: number; item: Media }
+
+export async function getMediaRelationships(mediaId: string, signal?: AbortSignal): Promise<MediaRelationship[]> {
+  const response = await fetch(`${apiBaseUrl}/media/${encodeURIComponent(mediaId)}/relationships`, { signal });
+  if (!response.ok) throw new Error(`Relationship request failed with status ${response.status}.`);
+  return response.json() as Promise<MediaRelationship[]>;
+}
+
+export async function getCanonicalCreator(query: string, signal?: AbortSignal): Promise<string> {
+  const parameters = new URLSearchParams({ query });
+  const response = await fetch(`${apiBaseUrl}/media/creators/aliases?${parameters}`, { signal });
+  if (!response.ok) return query;
+  const result = await response.json() as { canonical_name?: string };
+  return result.canonical_name || query;
 }
 
 export async function getCatalog(

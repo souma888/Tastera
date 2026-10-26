@@ -128,6 +128,7 @@ export default function MediaCard({
       <p className="creator">
         {onOpenCreator ? <button type="button" className="creator-link" onClick={() => onOpenCreator(item.creator)}>{item.creator} · View creator</button> : item.creator}
       </p>
+      {item.watch_url && <a className="where-to-watch-link" href={item.watch_url} target="_blank" rel="noreferrer">Check watch options{item.provider_region ? ` · ${item.provider_region}` : ""} · JustWatch / TMDb ↗</a>}
       {item.source && item.updated_at && <p className="media-data-freshness"><span>{item.source}</span><span>{metadataDate ? `Updated ${metadataDate}` : "Metadata date unavailable"}</span></p>}
       <p className="recommendation-reason">
         <span>WHY IT CONNECTS</span>

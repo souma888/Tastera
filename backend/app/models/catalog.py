@@ -21,6 +21,8 @@ class MediaItemRecord(Base):
     primary_genre: Mapped[str] = mapped_column(String(100), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     artwork_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    watch_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provider_region: Mapped[str | None] = mapped_column(String(8), nullable=True)
     connection: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(100))
     popularity_score: Mapped[float] = mapped_column(
@@ -62,6 +64,27 @@ class MediaEmbeddingRecord(Base):
     )
 
     media_item: Mapped[MediaItemRecord] = relationship(back_populates="embedding")
+
+
+class MediaRelationshipRecord(Base):
+    __tablename__ = "media_relationships"
+    __table_args__ = (UniqueConstraint("source_media_id", "target_media_id", "relationship_type", name="uq_media_relationship"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_media_id: Mapped[str] = mapped_column(ForeignKey("media_items.id", ondelete="CASCADE"), index=True)
+    target_media_id: Mapped[str] = mapped_column(ForeignKey("media_items.id", ondelete="CASCADE"), index=True)
+    relationship_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    provenance: Mapped[str] = mapped_column(String(200), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1)
+
+
+class CreatorAliasRecord(Base):
+    __tablename__ = "creator_aliases"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    canonical_name: Mapped[str] = mapped_column(String(500), index=True)
+    alias: Mapped[str] = mapped_column(String(500), unique=True)
+    provenance: Mapped[str] = mapped_column(String(200))
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class MediaIdentifier(Base):

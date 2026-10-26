@@ -5,7 +5,7 @@ from math import ceil
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.catalog import MediaItemRecord
+from app.models.catalog import CreatorAliasRecord, MediaItemRecord
 from app.schemas.media import MediaCategory, MediaItem, MediaPage
 
 
@@ -19,6 +19,8 @@ def to_schema(record: MediaItemRecord) -> MediaItem:
         category=MediaCategory(record.category),
         genre=record.primary_genre,
         image=record.artwork_url,
+        watch_url=record.watch_url,
+        provider_region=record.provider_region,
         description=record.description,
         connection=record.connection,
         source=record.source,
@@ -54,6 +56,9 @@ def list_media(
             or_(
                 MediaItemRecord.title.ilike(pattern),
                 MediaItemRecord.creator.ilike(pattern),
+                MediaItemRecord.creator.in_(select(CreatorAliasRecord.canonical_name).where(
+                    func.lower(CreatorAliasRecord.alias).ilike(pattern.lower())
+                )),
                 MediaItemRecord.primary_genre.ilike(pattern),
             )
         )

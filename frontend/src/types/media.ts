@@ -1,4 +1,5 @@
-export type MediaCategory = "Movies" | "Books" | "Music";
+export type CoreMediaCategory = "Movies" | "Books" | "Music";
+export type MediaCategory = CoreMediaCategory | "TV" | "Games" | "Podcasts";
 export type MediaFilter = "All" | MediaCategory;
 export type LibraryStatus = "planned" | "in_progress" | "finished";
 
@@ -9,6 +10,8 @@ export interface Media {
   category: MediaCategory;
   genre: string;
   image: string | null;
+  watch_url?: string | null;
+  provider_region?: string | null;
   connection: string;
   description?: string | null;
   source?: string;

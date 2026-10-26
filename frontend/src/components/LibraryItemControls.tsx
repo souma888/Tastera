@@ -6,6 +6,9 @@ const statusLabels: Record<SavedMedia["category"], Record<SavedMedia["status"], 
   Movies: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
   Books: { planned: "Want to read", in_progress: "Reading", finished: "Finished" },
   Music: { planned: "Want to listen", in_progress: "Listening", finished: "Finished" },
+  TV: { planned: "Want to watch", in_progress: "Watching", finished: "Finished" },
+  Games: { planned: "Want to play", in_progress: "Playing", finished: "Finished" },
+  Podcasts: { planned: "Want to listen", in_progress: "Listening", finished: "Finished" },
 };
 
 export default function LibraryItemControls({
