@@ -4,6 +4,8 @@ from os import getenv
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.ai import router as ai_router
@@ -12,12 +14,15 @@ from app.api.v1.media import router as media_router
 from app.api.v1.recommendations import router as recommendations_router
 from app.api.v1.saved import router as saved_router
 from app.api.v1.social import router as social_router
+from app.core.rate_limit import limiter
 
 app = FastAPI(
     title="TASTERA API",
     description="Personalized discovery across movies, books, and music.",
     version="0.1.0",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 cors_origins = tuple(
     origin.strip()

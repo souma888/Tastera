@@ -8,6 +8,7 @@ import CommunityPage from "./components/CommunityPage";
 import ThemedSelect from "./components/ThemedSelect";
 import ConnectionExplorer from "./components/ConnectionExplorer";
 import EvaluationDashboard from "./components/EvaluationDashboard";
+import { useAuth } from "./hooks/useAuth";
 import ImportLibrary from "./components/ImportLibrary";
 import { mediaItems } from "./data/media";
 import {
@@ -398,6 +399,11 @@ function App() {
     return [50, 100, 150].includes(stored) ? stored : 50;
   });
   const [unavailableMusicArtwork, setUnavailableMusicArtwork] = useState<string[]>([]);
+  const auth = useAuth();
+  const { account, setAccount, authToken, setAuthToken, isCheckingAccount, setIsCheckingAccount,
+    isAuthOpen, setIsAuthOpen, isAccountInfoOpen, setIsAccountInfoOpen, authMode, setAuthMode,
+    authEmail, setAuthEmail, authPassword, setAuthPassword, authError, setAuthError, isAuthBusy, setIsAuthBusy,
+    clearCachedAccountData, requireSignIn: authRequireSignIn } = auth;
   const [savedItems, setSavedItems] = useState<SavedMedia[]>(() => sessionStorage.getItem("tastera_access_token") ? readCachedLibrary(readCachedAccount()?.id) : []);
   const [libraryActivity, setLibraryActivity] = useState<LibraryActivity[]>([]);
   const [libraryUpdateBusyIds, setLibraryUpdateBusyIds] = useState<string[]>([]);
@@ -418,13 +424,6 @@ function App() {
   const [catalog, setCatalog] = useState<Media[]>(mediaItems);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [account, setAccount] = useState<Account | null>(() => sessionStorage.getItem("tastera_access_token") ? readCachedAccount() : null);
-  const [authToken, setAuthToken] = useState<string | null>(() =>
-    sessionStorage.getItem("tastera_access_token"),
-  );
-  const [isCheckingAccount, setIsCheckingAccount] = useState(() =>
-    Boolean(sessionStorage.getItem("tastera_access_token")),
-  );
   const [savedActionError, setSavedActionError] = useState<string | null>(null);
   const [libraryLoadError, setLibraryLoadError] = useState<string | null>(null);
   const [isLibraryRefreshing, setIsLibraryRefreshing] = useState(false);
@@ -442,13 +441,6 @@ function App() {
   const [feedbackBusyIds, setFeedbackBusyIds] = useState<string[]>([]);
   const [feedbackActionError, setFeedbackActionError] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<string[]>([]);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isAccountInfoOpen, setIsAccountInfoOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
   const [isTasteSetupOpen, setIsTasteSetupOpen] = useState(false);
@@ -471,27 +463,14 @@ function App() {
     }
   }, [account, savedItems]);
 
-  const clearCachedAccountData = useCallback(() => {
-    const cachedAccount = readCachedAccount();
-    if (cachedAccount) sessionStorage.removeItem(`tastera_cached_library_${cachedAccount.id}`);
-    sessionStorage.removeItem("tastera_cached_account");
-  }, []);
-
   const requireSignIn = useCallback((message: string) => {
-    sessionStorage.removeItem("tastera_access_token");
-    clearCachedAccountData();
-    setAuthToken(null);
-    setAccount(null);
+    authRequireSignIn(message);
     setSavedItems([]);
     setLibraryActivity([]);
     setRecommendations([]);
     setRecommendationFeedbackItems([]);
-    setIsCheckingAccount(false);
     setLibraryLoadError(null);
-    setAuthMode("sign-in");
-    setAuthError(message);
-    setIsAuthOpen(true);
-  }, [clearCachedAccountData]);
+  }, [authRequireSignIn]);
 
   const heroSlides = useMemo<HeroSlide[]>(() => {
     const itemFor = (mediaCategory: MediaCategory) =>
@@ -653,7 +632,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [authToken, requireSignIn]);
+  }, [authToken, requireSignIn, setAccount, setIsCheckingAccount]);
 
   useEffect(() => {
     if (!authToken || isCheckingAccount) {

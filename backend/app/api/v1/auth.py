@@ -4,12 +4,13 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_session
+from app.core.rate_limit import limiter
 from app.core.security import (
     ACCESS_TOKEN_TTL_SECONDS,
     create_access_token,
@@ -37,7 +38,8 @@ def _auth_response(account: AccountRecord) -> AuthResponse:
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register(credentials: Credentials, session: SessionDep) -> AuthResponse:
+@limiter.limit("5/minute")
+def register(request: Request, credentials: Credentials, session: SessionDep) -> AuthResponse:
     ensure_auth_configured()
     email = str(credentials.email).strip().lower()
     if session.scalar(select(AccountRecord).where(AccountRecord.email == email)):
@@ -63,7 +65,8 @@ def register(credentials: Credentials, session: SessionDep) -> AuthResponse:
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(credentials: Credentials, session: SessionDep) -> AuthResponse:
+@limiter.limit("5/minute")
+def login(request: Request, credentials: Credentials, session: SessionDep) -> AuthResponse:
     ensure_auth_configured()
     email = str(credentials.email).strip().lower()
     account = session.scalar(select(AccountRecord).where(AccountRecord.email == email))
