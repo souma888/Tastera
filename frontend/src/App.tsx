@@ -1404,6 +1404,7 @@ function App() {
             </div>
             <div className="about-provider-credit"><span className="about-provider-mark">TMDB</span><p><strong>Movie data and images</strong><span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span></p><a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">The Movie Database ↗</a></div>
           </section>
+        ) : activePage === "Contact" ? (
           <section className="info-page contact-page" aria-labelledby="contact-heading">
             <div className="contact-hero">
               <div className="contact-hero-copy">
