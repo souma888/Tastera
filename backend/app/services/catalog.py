@@ -9,7 +9,7 @@ from app.models.catalog import CreatorAliasRecord, MediaItemRecord
 from app.schemas.media import MediaCategory, MediaFilters, MediaItem, MediaPage
 
 MOVIE_DISCOVERY_BONUS = 1.5
-MOVIE_DISCOVER_STARTER_SLOTS = 70
+MOVIE_DISCOVER_STARTER_SLOTS = 150
 
 
 def to_schema(record: MediaItemRecord) -> MediaItem:
