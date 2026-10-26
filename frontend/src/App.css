@@ -2898,3 +2898,42 @@
 
 .library-load-feedback { display:flex; align-items:center; justify-content:space-between; gap:14px; }
 .library-load-feedback .text-button { flex:none; margin:0; white-space:nowrap; }
+
+
+/* Polished, consistent controls for creator links, Library notes and ratings. */
+.creator-link:focus:not(:focus-visible),
+.media-explore-link:focus:not(:focus-visible),
+.connection-creator-button:focus:not(:focus-visible { outline: none; }
+.connection-creator-button { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 5px; padding: 0; outline: none; color: var(--lavender); background: transparent; font: inherit; font-size: 11px; line-height: 1.5; cursor: pointer; }
+.connection-creator-button:hover { color: var(--text-primary); text-decoration: underline; }
+.connection-creator-button:focus-visible { outline: 2px solid var(--lavender); outline-offset: 3px; }
+.library-rating > div { flex-wrap: wrap; gap: 7px; }
+.library-rating button { display: grid; width: 34px; height: 34px; place-items: center; padding: 0; border: 1px solid #ffffff15; border-radius: 10px; color: #716a7c; background: linear-gradient(145deg,#211d29,#151219); font-size: 19px; line-height: 1; transition: color .15s ease, border-color .15s ease, transform .15s ease, background .15s ease; }
+.library-rating button:hover { border-color: #f2c56f66; color: #f2c56f; transform: translateY(-1px); }
+.library-rating button.is-rated { border-color: #f2c56f55; color: #f2c56f; background: linear-gradient(145deg,#49371d55,#211a14); text-shadow: 0 0 12px #f2c56f35; }
+.library-rating button:focus-visible,.library-note-form textarea:focus-visible,.library-note-form button:focus-visible { outline: 2px solid var(--lavender); outline-offset: 3px; }
+.library-note-form textarea { min-height: 84px; padding: 13px 14px; border-color: #8c78ad38; border-radius: 12px; background: linear-gradient(145deg,#100e14,#17131d); line-height: 1.55; transition: border-color .15s ease, box-shadow .15s ease; }
+.library-note-form textarea::placeholder { color: #81798e; }
+.library-note-form textarea:focus { border-color: #b39aff99; box-shadow: 0 0 0 3px #b39aff15; outline: none; }
+.library-note-form button,.library-progress-field button { min-height: 38px; padding: 9px 14px; border: 1px solid #b39aff45; border-radius: 10px; color: #e0d5ff; background: linear-gradient(145deg,#332744,#211a2c); font-size: 11px; font-weight: 600; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.library-note-form button:hover:not(:disabled),.library-progress-field button:hover:not(:disabled) { border-color: #b39aff99; background: linear-gradient(145deg,#423052,#2b203a); transform: translateY(-1px); }
+.library-note-form button:disabled,.library-progress-field button:disabled { opacity: .55; cursor: wait; }
+.community-inline-profile { display: grid; gap: 18px; margin-top: 16px; padding: 16px; border: 1px solid #b39aff35; border-radius: 14px; background: linear-gradient(145deg,#17131d,#100e14); }
+.community-inline-profile .community-sample-user-heading { margin: 0; }
+.community-inline-profile .community-sample-user-heading h4 { margin: 5px 0; font-size: 16px; }
+.community-inline-profile .community-sample-user-columns { margin: 0; }
+.community-playlists .community-playlist-button { display: flex; width: 100%; gap: 12px; align-items: center; min-width: 0; padding: 9px; border: 1px solid #ffffff15; border-radius: 11px; color: var(--text-primary); background: #ffffff04; text-align: left; cursor: pointer; transition: border-color .15s ease,background .15s ease,transform .15s ease; }
+.community-playlists .community-playlist-button:hover { border-color: #b39aff60; background: #b39aff0b; transform: translateY(-1px); }
+.community-playlist-copy { display: grid; min-width: 0; gap: 5px; }
+.community-playlist-copy strong { font-size: 12px; }
+.community-playlist-copy > span { color: var(--text-muted); font-size: 11px; line-height: 1.45; }
+.community-playlist-copy small { color: var(--lavender); font-size: 10px; }
+.community-playlist-detail { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; padding-top: 15px; border-top: 1px solid #ffffff14; }
+.community-playlist-detail h4 { margin: 5px 0; font-size: 16px; }
+.community-playlist-detail p { margin: 5px 0; color: var(--text-muted); font-size: 12px; }
+.community-playlist-detail > button { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 50%; color: var(--text-primary); background: #ffffff08; font-size: 20px; cursor: pointer; }
+.community-playlist-detail .community-saved-items { grid-column: 1 / -1; }
+@media(max-width:600px) {
+  .library-rating button { width: 32px; height: 32px; }
+  .community-inline-profile { padding: 12px; }
+}
