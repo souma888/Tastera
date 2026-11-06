@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  Home, Map as MapIcon, BookMarked, LayoutGrid, Users, CircleUser,
+  FlaskConical, Settings as SettingsIcon, HelpCircle, Info, Mail,
+} from "lucide-react";
 import MediaCard from "./components/MediaCard";
 import TasteMap from "./components/TasteMap";
 import TasteSetup, { type TastePreferences } from "./components/TasteSetup";
@@ -11,6 +15,7 @@ import EvaluationDashboard from "./components/EvaluationDashboard";
 import { useAuth } from "./hooks/useAuth";
 import ImportLibrary from "./components/ImportLibrary";
 import { mediaItems } from "./data/media";
+import Toast, { useToast } from "./components/Toast";
 import {
   AccountApiError,
   getCurrentAccount,
@@ -44,17 +49,17 @@ function languageLabel(language: string) {
 }
 
 const navigationItems = [
-  ["Discover", "⌂"],
-  ["Taste Map", "◎"],
-  ["Library", "▤"],
-  ["Collections", "▧"],
-  ["Community", "♧"],
-  ["Your Profile", "◉"],
-  ["ML Lab", "⌁"],
-  ["Settings", "⚙"],
-  ["Guide", "?"],
-  ["About", "✦"],
-  ["Contact", "✉"],
+  ["Discover", Home],
+  ["Taste Map", MapIcon],
+  ["Library", BookMarked],
+  ["Collections", LayoutGrid],
+  ["Community", Users],
+  ["Your Profile", CircleUser],
+  ["ML Lab", FlaskConical],
+  ["Settings", SettingsIcon],
+  ["Guide", HelpCircle],
+  ["About", Info],
+  ["Contact", Mail],
 ] as const;
 
 type Page = (typeof navigationItems)[number][0];
@@ -463,6 +468,7 @@ function App() {
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [languageFilter, setLanguageFilter] = useState("All languages");
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  const { toasts, addToast, dismissToast } = useToast();
 
 
   useEffect(() => {
@@ -586,7 +592,6 @@ function App() {
     setSearch("");
     setPageNumber(1);
     setCategory(mediaCategory ?? "All");
-    setLanguageFilter("All languages");
     navigate(page);
   }
 
@@ -949,6 +954,7 @@ function App() {
       if (saved.includes(id)) {
         await removeSavedMedia(authToken, id);
         setSavedItems((current) => current.filter((item) => item.id !== id));
+        addToast("Removed from Library", "info");
       } else {
         const item = await saveMedia(authToken, id);
         setSavedItems((current) =>
@@ -956,6 +962,7 @@ function App() {
             ? current
             : [item, ...current],
         );
+        addToast("Saved to Library ✓", "success");
       }
       setLibraryActivity(await getLibraryActivity(authToken));
       setLibraryLoadError(null);
@@ -1162,7 +1169,7 @@ function App() {
         <div className="side-label">YOUR SPACE</div>
 
         <nav className="navigation" aria-label="Main navigation">
-          {navigationItems.map(([label, symbol]) => (
+          {navigationItems.map(([label, Icon]) => (
             <button
               type="button"
               key={label}
@@ -1170,7 +1177,7 @@ function App() {
               aria-current={activePage === label ? "page" : undefined}
               onClick={() => navigate(label)}
             >
-              <span className="nav-symbol">{symbol}</span>
+              <span className="nav-symbol"><Icon size={16} strokeWidth={1.6} /></span>
               {label}
               {label === "Library" && saved.length > 0 && (
                 <span className="saved-count">{saved.length}</span>
@@ -2427,6 +2434,7 @@ function App() {
           </section>
         </div>
       )}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
