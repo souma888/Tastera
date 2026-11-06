@@ -48,20 +48,29 @@ def register(request: Request, credentials: Credentials, session: SessionDep) ->
             detail="An account with this email already exists. Sign in instead.",
         )
 
-    account = AccountRecord(
-        id=str(uuid4()), email=email, password_hash=hash_password(credentials.password)
-    )
-    session.add(account)
     try:
-        session.commit()
-    except IntegrityError:
+        account = AccountRecord(
+            id=str(uuid4()), email=email, password_hash=hash_password(credentials.password)
+        )
+        session.add(account)
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists. Sign in instead.",
+            ) from None
+        session.refresh(account)
+        return _auth_response(account)
+    except HTTPException:
+        raise
+    except Exception as exc:
         session.rollback()
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists. Sign in instead.",
-        ) from None
-    session.refresh(account)
-    return _auth_response(account)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration error: {type(exc).__name__}: {str(exc)}",
+        ) from exc
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -69,14 +78,22 @@ def register(request: Request, credentials: Credentials, session: SessionDep) ->
 def login(request: Request, credentials: Credentials, session: SessionDep) -> AuthResponse:
     ensure_auth_configured()
     email = str(credentials.email).strip().lower()
-    account = session.scalar(select(AccountRecord).where(AccountRecord.email == email))
-    if account is None or not verify_password(credentials.password, account.password_hash):
+    try:
+        account = session.scalar(select(AccountRecord).where(AccountRecord.email == email))
+        if account is None or not verify_password(credentials.password, account.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email or password is incorrect.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return _auth_response(account)
+    except HTTPException:
+        raise
+    except Exception as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email or password is incorrect.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return _auth_response(account)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Login error: {type(exc).__name__}: {str(exc)}",
+        ) from exc
 
 
 @router.get("/me", response_model=Account)
