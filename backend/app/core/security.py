@@ -40,10 +40,14 @@ def hash_password(password: str) -> str:
     return password_hasher.hash(password)
 
 
-def verify_password(password: str, encoded_hash: str) -> bool:
+def verify_password(password: str, encoded_hash: str | None) -> bool:
+    if not encoded_hash or not isinstance(encoded_hash, str):
+        return False
     try:
         return password_hasher.verify(encoded_hash, password)
     except (InvalidHashError, VerificationError, VerifyMismatchError):
+        return False
+    except Exception:
         return False
 
 
@@ -51,7 +55,7 @@ def create_access_token(account_id: str) -> str:
     now = datetime.now(UTC)
     return jwt.encode(
         {
-            "sub": account_id,
+            "sub": str(account_id),
             "iat": now,
             "exp": now + timedelta(seconds=ACCESS_TOKEN_TTL_SECONDS),
         },

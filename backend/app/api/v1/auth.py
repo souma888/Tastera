@@ -33,7 +33,7 @@ def _auth_response(account: AccountRecord) -> AuthResponse:
     return AuthResponse(
         access_token=create_access_token(account.id),
         expires_in=ACCESS_TOKEN_TTL_SECONDS,
-        account=Account(id=account.id, email=account.email),
+        account=Account(id=str(account.id), email=str(account.email)),
     )
 
 
