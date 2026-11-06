@@ -39,7 +39,12 @@ def _auth_response(account: AccountRecord) -> AuthResponse:
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-def register(request: Request, credentials: Credentials, session: SessionDep) -> AuthResponse:
+def register(
+    request: Request,
+    response: Response,
+    credentials: Credentials,
+    session: SessionDep,
+) -> AuthResponse:
     ensure_auth_configured()
     email = str(credentials.email).strip().lower()
     if session.scalar(select(AccountRecord).where(AccountRecord.email == email)):
@@ -75,7 +80,12 @@ def register(request: Request, credentials: Credentials, session: SessionDep) ->
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit("5/minute")
-def login(request: Request, credentials: Credentials, session: SessionDep) -> AuthResponse:
+def login(
+    request: Request,
+    response: Response,
+    credentials: Credentials,
+    session: SessionDep,
+) -> AuthResponse:
     ensure_auth_configured()
     email = str(credentials.email).strip().lower()
     try:
